@@ -1,0 +1,15 @@
+{
+  "seed": "1234",
+  "difficulty": "medium",
+  "type": "Layout",
+  "header": { "type": "Text", "value": "K-Means Clustering" },
+  "view1": [
+    { "type": "Table", "title": "Points", "columns": ["Label","X","Y"], "rows": [["A",1,2],["B",3,4]] },
+    { "type": "CoordinatePlot", "points": [...], "centroids": [...] },
+    { "type": "TableInput", "label": "Iteration 1", "columns": ["Centroid","X","Y"], "rows": [...] }
+  ],
+  "view2": [
+    { "type": "Text", "value": "Next step..." },
+    { "type": "CoordinatePlot", "points": [...], "centroids": [...] }
+  ]
+}

@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+mongoengine
+pydantic
+numpy
+pandas
+scikit-learn
+bcrypt==3.2.2
+passlib==1.7.4
+

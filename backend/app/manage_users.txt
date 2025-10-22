@@ -1,0 +1,45 @@
+➕ Add a single user
+python manage_users.py add --username <USERNAME> --password <PASSWORD> [--display_name "Full Name"]
+
+
+✅ Example:
+
+python manage_users.py add --username alice --password "Secret123" --display_name "Alice Smith"
+
+
+Creates a user who must change password on first login.
+
+Delete a user
+python manage_users.py delete --username <USERNAME>
+
+
+Example:
+
+python manage_users.py delete --username alice
+
+
+Deletes the user permanently.
+
+List all users
+python manage_users.py list
+
+
+Displays all existing users, their display names, and whether they must change their password.
+
+Bulk add users from CSV
+python manage_users.py bulk --file <PATH_TO_CSV>
+
+
+Example:
+
+python manage_users.py bulk --file users.csv
+
+
+CSV format (must have header row):
+
+username,password,display_name
+alice,Secret123,Alice Smith
+bob,Pass456,Bob Johnson
+
+
+Each row adds one user.
