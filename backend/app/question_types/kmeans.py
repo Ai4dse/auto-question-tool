@@ -57,7 +57,7 @@ class KMeansQuestion:
             iteration = 0
 
             # --- Run K-Means iterations ---
-            while iteration < self.iterations:
+            while True:
                 assignments = []
                 distances = []
 
@@ -67,7 +67,9 @@ class KMeansQuestion:
                     min_idx = 0
 
                     for j, (cx, cy) in enumerate(centroids):
+                        
                         dist = math.sqrt((px - cx) ** 2 + (py - cy) ** 2)
+                        
                         point_distances.append(f"{dist:.2f}".rstrip("0").rstrip("."))
 
                         if dist < min_dist or (math.isclose(dist, min_dist) and j < min_idx):
@@ -77,11 +79,15 @@ class KMeansQuestion:
                     distances.append(point_distances)
                     assignments.append(min_idx)
 
-                # Step 2: Check for convergence
+                #Check for convergence
                 if assignments == prev_assignments:
+                    stable_clusters = True
+                    break
+                elif iteration >= self.iterations:
+                    stable_clusters = False
                     break
                 prev_assignments = assignments[:]
-
+                
                 # Step 3: Recompute centroids
                 new_centroids = []
                 for k in range(self.num_centroids):
@@ -115,7 +121,7 @@ class KMeansQuestion:
                 iteration += 1
 
             # --- Check if we reached max_iter ---
-            if len(self.iteration_data) == self.iterations:
+            if len(self.iteration_data) == self.iterations and stable_clusters:
                 break
             else:
                 # Rerun K-means with new random centroids
@@ -197,6 +203,17 @@ class KMeansQuestion:
             
 
             base[view_key] = iter_views
+            base["lastView"] = [
+            {
+                "type": "CoordinatePlot",
+                "points_blue": [[p.label, p.x, p.y] for p in points],
+                "points_green": [[c.label, c.x, c.y] for c in self.iteration_data[len(self.iteration_data)-1]["centroids"]],
+            },
+            {
+                "type": "Text",
+                "content": f"Kmeans ends at this point because a stable cluster asignment has been found. Running further Kmeans iterations results in the same clusters.",    
+            },
+        ]
 
         base["view1"] = view0 + base["view1"]
         return base

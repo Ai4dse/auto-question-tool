@@ -143,12 +143,30 @@ export default function QuestionPage() {
 
       {finished && (
         <div className="mt-4">
-          <h3>Final Results:</h3>
-          <pre className="bg-light p-3 rounded border overflow-auto">
-            {JSON.stringify(viewResults, null, 2)}
-          </pre>
+          {question.layout.lastView ? (
+            <div className="card shadow-sm">
+              <div className="card-body">
+                <LayoutRenderer
+                  layout={question.layout}
+                  activeView="lastView"
+                  onChange={() => {}}
+                  evaluationResults={{}}
+                  userInput={{}}
+                  showExpected={true}
+                />
+              </div>
+            </div>
+          ) : (
+            <>
+              <h3>Final Results:</h3>
+              <pre className="bg-light p-3 rounded border overflow-auto">
+                {JSON.stringify(viewResults, null, 2)}
+              </pre>
+            </>
+          )}
         </div>
       )}
+
     </div>
   );
 }
