@@ -13,6 +13,7 @@ export default function Library() {
 
   const questions = [
     { id: "kmeans", title: "K-Means Clustering", desc: "Cluster data points into groups." },
+    { id: "dbscan", title: "DBSCAN", desc: "Practice the DBSCAN algorithm." },
     { id: "addition", title: "Simple Addition", desc: "Practice simple arithmetic." },
   ];
 

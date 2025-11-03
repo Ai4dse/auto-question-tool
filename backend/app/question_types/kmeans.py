@@ -17,14 +17,14 @@ DIFFICULTY_SETTINGS = {
 
 class KMeansQuestion:
 
-    def __init__(self, num_points=None, num_centroids=None, max_iter=None, seed=None, difficulty="easy"):
+    def __init__(self, seed=None, difficulty="easy"):
         
         self.difficulty = difficulty.lower()
         config = DIFFICULTY_SETTINGS.get(self.difficulty, DIFFICULTY_SETTINGS["easy"])
 
-        self.num_points = num_points or config["num_points"]
-        self.num_centroids = num_centroids or config["num_centroids"]
-        self.iterations = max_iter or config["max_iter"]
+        self.num_points = config["num_points"]
+        self.num_centroids = config["num_centroids"]
+        self.iterations = config["max_iter"]
 
         self.seed = seed or random.randint(1, 999999)
         random.seed(self.seed)
@@ -34,6 +34,7 @@ class KMeansQuestion:
             Point(f"P{i}", random.randint(0, 10), random.randint(0, 10))
             for i in range(self.num_points)
         ]
+        
         self.initial_centroids = [
             Point(f"C{j}", random.randint(0, 10), random.randint(0, 10))
             for j in range(self.num_centroids)
@@ -222,7 +223,6 @@ class KMeansQuestion:
     # Evaluation
     # ---------------------------------------------------------------------
     def evaluate(self, user_input):
-        print(user_input)
         results = {}
 
         for iter_idx, iteration in enumerate(self.iteration_data):

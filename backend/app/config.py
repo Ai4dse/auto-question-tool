@@ -6,6 +6,15 @@ QUESTION_CONFIG = {
             "tags": ["clustering", "unsupervised"]
         }
     },
+    
+    "dbscan": {
+        "class_path": "app.question_types.dbscan.DBSCANQuestion",
+        "metadata": {
+            "title": "DBSCAN",
+            "tags": ["clustering", "unsupervised"]
+        }
+    },
+    
     "addition": {
         "class_path": "app.question_types.addition.AdditionQuestion",
         "metadata": {

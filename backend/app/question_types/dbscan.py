@@ -17,12 +17,12 @@ DIFFICULTY_SETTINGS = {
 
 class DBSCANQuestion:
 
-    def __init__(self, num_points=None, seed=None, difficulty="easy"):
+    def __init__(self, seed=None, difficulty="easy"):
         
         self.difficulty = difficulty.lower()
         config = DIFFICULTY_SETTINGS.get(self.difficulty, DIFFICULTY_SETTINGS["easy"])
 
-        self.num_points = num_points or config["num_points"]
+        self.num_points = config["num_points"]
 
         self.seed = seed or random.randint(1, 999999)
         random.seed(self.seed)
@@ -57,6 +57,12 @@ class DBSCANQuestion:
                 "title": "Points",
                 "columns": ["Label", "X", "Y"],
                 "rows": [[p.label, p.x, p.y] for p in points],
+            },
+        ]
+        base["view1"] = [
+            {
+                "type": "Text",
+                "content": f"not implemented yet",    
             },
         ]
 
