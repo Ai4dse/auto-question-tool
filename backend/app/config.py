@@ -21,5 +21,14 @@ QUESTION_CONFIG = {
             "title": "Simple Addition",
             "tags": ["arithmetic"]
         }
+    },
+
+    "hungarian_method": {
+        "class_path": "app.question_types.hungrian_method.HungarianMethodQuestion",
+        "metadata": {
+            "title": "Hungarian Method",
+            'mode': ['steps', 'exam'],
+            "tags": ["arithmetic"]
+        }
     }
 }

@@ -1,7 +1,5 @@
 import random
 import numpy as np
-from sklearn.cluster import KMeans
-import math
 
 DIFFICULTY_SETTINGS = {
     "easy": {"min": 1, "max": 10 },
