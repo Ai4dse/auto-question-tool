@@ -1,4 +1,4 @@
-import React from "react";
+import React, { useEffect } from "react";
 import Plot from "react-plotly.js";
 import {
   ScatterChart,
@@ -18,6 +18,122 @@ import "bootstrap/dist/css/bootstrap.min.css";
  * - Includes evaluation color feedback
  * - Uses Bootstrap for styling
  */
+function MatrixInputGrid({ el, idx, userInput, onChange }) {
+  const id = el.id || `matrix_${idx}`;
+  const rows = el.rows || [];
+  const cols = el.cols || [];
+  const placeholders = el.values || [];
+
+  const norm = (x) => Array.isArray(x) ? String(x[0] ?? "") : String(x ?? "");
+  const isRowStruck = (r) => !!userInput?.[`${id}:row:${r}`];
+  const isColStruck = (c) => !!userInput?.[`${id}:col:${c}`];
+  const cellKey = (r, c) => `${id}:cell:${r},${c}`;
+
+  // ✅ Seed userInput with placeholder values exactly once
+  useEffect(() => {
+    for (let r = 0; r < rows.length; r++) {
+      for (let c = 0; c < cols.length; c++) {
+        const key = cellKey(r, c);
+        const hasValue = userInput && Object.prototype.hasOwnProperty.call(userInput, key);
+        if (!hasValue) {
+          const v = placeholders?.[r]?.[c];
+          if (v !== undefined) onChange(key, String(v));
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [id, rows.length, cols.length]); // run once per matrix identity/size
+
+  return (
+    <div className="card mb-4 shadow-sm">
+      <div className="card-body">
+        <h5 className="card-title mb-3">{el.title || "Matrix"}</h5>
+
+        <div className="table-responsive">
+          <table className="table table-bordered table-sm align-middle">
+            <thead className="table-light">
+              <tr>
+                <th className="text-center">x</th>
+                {cols.map((cLabel, cIdx) => {
+                  const colStruck = isColStruck(cIdx);
+                  return (
+                    <th key={`c-head-${cIdx}`} className={colStruck ? "text-decoration-line-through text-muted" : ""}>
+                      {norm(cLabel)}
+                    </th>
+                  );
+                })}
+                <th className="text-center small text-muted"></th>
+              </tr>
+            </thead>
+
+            <tbody>
+              {rows.map((rLabel, rIdx) => {
+                const rowStruck = isRowStruck(rIdx);
+                return (
+                  <tr key={`r-${rIdx}`} className={rowStruck ? "text-decoration-line-through text-muted" : ""}>
+                    <th className="text-center fw-semibold">{norm(rLabel)}</th>
+
+                    {cols.map((_, cIdx) => {
+                      const colStruck = isColStruck(cIdx);
+                      const key = cellKey(rIdx, cIdx);
+                      const current = userInput?.[key];
+                      const fallback = placeholders?.[rIdx]?.[cIdx];
+                      const value = current ?? (fallback !== undefined ? String(fallback) : "");
+
+                      // ✅ row OR col strike crosses out the cell
+                      const strike = rowStruck || colStruck ? "text-decoration-line-through text-muted" : "";
+
+                      return (
+                        <td key={`cell-${rIdx}-${cIdx}`} className={strike}>
+                          <input
+                            type="text"
+                            className="form-control form-control-sm"
+                            value={value}
+                            onChange={(e) => onChange(key, e.target.value)}
+                          />
+                        </td>
+                      );
+                    })}
+
+                    <td className="text-center">
+                      <input
+                        type="checkbox"
+                        className="form-check-input"
+                        checked={!!userInput?.[`${id}:row:${rIdx}`]}
+                        onChange={(e) => onChange(`${id}:row:${rIdx}`, e.target.checked)}
+                        aria-label={`Strike row ${norm(rLabel)}`}
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+
+            <tfoot>
+              <tr>
+                <th className="small text-muted text-center"></th>
+                {cols.map((_, cIdx) => (
+                  <td key={`c-foot-${cIdx}`} className="text-center">
+                    <input
+                      type="checkbox"
+                      className="form-check-input"
+                      checked={!!userInput?.[`${id}:col:${cIdx}`]}
+                      onChange={(e) => onChange(`${id}:col:${cIdx}`, e.target.checked)}
+                      aria-label={`Strike column ${norm(cols[cIdx])}`}
+                    />
+                  </td>
+                ))}
+                <td />
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+
 export default function LayoutRenderer({
   layout,
   activeView = "view1",
@@ -139,7 +255,17 @@ export default function LayoutRenderer({
             </div>
           </div>
         );
-
+      case "MatrixInput":
+      case "matrix_input":
+        return (
+          <MatrixInputGrid
+            key={idx}
+            el={el}
+            idx={idx}
+            userInput={userInput}
+            onChange={onChange}
+          />
+        );
       case "MultipleChoice":
       case "multiple_choice":
         return (

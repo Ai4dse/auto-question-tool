@@ -1,6 +1,6 @@
 import random
 import numpy as np
-#from app.resources.synonyms import synonym_pairs
+from app.resources.synonyms import synonym_pairs
 import itertools
 
 
@@ -16,20 +16,29 @@ class HungarianMethodQuestion:
         self.difficulty = difficulty.lower()
         config = DIFFICULTY_SETTINGS.get(self.difficulty, DIFFICULTY_SETTINGS["easy"])
         
-        random.seed(seed)
+        self.seed = seed or random.randint(1, 999999)
+        random.seed(self.seed)
         self.matrix_size = random.choice(config["matrix_size"])
         self.steps = random.choice(config["steps"])
         self.discrete = random.choice(config["discrete"])
         self.mode = mode
 
-        #pairs = random.sample(synonym_pairs, self.matrix_size)
+        self.pairs = random.sample(synonym_pairs, self.matrix_size)
 
+        self.schemaA = [a for a, b in self.pairs]
+        random.shuffle(self.schemaA)
+        self.schemaB = [b for a, b in self.pairs]
+        random.shuffle(self.schemaB)
+
+        print('hello world')
         current_steps = -1
         while (current_steps != self.steps):
-            numbers = self.random_numbers(self.matrix_size * self.matrix_size, self.discrete, seed)
-            res = self.hungarian_method(numbers, self.matrix_size)
-            current_steps = res.max_depth
-            seed += 1
+            self.path = []
+            self.numbers = self.random_numbers(self.matrix_size * self.matrix_size, self.discrete, self.seed)
+            res = self.hungarian_method(self.numbers, self.matrix_size)
+            current_steps = res[1]['max_depth']
+            #self.seed += 1
+            print(f'Path: {self.path}')
         
         #self.seed = seed or random.randint(1, 999999)
         #random.seed(self.seed)
@@ -45,7 +54,7 @@ class HungarianMethodQuestion:
         if discrete:
             return rng.integers(low, high + 1, size=n).tolist()
         else:
-            return rng.uniform(low, high, size=n).tolist()
+            return rng.uniform(low, high, size=n).round(1).tolist()
         
     def check_coverage(self, comb, zeros, matrix_size):
         for element in comb: 
@@ -131,18 +140,22 @@ class HungarianMethodQuestion:
     
     def loop(self, matrix, matrix_size, count):
         combs, i = self.step_three(matrix, matrix_size)
+        self.path.append(('Step3', (combs, i, count)))
         if i == matrix_size:
             return [(matrix.copy(), count)]
 
         leaves = []
         for comb in combs:
             branched = self.step_four(comb, matrix.copy(), matrix_size)
+            self.path.append(('Step4', (branched, comb, count)))
             leaves.extend(self.loop(branched, matrix_size, count + 1))
         return leaves
     
     def hungarian_method(self, numbers, matrix_size):
         matrix = self.step_one(matrix_size, numbers)
+        self.path.append(('Step1', matrix))
         matrix = self.step_two(matrix)
+        self.path.append(('Step2', matrix))
         leaves = self.loop(matrix, matrix_size, 0)  # list of (matrix, count)
 
         all_assignments = []
@@ -150,6 +163,7 @@ class HungarianMethodQuestion:
 
         for m, c in leaves:
             assignments = self.step_five(m, matrix_size)
+            self.path.append(('Step5', (m, c, assignments)))
             all_assignments.extend(assignments)
             per_assignment_loops.extend([c] * len(assignments))
 
@@ -179,29 +193,34 @@ class HungarianMethodQuestion:
         view0 = [
             {
                 "type": "Text",
-                "content": f"Solve this simple Addition with values from {self.min} up to {self.max}",    
+                "content": f"Gegeben ist die folgende Distanzmatrix zweier Schemata, in der jeder Eintrag die Distanz zwischen einem Attribut aus Schema A ({', '.join(self.schemaA)}) und einem Attribut aus Schema B ({', '.join(self.schemaB)}) beschreibt:",    
             },
-        ]
-        
-        base["view1"] = [
+            {
+                "type": "MatrixInput",
+                "id": "start-matrix",
+                "title": "Distanzmatrix",
+                "rows": [[a] for a in self.schemaA],
+                "cols": [[b] for b in self.schemaB],
+                "values": [self.numbers[i:i+self.matrix_size] for i in range(0, len(self.numbers), self.matrix_size)]
+            },
             {
                 "type": "Text",
-                "content": f"What is {self.a} + {self.b}?",    
+                "content": f"Führen Sie den ersten Schritt der ungarischen Methode aus, indem Sie in jeder Zeile das kleinste Element bestimmen und dieses Minimum von allen Elementen der jeweiligen Zeile subtrahieren.",    
             },
             {
-              "type": "TextInput",
-              "id": "5",  
-            },
+                "type": "Text",
+                "content": f"{self.path}, {self.path[0]}, {self.path[0][1]}, {self.path[0][1][0,1]}",    
+            }
         ]
 
         base["lastView"] = [
             {
                 "type": "Text",
-                "content": f"Bye",    
-            },
+                "content": ""    
+            }
         ]
 
-        base["view1"] = view0 + base["view1"]
+        base["view1"] = view0
         return base
 
     # ---------------------------------------------------------------------
@@ -209,8 +228,13 @@ class HungarianMethodQuestion:
     # ---------------------------------------------------------------------
     def evaluate(self, user_input):
         results = {}
-        id="5"
-        results[id] = {"correct": user_input.get(id) == str(self.addition_data[0]["sumx"]),
-                    "expected": str(self.addition_data[0]["sumx"])}
+        step1 = self.path[0][1]
+        for row in range(self.matrix_size):
+            for col in range(self.matrix_size):
+                results[f'start-matrix:cell:{row},{col}'] = {
+                    "correct": float(user_input.get(f'start-matrix:cell:{row},{col}')) == float(step1[row,col]),
+                    "expected": float(step1[row,col])
+                }
+        print(results)
         return results
 

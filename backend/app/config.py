@@ -33,7 +33,7 @@ QUESTION_CONFIG = {
     },
 
     "hungarian_method": {
-        "class_path": "app.question_types.hungrian_method.HungarianMethodQuestion",
+        "class_path": "app.question_types.hungarian_method.HungarianMethodQuestion",
         "metadata": {
             "title": "Hungarian Method",
             "mode": ["steps", "exam"],
