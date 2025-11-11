@@ -18,7 +18,6 @@ DIFFICULTY_SETTINGS = {
 class KMeansQuestion:
 
     def __init__(self, seed=None, difficulty="easy"):
-        
         self.difficulty = difficulty.lower()
         config = DIFFICULTY_SETTINGS.get(self.difficulty, DIFFICULTY_SETTINGS["easy"])
 
