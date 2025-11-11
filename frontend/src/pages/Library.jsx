@@ -15,6 +15,7 @@ export default function Library() {
     { id: "kmeans", title: "K-Means Clustering", desc: "Cluster data points into groups." },
     { id: "dbscan", title: "DBSCAN", desc: "Practice the DBSCAN algorithm." },
     { id: "addition", title: "Simple Addition", desc: "Practice simple arithmetic." },
+    { id: "hungarian_method", title: "Hungarian Method", desc: "Practice thh Hungarian Method"}
   ];
 
   const generateRandomSeed = () => Math.floor(Math.random() * 1_000_000).toString();
