@@ -30,7 +30,6 @@ class HungarianMethodQuestion:
         self.schemaB = [b for a, b in self.pairs]
         random.shuffle(self.schemaB)
 
-        print('hello world')
         current_steps = -1
         while (current_steps != self.steps):
             self.path = []
@@ -38,7 +37,6 @@ class HungarianMethodQuestion:
             res = self.hungarian_method(self.numbers, self.matrix_size)
             current_steps = res[1]['max_depth']
             #self.seed += 1
-            print(f'Path: {self.path}')
         
         #self.seed = seed or random.randint(1, 999999)
         #random.seed(self.seed)

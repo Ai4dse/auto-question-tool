@@ -18,18 +18,19 @@ import "bootstrap/dist/css/bootstrap.min.css";
  * - Includes evaluation color feedback
  * - Uses Bootstrap for styling
  */
-function MatrixInputGrid({ el, idx, userInput, onChange }) {
+const normLabel = (x) => (Array.isArray(x) ? String(x[0] ?? "") : String(x ?? ""));
+
+function MatrixInputGrid({ el, idx, userInput, onChange, renderEvaluatedInput }) {
   const id = el.id || `matrix_${idx}`;
   const rows = el.rows || [];
   const cols = el.cols || [];
   const placeholders = el.values || [];
 
-  const norm = (x) => Array.isArray(x) ? String(x[0] ?? "") : String(x ?? "");
   const isRowStruck = (r) => !!userInput?.[`${id}:row:${r}`];
   const isColStruck = (c) => !!userInput?.[`${id}:col:${c}`];
   const cellKey = (r, c) => `${id}:cell:${r},${c}`;
 
-  // ✅ Seed userInput with placeholder values exactly once
+  // Seed userInput with placeholder values once per matrix identity/size
   useEffect(() => {
     for (let r = 0; r < rows.length; r++) {
       for (let c = 0; c < cols.length; c++) {
@@ -42,7 +43,7 @@ function MatrixInputGrid({ el, idx, userInput, onChange }) {
       }
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [id, rows.length, cols.length]); // run once per matrix identity/size
+  }, [id, rows.length, cols.length]);
 
   return (
     <div className="card mb-4 shadow-sm">
@@ -57,40 +58,40 @@ function MatrixInputGrid({ el, idx, userInput, onChange }) {
                 {cols.map((cLabel, cIdx) => {
                   const colStruck = isColStruck(cIdx);
                   return (
-                    <th key={`c-head-${cIdx}`} className={colStruck ? "text-decoration-line-through text-muted" : ""}>
-                      {norm(cLabel)}
+                    <th
+                      key={`c-head-${cIdx}`}
+                      className={colStruck ? "text-decoration-line-through text-muted" : ""}
+                    >
+                      {normLabel(cLabel)}
                     </th>
                   );
                 })}
-                <th className="text-center small text-muted"></th>
+                <th className="text-center small text-muted">Strike row</th>
               </tr>
             </thead>
 
             <tbody>
               {rows.map((rLabel, rIdx) => {
                 const rowStruck = isRowStruck(rIdx);
+
                 return (
-                  <tr key={`r-${rIdx}`} className={rowStruck ? "text-decoration-line-through text-muted" : ""}>
-                    <th className="text-center fw-semibold">{norm(rLabel)}</th>
+                  <tr
+                    key={`r-${rIdx}`}
+                    className={rowStruck ? "text-decoration-line-through text-muted" : ""}
+                  >
+                    <th className="text-center fw-semibold">{normLabel(rLabel)}</th>
 
                     {cols.map((_, cIdx) => {
                       const colStruck = isColStruck(cIdx);
-                      const key = cellKey(rIdx, cIdx);
-                      const current = userInput?.[key];
-                      const fallback = placeholders?.[rIdx]?.[cIdx];
-                      const value = current ?? (fallback !== undefined ? String(fallback) : "");
-
-                      // ✅ row OR col strike crosses out the cell
                       const strike = rowStruck || colStruck ? "text-decoration-line-through text-muted" : "";
+                      const key = cellKey(rIdx, cIdx);
+                      const seeded = placeholders?.[rIdx]?.[cIdx];
+                      const value = userInput?.[key] ?? (seeded !== undefined ? String(seeded) : "");
 
                       return (
                         <td key={`cell-${rIdx}-${cIdx}`} className={strike}>
-                          <input
-                            type="text"
-                            className="form-control form-control-sm"
-                            value={value}
-                            onChange={(e) => onChange(key, e.target.value)}
-                          />
+                          {/* pass fieldId + current value to your wrapper */}
+                          {renderEvaluatedInput(key, value)}
                         </td>
                       );
                     })}
@@ -101,7 +102,7 @@ function MatrixInputGrid({ el, idx, userInput, onChange }) {
                         className="form-check-input"
                         checked={!!userInput?.[`${id}:row:${rIdx}`]}
                         onChange={(e) => onChange(`${id}:row:${rIdx}`, e.target.checked)}
-                        aria-label={`Strike row ${norm(rLabel)}`}
+                        aria-label={`Strike row ${normLabel(rLabel)}`}
                       />
                     </td>
                   </tr>
@@ -111,7 +112,7 @@ function MatrixInputGrid({ el, idx, userInput, onChange }) {
 
             <tfoot>
               <tr>
-                <th className="small text-muted text-center"></th>
+                <th className="small text-muted text-center">Strike col</th>
                 {cols.map((_, cIdx) => (
                   <td key={`c-foot-${cIdx}`} className="text-center">
                     <input
@@ -119,7 +120,7 @@ function MatrixInputGrid({ el, idx, userInput, onChange }) {
                       className="form-check-input"
                       checked={!!userInput?.[`${id}:col:${cIdx}`]}
                       onChange={(e) => onChange(`${id}:col:${cIdx}`, e.target.checked)}
-                      aria-label={`Strike column ${norm(cols[cIdx])}`}
+                      aria-label={`Strike column ${normLabel(cols[cIdx])}`}
                     />
                   </td>
                 ))}
@@ -150,6 +151,8 @@ export default function LayoutRenderer({
   /** 🔹 Evaluated text input with color feedback */
   const renderEvaluatedInput = (fieldId, value = "") => {
     const evalResult = evaluationResults?.[fieldId];
+    console.log("[renderEvaluatedInput] fieldId:", fieldId, "value:", value, "eval:", evalResult);
+
     const isCorrect = evalResult?.correct;
     const expected = evalResult?.expected;
 
@@ -264,6 +267,7 @@ export default function LayoutRenderer({
             idx={idx}
             userInput={userInput}
             onChange={onChange}
+            renderEvaluatedInput={renderEvaluatedInput}
           />
         );
       case "MultipleChoice":
