@@ -19,6 +19,7 @@ export default function QuestionPage() {
   const [viewResults, setViewResults] = useState({});
   const [viewStatus, setViewStatus] = useState({});
   const [finished, setFinished] = useState(false);
+  const [reactiveTables, setReactiveTables] = useState({});
 
   useEffect(() => {
     if (!type) return;
@@ -31,9 +32,88 @@ export default function QuestionPage() {
         setViewResults({});
         setViewStatus({ view1: "idle" });
         setFinished(false);
+        setReactiveTables({});
       })
       .catch((err) => console.error("Error loading question:", err));
   }, [type, seed, difficulty]);
+
+  useEffect(() => {
+    if (!question) return;
+    if (type !== "relational_algebra") return;
+
+    const stmt = formData["0"] ?? "";
+    const seedToUse = question.seed || seed || "1234";
+    const difficultyToUse = question.difficulty || difficulty || "medium";
+
+    if (!stmt.trim()) {
+      setReactiveTables((prev) => ({
+        ...prev,
+        "0": {
+          columns: [],
+          rows: [],
+          tree: null,       
+          error: null,
+          status: "idle",
+        },
+      }));
+      return;
+    }
+
+    let cancelled = false;
+
+    const timeoutId = setTimeout(() => {
+      setReactiveTables((prev) => ({
+        ...prev,
+        "0": {
+          ...(prev["0"] || {}),
+          status: "loading",
+        },
+      }));
+
+      fetch(
+        `${API_URL}/question/${type}/preview?seed=${seedToUse}&difficulty=${difficultyToUse}`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ statement: stmt }),
+        }
+      )
+        .then((res) => res.json())
+        .then((data) => {
+          if (cancelled) return;
+
+          setReactiveTables((prev) => ({
+            ...prev,
+            "0": {
+              columns: data.columns || [],
+              rows: data.rows || [],
+              tree: data.tree || null,   
+              error: data.error || null,
+              status: "ready",
+            },
+          }));
+        })
+        .catch((err) => {
+          if (cancelled) return;
+          console.error("Preview error:", err);
+          setReactiveTables((prev) => ({
+            ...prev,
+            "0": {
+              columns: [],
+              rows: [],
+              tree: null,                  // 🔹 clear tree on error
+              error: "Preview request failed.",
+              status: "error",
+            },
+          }));
+        });
+    }, 600);
+
+    return () => {
+      cancelled = true;
+      clearTimeout(timeoutId);
+    };
+  }, [formData["0"], question, type, seed, difficulty]);
 
   const handleChange = (id, value) => setFormData((prev) => ({ ...prev, [id]: value }));
 
@@ -107,6 +187,7 @@ export default function QuestionPage() {
                 evaluationResults={results}
                 userInput={formData}
                 showExpected={status === "showingResults"}
+                reactiveTables={reactiveTables}
               />
 
               <button

@@ -1,5 +1,6 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState } from "react";
 import Plot from "react-plotly.js";
+import Tree from "react-d3-tree";
 import {
   ScatterChart,
   Scatter,
@@ -10,6 +11,133 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import "bootstrap/dist/css/bootstrap.min.css";
+
+const replaceOps = (value) => {
+  return value
+    .replace(/\\join/g, "⋈")
+    .replace(/\\proj/g, "π")     
+    .replace(/\\sele/g, "σ")
+    .replace(/\\diff/g, "−")           
+    .replace(/\\rename/g, "ρ")   
+};
+
+const NODE_OP_META = {
+  join: {
+    color: "#1f77b4",
+    symbol: "⋈",
+    label: "JOIN",
+  },
+  projection: {
+    color: "#2ca02c",
+    symbol: "π",
+    label: "PROJECTION",
+  },
+  selection: {
+    color: "#d62728",
+    symbol: "σ",
+    label: "SELECTION",
+  },
+  diff: {
+    color: "#9467bd",
+    symbol: "−",
+    label: "DIFFERENCE",
+  },
+  rename_attribute: {
+    color: "#ff7f0e",
+    symbol: "ρ",
+    label: "RENAME ATTRIBUTE",
+  },
+  rename_relation: {
+    color: "#ffde08ff",
+    symbol: "ρ",
+    label: "RENAME RELATION",
+  },
+};
+
+const NODE_RELATION_COLOR = "#555555"; // grey for relations like hoeren, Studierende, etc.
+
+function ColoredNode({ nodeDatum }) {
+  const rawName = String(nodeDatum?.name ?? "");
+
+  // detect operator keyword from first token, e.g. "join" from "join (A=B)"
+  const lower = rawName.toLowerCase();
+  const match = lower.match(/^[a-z_]+/);
+  const opKey = match && NODE_OP_META[match[0]] ? match[0] : null;
+
+  const isOp = !!opKey;
+  const meta = opKey ? NODE_OP_META[opKey] : null;
+
+  const fill = isOp ? meta.color : NODE_RELATION_COLOR;
+  const radius = isOp ? 58 : 42;
+
+  // split "join (Studierende.MatrNr=hoeren.MatrNr)" into title + detail
+  let title = rawName;
+  let detail = "";
+
+  const openIdx = rawName.indexOf("(");
+  const closeIdx = rawName.lastIndexOf(")");
+
+  if (openIdx !== -1 && closeIdx !== -1 && closeIdx > openIdx) {
+    title = rawName.slice(0, openIdx).trim();             // "join"
+    detail = rawName.slice(openIdx + 1, closeIdx).trim(); // "Studierende.MatrNr=hoeren.MatrNr"
+  }
+
+  const fontBase = {
+    fontFamily: '"Helvetica Neue", Arial, sans-serif',
+    letterSpacing: "0.4px",
+    stroke: "none",
+    fill: "#000",
+  };
+
+  return (
+    <g>
+      {/* Circle */}
+      <circle r={radius} fill={fill} stroke="#181717ff" strokeWidth={2.1} />
+
+      {isOp ? (
+        <>
+          {/* math-style symbol INSIDE the circle (⋈, π, σ, …) */}
+          <text
+            dy={17}
+            textAnchor="middle"
+            style={{ ...fontBase, fontSize: 64, }}
+          >
+            {meta.symbol}
+          </text>
+
+          {/* operator label below, e.g. JOIN / PROJECTION */}
+          <text
+            dy={radius + 36}
+            textAnchor="middle"
+            style={{ ...fontBase, fontSize: 30 }}
+          >
+            {meta.label}
+          </text>
+
+          {/* condition / detail below that, smaller */}
+          {detail && (
+            <text
+              dy={radius + 74}
+              textAnchor="middle"
+              style={{ ...fontBase, fontSize: 38 }}
+            >
+              {detail}
+            </text>
+          )}
+        </>
+      ) : (
+        // relations: name below the circle
+        <text
+          dy={radius + 44}
+          textAnchor="middle"
+          style={{ ...fontBase, fontSize: 40}}
+        >
+          {rawName}
+        </text>
+      )}
+    </g>
+  );
+}
 
 /**
  * LayoutRenderer
@@ -134,7 +262,6 @@ function MatrixInputGrid({ el, idx, userInput, onChange, renderEvaluatedInput })
   );
 }
 
-
 export default function LayoutRenderer({
   layout,
   activeView = "view1",
@@ -142,6 +269,7 @@ export default function LayoutRenderer({
   evaluationResults = {},
   userInput = {},
   showExpected = false,
+  reactiveTables = {},
 }) {
   if (!layout) return null;
 
@@ -150,36 +278,40 @@ export default function LayoutRenderer({
 
   /** 🔹 Evaluated text input with color feedback */
   const renderEvaluatedInput = (fieldId, value = "") => {
-    const evalResult = evaluationResults?.[fieldId];
-    console.log("[renderEvaluatedInput] fieldId:", fieldId, "value:", value, "eval:", evalResult);
+  const evalResult = evaluationResults?.[fieldId];
+  const isCorrect = evalResult?.correct;
+  const expected = evalResult?.expected;
 
-    const isCorrect = evalResult?.correct;
-    const expected = evalResult?.expected;
+  const bgClass =
+    evalResult === undefined
+      ? ""
+      : isCorrect
+      ? "bg-success-subtle"
+      : "bg-danger-subtle";
 
-    const bgClass =
-      evalResult === undefined
-        ? ""
-        : isCorrect
-        ? "bg-success-subtle"
-        : "bg-danger-subtle";
+  const handleChange = (e) => {
+    const raw = e.target.value;
+    const withUnicode = replaceOps(raw);
+    onChange(fieldId, withUnicode);
+  };
 
-    return (
-      <div className="mb-2">
-        <input
-          type="text"
-          name={fieldId}
-          className={`form-control form-control-sm ${bgClass}`}
-          onChange={(e) => onChange(fieldId, e.target.value)}
-          value={userInput?.[fieldId] ?? ""}
-          title={!isCorrect && expected ? `Expected: ${expected}` : ""}
-        />
-        {showExpected && !isCorrect && expected !== undefined && (
-          <small className="text-muted fst-italic">
-            Correct: {expected}
-          </small>
-        )}
-      </div>
-    );
+  return (
+    <div className="mb-2">
+      <input
+        type="text"
+        name={fieldId}
+        className={`form-control form-control-sm ${bgClass}`}
+        onChange={handleChange}
+        value={userInput?.[fieldId] ?? ""}
+        title={!isCorrect && expected ? `Expected: ${expected}` : ""}
+      />
+      {showExpected && !isCorrect && expected !== undefined && (
+        <small className="text-muted fst-italic">
+          Correct: {expected}
+        </small>
+      )}
+    </div>
+  );
   };
 
   /** 🔹 General renderer for all element types */
@@ -188,7 +320,7 @@ export default function LayoutRenderer({
       case "Text":
       case "text":
         return (
-          <p key={idx} className="mb-3">
+          <p key={idx} className="mb-3" style={{ whiteSpace: "pre-line" }}>
             {el.value || el.content}
           </p>
         );
@@ -224,6 +356,97 @@ export default function LayoutRenderer({
             </div>
           </div>
         );
+      case "ReactiveTree":
+      case "reactive_tree": {
+        const listenId = el.listenTo;
+        const data = reactiveTables?.[listenId] || {};
+        const { tree, error, status } = data;
+
+        console.log("REACTIVE TREE DATA", listenId, data);
+
+        return (
+          <div key={idx} className="card mb-4 shadow-sm">
+            <div className="card-body">
+              <h5 className="card-title mb-3">{el.label || "Execution Tree"}</h5>
+
+              {status === "loading" && <p className="text-muted">Parsing...</p>}
+              {error && <p className="text-danger">{error}</p>}
+
+              {tree && (
+                <div style={{ width: "200%", height: "600px" }}>
+                  <Tree
+                    data={[tree]}
+                    orientation="vertical"
+                    nodeSize={{ x: 750, y: 220 }}
+                    translate={{ x: 600, y: 50 }}
+                    zoom={0.4}
+                    renderCustomNodeElement={(rdProps) => <ColoredNode {...rdProps} />}
+                  />
+                </div>
+              )}
+
+              {!tree && !error && status !== "loading" && (
+                <p className="text-muted">No expression yet.</p>
+              )}
+            </div>
+          </div>
+        );
+      }
+      case "ReactiveTable":
+      case "reactive_table": {
+        const listenId = el.listenTo; // e.g. "0"
+        const data = reactiveTables?.[listenId] || {};
+        const { columns = [], rows = [], error, status } = data;
+
+        return (
+          <div key={idx} className="card mb-4 shadow-sm">
+            <div className="card-body">
+              <h5 className="card-title mb-3">
+                {el.label || el.title || "Result"}
+              </h5>
+
+              {status === "loading" && (
+                <p className="text-muted small mb-2">Evaluating...</p>
+              )}
+
+              {error && (
+                <p className="text-danger small mb-2">
+                  {error}
+                </p>
+              )}
+
+              {!error && rows.length === 0 && status !== "loading" && (
+                <p className="text-muted small">
+                  No tuples yet (expression incomplete or empty result).
+                </p>
+              )}
+
+              {rows.length > 0 && (
+                <div className="table-responsive">
+                  <table className="table table-bordered table-sm align-middle">
+                    <thead className="table-light">
+                      <tr>
+                        {columns.map((c, i) => (
+                          <th key={i}>{c}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {rows.map((row, rIdx) => (
+                        <tr key={rIdx}>
+                          {row.map((cell, cIdx) => (
+                            <td key={cIdx}>{String(cell)}</td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
+            </div>
+          </div>
+        );
+      }
       case "TableInput":
       case "table_input":
         return (

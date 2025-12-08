@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, Query
+from fastapi import FastAPI, Request, Query, HTTPException
 from mongoengine import connect
 from fastapi.middleware.cors import CORSMiddleware
 from .generator_loader import load_question_generators
@@ -95,3 +95,27 @@ async def evaluate_question(
         "results": result
     }
 
+@app.post("/question/{type_name}/preview")
+async def preview_question(
+    type_name: str,
+    request: Request,
+    seed: int = Query(...),
+    difficulty: str = Query("easy")
+):
+    if type_name not in question_generators:
+        raise HTTPException(status_code=404, detail="Question type not found")
+
+    base_config = question_generators[type_name]
+    QuestionClass = base_config["class"]
+
+    payload = await request.json()
+    # e.g. { "statement": "..." } or more general later
+    statement = payload.get("statement", "")
+
+    q = QuestionClass(seed=seed, difficulty=difficulty)
+
+    if not hasattr(q, "preview"):
+        # not all question types must support preview
+        return {"columns": [], "rows": [], "error": "Preview not supported"}
+
+    return q.preview(statement)

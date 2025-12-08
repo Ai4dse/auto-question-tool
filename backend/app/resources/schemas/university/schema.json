@@ -1,0 +1,88 @@
+{
+  "schema_name": "universitaet",
+  "delimiter": ";",
+  "relations": {
+    "Profs": {
+      "filename": "Profs.csv",
+      "primary_key": ["PersNr"],
+      "attributes": ["PersNr", "Name", "Rang", "Raum"]
+    },
+    "Studierende": {
+      "filename": "Studierende.csv",
+      "primary_key": ["MatrNr"],
+      "attributes": ["MatrNr", "Name", "Semester"]
+    },
+    "Vorlesungen": {
+      "filename": "Vorlesungen.csv",
+      "primary_key": ["VorlNr"],
+      "attributes": ["VorlNr", "Titel", "SWS", "gelesen_von"]
+    },
+    "hoeren": {
+      "filename": "hoeren.csv",
+      "primary_key": ["MatrNr", "VorlNr"],
+      "attributes": ["MatrNr", "VorlNr"]
+    },
+    "pruefen": {
+      "filename": "pruefen.csv",
+      "primary_key": ["MatrNr", "VorlNr", "PersNr"],
+      "attributes": ["MatrNr", "VorlNr", "PersNr", "Note"]
+    },
+    "voraussetzen": {
+      "filename": "voraussetzen.csv",
+      "primary_key": ["Vorgaenger", "Nachfolger"],
+      "attributes": ["Vorgaenger", "Nachfolger"]
+    },
+    "Assistierende": {
+      "filename": "Assistierende.csv",
+      "primary_key": ["PersNr"],
+      "attributes": ["PersNr", "Name", "Fachgebiet", "Boss"]
+    }
+  },
+  "foreign_keys": [
+    {
+      "name": "Vorlesungen_Profs",
+      "from": { "relation": "Vorlesungen", "attributes": ["gelesen_von"] },
+      "to":   { "relation": "Profs",        "attributes": ["PersNr"] }
+    },
+    {
+      "name": "Hoeren_Studierende",
+      "from": { "relation": "hoeren", "attributes": ["MatrNr"] },
+      "to":   { "relation": "Studierende", "attributes": ["MatrNr"] }
+    },
+    {
+      "name": "Hoeren_Vorlesungen",
+      "from": { "relation": "hoeren", "attributes": ["VorlNr"] },
+      "to":   { "relation": "Vorlesungen", "attributes": ["VorlNr"] }
+    },
+    {
+      "name": "Pruefen_Studierende",
+      "from": { "relation": "pruefen", "attributes": ["MatrNr"] },
+      "to":   { "relation": "Studierende", "attributes": ["MatrNr"] }
+    },
+    {
+      "name": "Pruefen_Vorlesungen",
+      "from": { "relation": "pruefen", "attributes": ["VorlNr"] },
+      "to":   { "relation": "Vorlesungen", "attributes": ["VorlNr"] }
+    },
+    {
+      "name": "Pruefen_Profs",
+      "from": { "relation": "pruefen", "attributes": ["PersNr"] },
+      "to":   { "relation": "Profs", "attributes": ["PersNr"] }
+    },
+    {
+      "name": "Voraussetzen_Vorlesungen_Vorgaenger",
+      "from": { "relation": "voraussetzen", "attributes": ["Vorgaenger"] },
+      "to":   { "relation": "Vorlesungen", "attributes": ["VorlNr"] }
+    },
+    {
+      "name": "Voraussetzen_Vorlesungen_Nachfolger",
+      "from": { "relation": "voraussetzen", "attributes": ["Nachfolger"] },
+      "to":   { "relation": "Vorlesungen", "attributes": ["VorlNr"] }
+    },
+    {
+      "name": "Assistierende_Profs",
+      "from": { "relation": "Assistierende", "attributes": ["Boss"] },
+      "to":   { "relation": "Profs",         "attributes": ["PersNr"] }
+    }
+  ]
+}

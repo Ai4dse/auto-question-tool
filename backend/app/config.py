@@ -41,5 +41,16 @@ QUESTION_CONFIG = {
             "desc": "Practice the hungarian_method.",
             "tags": ["arithmetic"]
         }
+    },
+
+    "relational_algebra": {
+        "class_path": "app.question_types.relational_algebra.RelationalAlgebra",
+        "metadata": {
+            "title": "Relational Algebra",
+            "mode": ["steps", "exam"],
+            "difficulty": ["easy", "medium", "hard"],
+            "desc": "Practice relational algebra.",
+            "tags": ["arithmetic"]
+        }
     }
 }
