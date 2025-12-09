@@ -44,6 +44,11 @@ def prepare_predicate(df, predicate):
     return predicate
 
 def rename_relation(df, new_name):
+    new_name = str(new_name).strip()
+    if not new_name:
+        raise ValueError(
+            "Der neue Relationsname darf nicht leer sein."
+        )
     new_cols = {}
     for col in df.columns:
         if "." in col:
@@ -52,6 +57,10 @@ def rename_relation(df, new_name):
     return df.rename(columns=new_cols)
 
 def rename_attribute(df, attribute, new_name):
+    if attribute not in df.columns:
+        raise ValueError(
+            f'Das Attribut "{attribute}" existiert in der Relation nicht und kann daher nicht umbenannt werden.'
+        )
     new_cols = {attribute: new_name}
     return df.rename(columns=new_cols)
 
@@ -63,10 +72,26 @@ def join(df1, df2, predicate):
 def selection(df, predicate):
     predicate = parse_predicate(predicate)
     predicate = prepare_predicate(df, predicate)
-    mask = eval(predicate, {"df": df})
+    try:
+        mask = eval(predicate, {"df": df})
+    except Exception as e:
+        raise ValueError(
+            f'Ungültiges Selektionsprädikat: "{predicate}". Bitte prüfen Sie die Schreibweise und die verwendeten Attribute.'
+        ) from e
+
+    if not isinstance(mask, pd.Series) or mask.dtype != bool:
+        raise ValueError(
+            "Das Selektionsprädikat muss einen booleschen Ausdruck ergeben."
+        )
+
     return df[mask]
 
 def projection(df, attributes):
+    missing = [a for a in attributes if a not in df.columns]
+    if missing:
+        raise ValueError(
+            f'Die folgenden Attribute existieren in dieser Relation nicht und können nicht projiziert werden: "{", ".join(missing)}"'
+        )
     return df[attributes].drop_duplicates().copy()
 
 def diff(df1, df2):
@@ -121,6 +146,8 @@ def parse_selection(statement):
         m = matches[-1] #begin with last match
         start, end = m.span()
         parentheses_block = get_matching_close_paren(statement[end-1:]) #returns parentheses block, e.g. \selection{...}( A (B)) --> ( A (B))
+        if parentheses_block is None:
+            raise ValueError("Fehler bei SELECTION: Die Klammern nach \\selection{...} sind nicht korrekt geschlossen.")
         predicate = m.group(1)
         replacement = f'selection({parentheses_block}, "{predicate}")'
         statement = statement[:start] + replacement + statement[end-1+len(parentheses_block):]
@@ -135,6 +162,8 @@ def parse_projection(statement):
         m = matches[-1] #begin with last match
         start, end = m.span()
         parentheses_block = get_matching_close_paren(statement[end-1:])
+        if parentheses_block is None:
+            raise ValueError("Fehler bei PROJECTION: Die Klammern nach \\projection{...} sind nicht korrekt geschlossen.")
         predicate = m.group(1)
         attrs = [f'{x.strip()}' for x in predicate.split(',')]
         replacement = f'projection({parentheses_block}, {attrs})'
@@ -161,6 +190,8 @@ def parse_join(statement):
             start, end = m.span()
             left = get_matching_open_paren(statement[:start])
             right = get_matching_close_paren(statement[end-1:])
+            if right is None:
+                raise ValueError("Fehler bei JOIN: Die Klammern nach \\join{...} sind nicht korrekt geschlossen.")
             predicate = m.group(1)
             replacement = f'join({left}, {right}, "{predicate}")'
             statement = statement[:start - len(left)] + replacement + statement[end - 1 + len(right):]
@@ -175,7 +206,11 @@ def parse_rename_relation(statement):
         m = matches[-1] #begin with last match
         start, end = m.span()
         right = get_matching_close_paren(statement[end-1:])
+        if right is None:
+            raise ValueError("Fehler beim RENAME RELATION: Die Klammern sind nicht korrekt geschlossen.")
         new_name = m.group(1)
+        if not new_name:
+            raise ValueError("Der Relations-RENAME-Operator erwartet einen neuen Relationsnamen: \\_rename_relation{NeuerName}(Relation).")
         replacement = f'rename_relation({right}, "{new_name}")'
         statement = statement[:start] + replacement + statement[end-1+len(right):]
     return statement
@@ -190,6 +225,8 @@ def parse_diff(statement):
         start, end = m.span()
         left = get_matching_open_paren(statement[:start])
         right = get_matching_close_paren(statement[end-1:])
+        if right is None:
+            raise ValueError("Fehler bei DIFFERENZ: Die Klammern nach \\diff{...} sind nicht korrekt geschlossen.")
         replacement = f'diff({left}, {right})'
         statement = statement[:start-len(left)] + replacement + statement[end-1+len(right):]
     return statement
@@ -203,8 +240,12 @@ def parse_rename_attribute(statement):
         m = matches[-1] #begin with last match
         start, end = m.span()
         right = get_matching_close_paren(statement[end-1:])
+        if right is None:
+            raise ValueError("Fehler beim RENAME ATTRIBUTE: Die Klammern sind nicht korrekt geschlossen.")
         predicate = m.group(1)
         attributes = [p.strip() for p in predicate.split(",") if p.strip()]
+        if len(attributes) != 2:
+            raise ValueError("Der Attribut-RENAME-Operator erwartet genau zwei Attribute: \\rename_attribute{altesAttribut, neuesAttribut}.")
         old_name = attributes[0]
         new_name = attributes[1]
         replacement = f'rename_attribute({right}, "{old_name}", "{new_name}")'
@@ -392,7 +433,7 @@ def disambiguate_rename(s: str) -> str:
         elif len(parts) ==1:
             op = r"\_rename_relation"
         else:
-            print('Rename nimmt entweder ein oder zwei Argumente entgegen!')
+            raise ValueError("Der RENAME-Operator erwartet entweder ein Argument (Relation umbenennen) oder zwei Argumente (Attribut umbenennen).")
         return f"{op}{space}{{{inner}}}"
     
     return re.sub(pattern, repl, s)
@@ -409,9 +450,14 @@ def execute_relational_algebra(dfs, statement):
         "rename_attribute": rename_attribute,
         "dfs": dfs,
     }
+    try:
+        statement = normalize(statement)
+        statement = parse_statement(statement, relations)
+        tree = build_tree_from_statement(statement)
+        result = eval(statement, {"__builtins__": {}}, env)
+    except ValueError:
+        raise # schon "schöne" Fehler, einfach durchreichen
+    except Exception as e:
+        raise ValueError("Bei der Auswertung des relationalen Algebra-Ausdrucks ist ein Fehler aufgetreten. Bitte prüfen Sie die Eingabe.") from e
 
-    statement = normalize(statement)
-    print('after normalization: ', statement)
-    statement = parse_statement(statement, relations)
-    tree = build_tree_from_statement(statement)
-    return eval(statement, {"__builtins__": {}}, env), tree
+    return result, tree

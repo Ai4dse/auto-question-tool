@@ -1,0 +1,44 @@
+{
+    "exercises": [
+        {
+            "name": "exercise1",
+            "schema": "university",
+            "text": "Geben Sie all Vorlesungen (Nummer und Titel) an, die der Studierende Xenokrates gehört hat.",
+            "answer": "π{Vorlesungen.VorlNr,Vorlesungen.Titel}(Vorlesungen⋈{Vorlesungen.VorlNr=hoeren.VorlNr}(hoeren⋈{hoeren.MatrNr=Studierende.MatrNr}(σ{Studierende.Name='Xenokrates'}(Studierende))))",
+            "result_path": "exercise1.csv",
+            "difficulty": "easy"
+        },
+        {
+            "name": "exercise2",
+            "schema": "university",
+            "text": "Geben Sie die Titel der direkten Voraussetzungen für die Vorlesung Wissenschaftstheorie an.",
+            "answer": "π{V2.Titel}(ρ{V2}(Vorlesungen)⋈{V2.VorlNr=voraussetzen.Vorgaenger}(voraussetzen⋈{V1.VorlNr=voraussetzen.Nachfolger}(σ{V1.Titel='Wissenschaftstheorie'}(ρ{V1}(Vorlesungen)))))",
+            "result_path": "exercise2.csv",
+            "difficulty": "medium"
+        },
+        {
+            "name": "exercise3",
+            "schema": "university",
+            "text": "Geben Sie Paare von Studierenden(-Namen) an, die sich aus der Vorlesung Grundzüge kennen.",
+            "answer": "π{s1.Name,s2.Name}(σ{Vorlesungen.Titel='Grundzüge'}(Vorlesungen)⋈{Vorlesungen.VorlNr=h1.VorlNr}(ρ{s1}(Studierende)⋈{(s1.MatrNr=h1.MatrNr) AND (s1.MatrNr!=s2.MatrNr)}(ρ{h1}(hoeren)⋈{h1.VorlNr=h2.VorlNr}(ρ{h2}(hoeren)⋈{s2.MatrNr=h2.MatrNr}(ρ{s2}(Studierende))))))",
+            "result_path": "exercise3.csv",
+            "difficulty": "hard"
+        },
+        {
+            "name": "exercise4",
+            "schema": "university",
+            "text": "Finden Sie die Assistierenden (Nummer, Name) von Profs, die den Studierenden Fichte unterrichtet haben, z.B. als potentielle Betreuende seiner Diplomarbeit.",
+            "answer": "π{Assistierende.Name, Assistierende.PersNr}((Assistierende⋈{Assistierende.Boss=Vorlesungen.gelesen_von}(Vorlesungen))⋈{Vorlesungen.VorlNr=hoeren.VorlNr}(π{hoeren.VorlNr}(σ{Studierende.Name='Fichte'}(Studierende)⋈{Studierende.MatrNr=hoeren.MatrNr}(hoeren))))",
+            "result_path": "exercise4.csv",
+            "difficulty": "medium"
+        },
+        {
+            "name": "exercise5",
+            "schema": "university",
+            "text": "Finden Sie die Studierenden, die Vorlesungen hören (bzw. gehört haben), für die ihnen die direkten Voraussetzungen fehlen.",
+            "answer": "ρ{voraussetzen.Vorgaenger, vorraussetzen.VorlNr}(π{hoeren.MatrNr, voraussetzen.Vorgaenger}(hoeren⋈{hoeren.VorlNr=voraussetzen.Nachfolger}(voraussetzen)))−{}(hoeren)⋈{hoeren.MatrNr=Studierende.MatrNr}(Studierende)",
+            "result_path": "exercise5.csv",
+            "difficulty": "hard"
+        }
+    ]
+}

@@ -87,7 +87,10 @@ async def evaluate_question(
 
     q = QuestionClass(seed=seed, difficulty=difficulty)
 
-    result = q.evaluate(user_input)
+    try:
+        result = q.evaluate(user_input)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
 
     return {
         "seed": seed,

@@ -20,14 +20,17 @@ class RelationalAlgebra:
         np.random.seed(self.seed)
 
         #Aufgabenauswahl
-        out = './app/resources/schemas/university'
-        with open(f'{out}/exercises/exercises.json', 'r') as f:
-            exercises = json.load(f)
-            self.exercise = random.choice(exercises['exercises'])
+        with open('./app/resources/relational_algebra_exercises/exercises.json', 'r') as f:
+            exercises = json.load(f)['exercises']
+        
+        filtered = [ex for ex in exercises if ex["difficulty"] == difficulty]
+        self.exercise = random.choice(filtered)
 
-        self.exercise_res = pd.read_csv(f'{out}/exercises/{self.exercise['result_path']}', index_col=0)
-        _, dfs = load_schema(out)
+        _, dfs = load_schema(f'./app/resources/schemas/{self.exercise["schema"]}/')
+        #_, dfs = load_schema(f'./app/resouces/schemas/university')
         self.dfs = dfs
+        df = pd.read_csv(f'./app/resources/relational_algebra_exercises/{self.exercise['result_path']}', index_col=0)
+        self.exercise_res = df
 
     def generate(self):
         base = {}
@@ -38,7 +41,7 @@ class RelationalAlgebra:
                 "tables": [
                     {
                         "title": name,
-                        "columns": list(df.columns),
+                        "columns": [c.split(".", 1)[1] for c in df.columns],
                         "rows": df.values.tolist()[:2],  # nur erste 2 Zeilen
                     }
                     for name, df in self.dfs.items()
@@ -107,13 +110,18 @@ class RelationalAlgebra:
     def evaluate(self, user_input):
         results = {}
         statement = user_input.get('0')
-        res_df, execution_string= execute_relational_algebra(self.dfs, statement)
+        try:
+            res_df, execution_string= execute_relational_algebra(self.dfs, statement)
+        except:
+            results['0'] = {"correct": False, "expected": self.exercise['answer']}
+            return results
 
         def df_equal_unordered(a, b):
             if set(a.columns) != set(b.columns):
                 return False
-            a2 = a.sort_values(by=list(a.columns)).reset_index(drop=True)
-            b2 = b.sort_values(by=list(b.columns)).reset_index(drop=True)
+            cols = sorted(a.columns)
+            a2 = a[cols].sort_values(by=cols).reset_index(drop=True)
+            b2 = b[cols].sort_values(by=cols).reset_index(drop=True)
             return a2.equals(b2)
     
         is_identical = df_equal_unordered(res_df, self.exercise_res)

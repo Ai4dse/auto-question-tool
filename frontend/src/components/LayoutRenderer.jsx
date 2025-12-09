@@ -16,7 +16,7 @@ const replaceOps = (value) => {
   return value
     .replace(/\\join/g, "⋈{}")
     .replace(/\\proj/g, "π{}")     
-    .replace(/\\sele/g, "σ{}")
+    .replace(/\\sel/g, "σ{}")
     .replace(/\\diff/g, "−{}")           
     .replace(/\\rename/g, "ρ{}")   
 };
