@@ -14,11 +14,11 @@ import "bootstrap/dist/css/bootstrap.min.css";
 
 const replaceOps = (value) => {
   return value
-    .replace(/\\join/g, "⋈")
-    .replace(/\\proj/g, "π")     
-    .replace(/\\sele/g, "σ")
-    .replace(/\\diff/g, "−")           
-    .replace(/\\rename/g, "ρ")   
+    .replace(/\\join/g, "⋈{}")
+    .replace(/\\proj/g, "π{}")     
+    .replace(/\\sele/g, "σ{}")
+    .replace(/\\diff/g, "−{}")           
+    .replace(/\\rename/g, "ρ{}")   
 };
 
 const NODE_OP_META = {
@@ -53,6 +53,15 @@ const NODE_OP_META = {
     label: "RENAME RELATION",
   },
 };
+
+const OP_SYMBOL_COLORS = {
+  "⋈": NODE_OP_META.join.color,
+  "π": NODE_OP_META.projection.color,
+  "σ": NODE_OP_META.selection.color,
+  "−": NODE_OP_META.diff.color,
+  "ρ": NODE_OP_META.rename_attribute.color,
+};
+
 
 const NODE_RELATION_COLOR = "#555555"; // grey for relations like hoeren, Studierende, etc.
 
@@ -137,6 +146,110 @@ function ColoredNode({ nodeDatum }) {
       )}
     </g>
   );
+}
+
+function renderMathLike(text) {
+  const parts = [];
+  const regex = /{([^}]*)}/g; // findet {...}
+  let lastIdx = 0;
+  let match;
+  let key = 0;
+
+  // Operatoren, die hervorgehoben werden sollen
+  const opRegex = /([⋈πσρ−])/g;
+
+  // Plain-Text-Abschnitt mit farbigen Operatoren rendern
+  const renderPlainSegment = (segment) => {
+    if (!segment) return null;
+
+    const subParts = [];
+    let last = 0;
+    let m;
+    let subKey = 0;
+
+    while ((m = opRegex.exec(segment)) !== null) {
+      // Text vor dem Operator
+      if (m.index > last) {
+        subParts.push(
+          <span key={`plain-${key}-${subKey++}`}>
+            {segment.slice(last, m.index)}
+          </span>
+        );
+      }
+
+      const symbol = m[1];
+      const color = OP_SYMBOL_COLORS[symbol] || "#000";
+
+      // Der Operator selbst – groß, fett, farbig
+      subParts.push(
+        <span
+          key={`op-${key}-${subKey++}`}
+          style={{
+            fontSize: "1.35em",
+            marginRight: "2px",
+            color,
+          }}
+        >
+          {symbol}
+        </span>
+      );
+
+      last = opRegex.lastIndex;
+    }
+
+    // Rest hinter dem letzten Operator
+    if (last < segment.length) {
+      subParts.push(
+        <span key={`plain-tail-${key}-${subKey++}`}>
+          {segment.slice(last)}
+        </span>
+      );
+    }
+
+    return subParts;
+  };
+
+  // Haupt-Loop: Text in Plain-Parts + {…}-Parts zerlegen
+  while ((match = regex.exec(text)) !== null) {
+    // Plain-Text vor {…}
+    if (match.index > lastIdx) {
+      const segment = text.slice(lastIdx, match.index);
+      parts.push(
+        <React.Fragment key={key++}>
+          {renderPlainSegment(segment)}
+        </React.Fragment>
+      );
+    }
+
+    // Inhalt in {…} als graues, kleineres Subscript
+    parts.push(
+      <sub
+        key={key++}
+        style={{
+          fontSize: "0.75em",
+          color: "#666",
+          verticalAlign: "sub",
+          fontWeight: 400,
+        }}
+      >
+        {match[1]}
+      </sub>
+    );
+
+    lastIdx = regex.lastIndex;
+  }
+
+  // Rest nach dem letzten {…}
+  if (lastIdx < text.length) {
+    const segment = text.slice(lastIdx);
+    parts.push(
+      <React.Fragment key={key++}>
+        {renderPlainSegment(segment)}
+      </React.Fragment>
+    );
+  }
+
+  return parts;
 }
 
 /**
@@ -262,6 +375,36 @@ function MatrixInputGrid({ el, idx, userInput, onChange, renderEvaluatedInput })
   );
 }
 
+function DropdownSection({ title, children, defaultOpen = false }) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  const toggle = () => setIsOpen((o) => !o);
+
+  return (
+    <div className="card mb-3 shadow-sm">
+      {/* Header-Zeile mit Titel + Pfeil */}
+      <button
+        type="button"
+        className="btn btn-link w-100 text-start d-flex justify-content-between align-items-center px-3 py-2"
+        onClick={toggle}
+        style={{ textDecoration: "none" }}
+      >
+        <span className="fw-semibold">{title}</span>
+        <span className="ms-2">
+          {isOpen ? "▾" : "▸"}
+        </span>
+      </button>
+
+      {/* Inhalt nur zeigen, wenn isOpen */}
+      {isOpen && (
+        <div className="card-body pt-2">
+          {children}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function LayoutRenderer({
   layout,
   activeView = "view1",
@@ -277,7 +420,9 @@ export default function LayoutRenderer({
   const header = layout.header;
 
   /** 🔹 Evaluated text input with color feedback */
-  const renderEvaluatedInput = (fieldId, value = "") => {
+  const renderEvaluatedInput = (fieldId, value = "", options = {}) => {
+  const { asTextarea = false, rows = 4 } = options;
+
   const evalResult = evaluationResults?.[fieldId];
   const isCorrect = evalResult?.correct;
   const expected = evalResult?.expected;
@@ -291,20 +436,27 @@ export default function LayoutRenderer({
 
   const handleChange = (e) => {
     const raw = e.target.value;
-    const withUnicode = replaceOps(raw);
+    const withUnicode = replaceOps(raw); // \\join -> ⋈{} etc., auch über Zeilenumbrüche
     onChange(fieldId, withUnicode);
+  };
+
+  const commonProps = {
+    name: fieldId,
+    className: `form-control form-control-sm ${bgClass}`,
+    onChange: handleChange,
+    value: userInput?.[fieldId] ?? "",
+    title: !isCorrect && expected ? `Expected: ${expected}` : "",
+    style: { fontFamily: "monospace", whiteSpace: "pre" },
   };
 
   return (
     <div className="mb-2">
-      <input
-        type="text"
-        name={fieldId}
-        className={`form-control form-control-sm ${bgClass}`}
-        onChange={handleChange}
-        value={userInput?.[fieldId] ?? ""}
-        title={!isCorrect && expected ? `Expected: ${expected}` : ""}
-      />
+      {asTextarea ? (
+        <textarea {...commonProps} rows={rows} />
+      ) : (
+        <input type="text" {...commonProps} />
+      )}
+
       {showExpected && !isCorrect && expected !== undefined && (
         <small className="text-muted fst-italic">
           Correct: {expected}
@@ -312,7 +464,7 @@ export default function LayoutRenderer({
       )}
     </div>
   );
-  };
+};
 
   /** 🔹 General renderer for all element types */
   const renderElement = (el, idx) => {
@@ -356,6 +508,78 @@ export default function LayoutRenderer({
             </div>
           </div>
         );
+      case "Dropdown":
+      case "dropdown": {
+        // el.children ist ein Array von "normalen" Layout-Elementen
+        const childrenEls = el.children || [];
+
+        return (
+          <DropdownSection
+            key={idx}
+            title={el.title || el.label || "Details"}
+            defaultOpen={!!el.defaultOpen}
+          >
+            {Array.isArray(childrenEls)
+              ? childrenEls.map((child, cIdx) =>
+                  renderElement(child, `${idx}-${cIdx}`)
+                )
+              : null}
+          </DropdownSection>
+        );
+      }
+      case "SchemaGrid":
+      case "schema_grid": {
+        const tables = el.tables || [];
+
+        return (
+          <div
+            key={idx}
+            className="row row-cols-1 row-cols-md-2 row-cols-lg-2 g-3 mb-4"
+          >
+            {tables.map((tbl, tIdx) => (
+              <div className="col" key={tIdx}>
+                <div className="card h-100 shadow-sm">
+                  <div className="card-body">
+                    <h5 className="card-title mb-3">
+                      {tbl.title || tbl.label || "Table"}
+                    </h5>
+
+                    <div className="table-responsive">
+                      <table className="table table-bordered table-sm align-middle mb-0">
+                        <thead className="table-light">
+                          <tr>
+                            {tbl.columns.map((col, i) => (
+                              <th key={i} className="small">
+                                {col}
+                              </th>
+                            ))}
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {tbl.rows.map((row, rIdx) => (
+                            <tr key={rIdx}>
+                              {row.map((cell, cIdx) => (
+                                <td key={cIdx} className="small">
+                                  {String(cell)}
+                                </td>
+                              ))}
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    {/* Optional: Hinweis, dass gekürzt wurde */}
+                    <p className="text-muted small mt-2 mb-0">
+                      (nur Beispiel-Tupel angezeigt)
+                    </p>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      }
       case "ReactiveTree":
       case "reactive_tree": {
         const listenId = el.listenTo;
@@ -493,6 +717,65 @@ export default function LayoutRenderer({
             renderEvaluatedInput={renderEvaluatedInput}
           />
         );
+      case "ExpressionInput":
+      case "expression_input": {
+        const fieldId = el.id;
+        const value = userInput?.[fieldId] ?? el.default ?? "";
+        const evalResult = evaluationResults?.[fieldId];
+        const isCorrect = evalResult?.correct;
+        const expected = evalResult?.expected;
+
+        const bgClass =
+          evalResult === undefined
+            ? ""
+            : isCorrect
+            ? "bg-success-subtle"
+            : "bg-danger-subtle";
+
+        const handleChange = (e) => {
+          const raw = e.target.value;
+          const withUnicode = replaceOps(raw);
+          onChange(fieldId, withUnicode);
+        };
+
+        return (
+          <div key={idx} className="mb-3">
+            <label className="form-label fw-semibold">{el.label}</label>
+
+            {/* Mehrzeiliges Eingabefeld */}
+            <textarea
+              rows={el.rows || 5}
+              className={`form-control ${bgClass}`}
+              value={value}
+              onChange={handleChange}
+              style={{
+                fontFamily: "monospace",
+                whiteSpace: "pre-wrap",
+              }}
+            />
+
+            {/* Überschrift über der gerenderten Ansicht */}
+            <p className="mt-2 mb-1 fw-semibold">
+              Relationaler Algebra Ausdruck (gerendert):
+            </p>
+
+            {/* Math-Style Preview */}
+            <div
+              className="p-2 border rounded bg-light"
+              style={{
+                fontSize: "1.2em",       // alles etwas größer
+                whiteSpace: "pre-wrap",
+              }}
+            >
+              {renderMathLike(value)}
+            </div>
+
+            {showExpected && !isCorrect && expected !== undefined && (
+              <small className="text-muted fst-italic">Correct: {expected}</small>
+            )}
+          </div>
+        );
+      }
       case "MultipleChoice":
       case "multiple_choice":
         return (
