@@ -1,0 +1,138 @@
+[
+  {
+    "id": "relational_algebra",
+    "issues": ["none"],
+    "description": "Construct a relational algebra expression for a Dataset",
+    "completed": true
+  },
+  {
+    "id": "dbscan",
+    "issues": ["none"],
+    "description": "Mark Border Core and Noise Ponts in a 2d Data distribution with dbscan",
+    "completed": false
+  },
+  {
+    "id": "kmeans",
+    "issues": ["none"],
+    "description": "Compute Centroids and cluster distributions for multiple k means iterations",
+    "completed": true
+  },
+  {
+    "id": "hungarian_method",
+    "issues": ["none"],
+    "description": "Match terms using the hungarian method",
+    "completed": false
+  }
+  ,
+  {
+    "id": " term_document_incidence_matrix",
+    "issues": ["none"],
+    "description": "complete a Term-DocumentIncidenceMatrix",
+    "completed": false
+  }
+  ,
+  {
+    "id": "inverted_index",
+    "issues": ["none"],
+    "description": "build an inverted index for a given document set",
+    "completed": false
+  }
+  ,
+  {
+    "id": "positional_index",
+    "issues": ["none"],
+    "description": "build an positional index for a given document set",
+    "completed": false
+  }
+   ,
+  {
+    "id": "similarity_measures",
+    "issues": ["none"],
+    "description": "calculate Jaccard and tfidf for given document query pairs",
+    "completed": false
+  }
+   ,
+  {
+    "id": "er_cardinalitys_keys",
+    "issues": ["none"],
+    "description": "complete er diagramms by adding according min max or cardinality notation and marking ",
+    "completed": false
+  }
+   ,
+  {
+    "id": "SQL",
+    "issues": ["none"],
+    "description": "build SQL queries for a given schema",
+    "completed": false
+  }
+   ,
+  {
+    "id": "key_candidates_and_fd",
+    "issues": ["none"],
+    "description": "calculate for a set of Functional Dependencys key candidates",
+    "completed": false
+  }
+  ,
+  {
+    "id": "synthesealgorithmus",
+    "issues": ["none"],
+    "description": "anwenden der Kanonischen überdeckung und ggf. ein Relationenschema erzeugen und anschließend Relationale Schema vervollständigen und vereinfachen",
+    "completed": false
+  }
+  ,
+  {
+    "id": "kanonische_ueberdeckung",
+    "issues": ["none"],
+    "description": "i. Links reduktion ii.Rechts reduktion iii. Entfernen von FDs mit leerer Menge auf der rechten Seite iv. Zusammen fassen der FDs mit gleichen linken Seiten",
+    "completed": false
+  }
+  ,
+  {
+    "id": "apriori_algorithmus",
+    "issues": ["none"],
+    "description": "find most common subsets among transaction list",
+    "completed": false
+  }
+  ,
+  {
+    "id": "fp_growth",
+    "issues": ["none"],
+    "description": "find most common subsets among transaction list",
+    "completed": false
+  }
+  ,
+  {
+    "id": "agnes",
+    "issues": ["none"],
+    "description": "find clusters with a distance matrix utilizing a dendogram and an specifyed linkage method",
+    "completed": false
+  }
+  ,
+  {
+    "id": "bi_tri_grams",
+    "issues": ["none"],
+    "description": "Match terms using bi or trigram measures",
+    "completed": false
+  }
+  ,
+  {
+    "id": "stable_marriage",
+    "issues": ["none"],
+    "description": "Match terms using the stable marriage algorithm",
+    "completed": false
+  }
+  ,
+  {
+    "id": "sigma_rule",
+    "issues": ["none"],
+    "description": "calculate upper, lower bounds and detect outliers using the sigma rule",
+    "completed": false
+  }
+  ,
+  {
+    "id": "tukey_fences",
+    "issues": ["none"],
+    "description": "calculate upper, lower bounds and detect outliers using the tukey fences approach",
+    "completed": false
+  }
+]
