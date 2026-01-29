@@ -29,15 +29,19 @@ class KMeansQuestion:
         random.seed(self.seed)
         np.random.seed(self.seed)
 
-        self.points = [
-            Point(f"P{i}", random.randint(0, 10), random.randint(0, 10))
-            for i in range(self.num_points)
-        ]
-        
-        self.initial_centroids = [
-            Point(f"C{j}", random.randint(0, 10), random.randint(0, 10))
-            for j in range(self.num_centroids)
-        ]
+        all_coords = set()
+        while len(all_coords) < self.num_points + self.num_centroids:
+            all_coords.add((random.randint(0, 10), random.randint(0, 10)))
+
+        all_coords = list(all_coords)
+
+        p_coords = all_coords[:self.num_points]
+        c_coords = all_coords[self.num_points:]
+
+        self.points = [Point(f"P{i}", x, y) for i, (x, y) in enumerate(p_coords)]
+        self.initial_centroids = [Point(f"C{j}", x, y) for j, (x, y) in enumerate(c_coords)]
+
+
 
         self.iteration_data = []
 
@@ -47,7 +51,7 @@ class KMeansQuestion:
     # Internal KMeans computation
     # ---------------------------------------------------------------------
     def _run_kmeans(self):
-        
+
         while True:
             # --- Reset everything for a fresh run ---
             points = [(p.x, p.y) for p in self.points]

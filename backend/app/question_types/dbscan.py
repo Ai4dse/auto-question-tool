@@ -8,7 +8,7 @@ from app.ui_layout import Point
 DIFFICULTY_SETTINGS = {
     "easy": {"num_points": 5},
     "medium": {"num_points": 6},
-    "hard": {"num_points": 7},
+    "hard": {"num_points": 8},
 }
 
 
@@ -20,6 +20,10 @@ class DBSCANQuestion:
         MANHATTAN = "manhattan"
         self.dist = MANHATTAN
 
+        self.noise_label = "NP"
+        self.border_label = "BP"
+        self.core_label = "CP"
+
         self.difficulty = difficulty.lower()
         config = DIFFICULTY_SETTINGS.get(self.difficulty, DIFFICULTY_SETTINGS["easy"])
 
@@ -29,12 +33,12 @@ class DBSCANQuestion:
         random.seed(self.seed)
         np.random.seed(self.seed)
 
-        self.points = [
-            Point(f"P{i}", random.randint(0, 10), random.randint(0, 10))
-            for i in range(self.num_points)
-        ]
+        coords = set()
+        while len(coords) < self.num_points:
+            coords.add((random.randint(0, 10), random.randint(0, 10)))
+        self.points = [Point(f"P{i}", x, y) for i, (x, y) in enumerate(coords)]
 
-        self.min_pts = random.randint(2, 4)
+        self.min_pts = random.randint(2, int(self.num_points/2))
         self.average_kth_neighbor_distance()
         self._run_dbscan()
 
@@ -129,12 +133,12 @@ class DBSCANQuestion:
                 "type": "DropdownInput",
                 "id": i,
                 "placeholder": "Please select…",
-                "options": ["CP","BP","NP"]
+                "options": [self.core_label,self.border_label,self.noise_label]
                 })
         view0 = [
             {
                 "type": "Text",
-                "content": f"min_pts = {self.min_pts}\n e = {self.cluster_range}",
+                "content": f"In the following {self.num_points} are given and ploted. Use the DBSCAN algorithm do find cluster and Noise Points. To execute the DBSCAN algorithm use {self.dist}distance as distance measure. Furthermore the parameters min_pts = {self.min_pts}\n and e = {self.cluster_range} are given",
             },
             {
                 "type": "Table",
@@ -150,6 +154,7 @@ class DBSCANQuestion:
         base["view1"] = [
             {
             "type": "layout_table",
+            "title": f"Select the type for each point. ({self.core_label}=Core Point, {self.border_label}=Border Point, {self.noise_label}=Noise Point)",
             "rows": 2,
             "cols": self.num_points,
             "cells": [
@@ -159,13 +164,13 @@ class DBSCANQuestion:
             }
         ]
         points_black = [
-            [f"{p.label}(NP)", p.x, p.y]
+            [f"{p.label}({self.noise_label})", p.x, p.y]
             for i, p in enumerate(points)
             if self.cluster[i] == 0
         ]
         points_blue = [
             [
-                f"{p.label}(CP)" if self.core_mask[i] else f"{p.label}(RP)",
+                f"{p.label}({self.core_label})" if self.core_mask[i] else f"{p.label}({self.border_label})",
                 p.x,
                 p.y,
             ]
@@ -175,7 +180,7 @@ class DBSCANQuestion:
 
         points_green = [
             [
-                f"{p.label}(CP)" if self.core_mask[i] else f"{p.label}(RP)",
+                f"{p.label}({self.core_label})" if self.core_mask[i] else f"{p.label}({self.border_label})",
                 p.x,
                 p.y,
             ]
@@ -208,15 +213,15 @@ class DBSCANQuestion:
         for id in range(0,self.num_points):
             value = False
             match user_input.get(str(id)):
-                case "CP":
+                case self.core_label:
                     value = self.core_mask[id]
-                case "BP":
+                case self.border_label:
                     value = self.border_mask[id]
-                case "NP":
+                case self.noise_label:
                     value = self.noise_mask[id]
-            if self.core_mask[id]: expected = "CP"
-            elif self.border_mask[id]: expected = "BP"
-            elif self.noise_mask[id]: expected = "NP"
+            if self.core_mask[id]: expected = self.core_label
+            elif self.border_mask[id]: expected = self.border_label
+            elif self.noise_mask[id]: expected = self.noise_label
             else:
                 print(f"invalid input on field{id}: {user_input.get(id)}")
                 expected = "Undefined"
