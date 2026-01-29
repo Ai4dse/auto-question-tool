@@ -1,23 +1,18 @@
 // frontend/src/pages/Library.jsx
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import QuestionControls from "../components/QuestionControls";
 import "bootstrap/dist/css/bootstrap.min.css";
-
-const difficultyLevels = ["easy", "medium", "hard"];
+import { API_URL } from "../api";
 
 export default function Library() {
-  const [hoveredConfig, setHoveredConfig] = useState(null); // which ⚙️ menu is open
-  const [questionSettings, setQuestionSettings] = useState({}); // { [id]: { seed, difficulty } }
+  const [hoveredConfig, setHoveredConfig] = useState(null);
+  const [questionSettings, setQuestionSettings] = useState({});
   const hoverTimeout = useRef(null);
 
-  const questions = [
-    { id: "kmeans", title: "K-Means Clustering", desc: "Cluster data points into groups." },
-    { id: "dbscan", title: "DBSCAN", desc: "Practice the DBSCAN algorithm." },
-    { id: "addition", title: "Simple Addition", desc: "Practice simple arithmetic." },
-    { id: "hungarian_method", title: "Hungarian Method", desc: "Practice thh Hungarian Method"},
-    { id: "relational_algebra", title: "Relational Algebra", desc: "Practice relational algebra"}
-  ];
+  const [questions, setQuestions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
 
   const generateRandomSeed = () => Math.floor(Math.random() * 1_000_000).toString();
 
@@ -31,15 +26,65 @@ export default function Library() {
     hoverTimeout.current = setTimeout(() => setHoveredConfig(null), 150);
   };
 
+  //fetch questions once on mount
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadQuestions() {
+      try {
+        setLoading(true);
+        setError("");
+
+        const res = await fetch(`${API_URL}/questions`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const data = await res.json();
+        if (cancelled) return;
+
+        const normalized = (Array.isArray(data) ? data : []).map((q) => ({
+          id: q.id,
+          title: q.title || q.id,
+          desc: q.desc || "",
+          difficulty: Array.isArray(q.difficulty) ? q.difficulty : ["easy", "medium", "hard"],
+          mode: Array.isArray(q.mode) ? q.mode : ["steps", "exam"],
+          tags: Array.isArray(q.tags) ? q.tags : [],
+        }));
+
+        normalized.sort((a, b) => a.title.localeCompare(b.title));
+        setQuestions(normalized);
+      } catch (e) {
+        setError(e?.message || "Failed to load questions");
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadQuestions();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
   return (
     <div className="container py-4">
       <h1 className="mb-4 text-center">Question Library</h1>
 
+      {loading && <div className="text-center text-muted">Loading…</div>}
+      {error && <div className="alert alert-danger">Could not load: {error}</div>}
+
       <div className="row">
         {questions.map((q) => {
-          const settings = questionSettings[q.id] || { seed: "", difficulty: "medium" };
-          const seedToUse =
-            settings.seed && settings.seed.length > 0 ? settings.seed : generateRandomSeed();
+          const availableDifficulties =
+            Array.isArray(q.difficulty) && q.difficulty.length ? q.difficulty : ["easy", "medium", "hard"];
+
+          const settings = questionSettings[q.id] || {
+            seed: "",
+            difficulty: availableDifficulties.includes("medium")
+              ? "medium"
+              : availableDifficulties[0],
+          };
+
+          const seedToUse = settings.seed?.length ? settings.seed : generateRandomSeed();
           const difficulty = settings.difficulty;
           const questionUrl = `/question/${q.id}?seed=${seedToUse}&difficulty=${difficulty}`;
 
@@ -94,7 +139,7 @@ export default function Library() {
                       }
                       className="form-select form-select-sm w-auto d-inline-block"
                     >
-                      {difficultyLevels.map((level) => (
+                      {availableDifficulties.map((level) => (
                         <option key={level} value={level}>
                           {level}
                         </option>
@@ -102,7 +147,6 @@ export default function Library() {
                     </select>
                   </div>
 
-                  {/* Open Button */}
                   <Link to={questionUrl} className="btn btn-primary w-100">
                     Open
                   </Link>

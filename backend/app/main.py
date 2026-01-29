@@ -4,6 +4,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from .generator_loader import load_question_generators
 import os
 from app.routes.auth import router as auth_router
+from .config import QUESTION_CONFIG
 
 app = FastAPI()
 
@@ -44,6 +45,14 @@ def serialize(obj):
         return {k: serialize(v) for k, v in obj.items()}
     else:
         return obj
+
+@app.get("/questions")
+def get_questions():
+    return [
+        {"id": qid, **cfg["metadata"]}
+        for qid, cfg in QUESTION_CONFIG.items()
+    ]
+
 
 @app.get("/question/{type_name}")
 def get_question_by_type(type_name: str, seed: int = Query(None), difficulty: str = "easy"):

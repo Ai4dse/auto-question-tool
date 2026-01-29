@@ -10,6 +10,17 @@ QUESTION_CONFIG = {
         }
     },
     
+    "agnes": {
+        "class_path": "app.question_types.agnes.AGNESQuestion",
+        "metadata": {
+            "title": "AGNES",
+            "mode": ["steps", "exam"],
+            "difficulty": ["easy", "medium", "hard"],
+            "desc": "Practice the Agglomerative Nesting cluster algorithm.",
+            "tags": ["clustering", "unsupervised"]
+        }
+    },
+    
     "dbscan": {
         "class_path": "app.question_types.dbscan.DBSCANQuestion",
         "metadata": {

@@ -2,8 +2,7 @@
 import { useEffect, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import LayoutRenderer from "../components/LayoutRenderer";
-
-const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+import { API_URL } from "../api";
 
 export default function QuestionPage() {
   const { type } = useParams();
