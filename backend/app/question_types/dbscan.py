@@ -15,7 +15,11 @@ DIFFICULTY_SETTINGS = {
 class DBSCANQuestion:
 
     def __init__(self, seed=None, difficulty="easy"):
-        
+
+        EUCLIDEAN = "euclidean"
+        MANHATTAN = "manhattan"
+        self.dist = MANHATTAN
+
         self.difficulty = difficulty.lower()
         config = DIFFICULTY_SETTINGS.get(self.difficulty, DIFFICULTY_SETTINGS["easy"])
 
@@ -29,12 +33,15 @@ class DBSCANQuestion:
             Point(f"P{i}", random.randint(0, 10), random.randint(0, 10))
             for i in range(self.num_points)
         ]
-        self.min_pts = random.randint(2, 4)
 
+        self.min_pts = random.randint(2, 4)
+        self.average_kth_neighbor_distance()
         self._run_dbscan()
 
-
-    def average_kth_neighbor_distance(points, k):
+    def average_kth_neighbor_distance(self):
+        k = random.randint(2, self.num_points)
+        k=2
+        points = self.points
         X = np.array([(p.x, p.y) for p in points], dtype=float)
 
         n = len(X)
@@ -42,43 +49,71 @@ class DBSCANQuestion:
             raise ValueError("k must be smaller than number of points")
 
         # Pairwise distances
-        D = np.sqrt(((X[:, None, :] - X[None, :, :]) ** 2).sum(axis=2))
+        D = self._distance_matrix(X)
         np.fill_diagonal(D, np.inf)
 
         # k-th nearest neighbor distance for each point
         kth_distances = np.partition(D, k-1, axis=1)[:, k-1]
 
         # Average
-        return float(kth_distances.mean())
-    
+        self.cluster_range = int(kth_distances.mean())
+
+    def _distance_matrix(self, X):
+
+        if self.dist == "euclidean":
+            return np.sqrt(((X[:, None, :] - X[None, :, :]) ** 2).sum(axis=2))
+
+        elif self.dist == "manhattan":
+            return np.abs(X[:, None, :] - X[None, :, :]).sum(axis=2)
+
+        else:
+            raise ValueError(f"Unknown distance metric: {self.dist}")
+
     # ---------------------------------------------------------------------
     # Internal DBSCAN computation
     # ---------------------------------------------------------------------
     def _run_dbscan(self):
-        k = random.randint(2, self.num_points)
-        self.dist = average_kth_neighbor_distance(self.points,k)
-        X = np.array([(p.x, p.y) for p in self.points], dtype=float)
-        D = np.sqrt(((X[:, None, :] - X[None, :, :]) ** 2).sum(axis=2))
 
-        # Neighborhood matrix: within dist
-        within = (D <= self.dist)
+        X = np.array([(p.x, p.y) for p in self.points], dtype=float)
+        D = self._distance_matrix(X)
+
+        within = (D <= self.cluster_range)
 
         # Count neighbors including self
         neighbor_counts = within.sum(axis=1)
 
         # Core points
-        core_mask = neighbor_counts >= self.min_pts
+        self.core_mask = neighbor_counts >= self.min_pts
 
-        # Border points: not core, but in eps-neighborhood of some core
         # For each point i, check if there exists a core point j with within[i, j] == True
-        border_mask = (~core_mask) & (within[:, core_mask].any(axis=1))
+        self.border_mask = (~self.core_mask) & (within[:, self.core_mask].any(axis=1))
 
-        # Noise: neither
-        noise_mask = ~(core_mask | border_mask)
+        self.noise_mask = ~(self.core_mask | self.border_mask)
+        visited = [False]*self.num_points
+        self.cluster = [0]*self.num_points
+        idx = 0
+        for idx in range(len(self.core_mask)):
+            cluster_label = 0
 
-        print(core_mask, border_mask, noise_mask)
-        
-        
+            if (not self.core_mask[idx]) or visited[idx]:
+                print("check")
+                continue
+            visited[idx] = True
+            neigh_mask = D[idx] <= self.cluster_range
+            neigh_idx  = np.flatnonzero(neigh_mask)
+            print(neigh_idx)
+            for k in neigh_idx:
+                if (self.core_mask[k] == True) and (self.cluster[k] != 0):
+                    cluster_label =  self.cluster[k]
+            if cluster_label == 0:
+                cluster_label = max(self.cluster)+1
+                self.cluster[idx] = cluster_label
+            for k in neigh_idx:
+                 self.cluster[k] = cluster_label
+
+            idx += 1
+        print(self.cluster)
+
 
     # ---------------------------------------------------------------------
     # Layout builder
@@ -86,11 +121,20 @@ class DBSCANQuestion:
     def generate(self):
         base = {}
         points = self.points
-
+        table_header = []
+        dropdown_body = []
+        for i in range(0,self.num_points):
+            table_header.append({ "type": "text", "value": f"P{i}" })
+            dropdown_body.append({
+                "type": "DropdownInput",
+                "id": i,
+                "placeholder": "Please select…",
+                "options": ["CP","BP","NP"]
+                })
         view0 = [
             {
                 "type": "Text",
-                "content": f"",
+                "content": f"min_pts = {self.min_pts}\n e = {self.cluster_range}",
             },
             {
                 "type": "Table",
@@ -105,31 +149,78 @@ class DBSCANQuestion:
         ]
         base["view1"] = [
             {
-                "type": "Text",
-                "content": f"not implemented yet",
-            },
-            {
-                "type": "Text",
-                "content": f"not implemented yet",
-            },
+            "type": "layout_table",
+            "rows": 2,
+            "cols": self.num_points,
+            "cells": [
+                table_header,
+                dropdown_body
+            ]
+            }
+        ]
+        points_black = [
+            [f"{p.label}(NP)", p.x, p.y]
+            for i, p in enumerate(points)
+            if self.cluster[i] == 0
+        ]
+        points_blue = [
+            [
+                f"{p.label}(CP)" if self.core_mask[i] else f"{p.label}(RP)",
+                p.x,
+                p.y,
+            ]
+            for i, p in enumerate(points)
+            if self.cluster[i] == 1
+        ]
+
+        points_green = [
+            [
+                f"{p.label}(CP)" if self.core_mask[i] else f"{p.label}(RP)",
+                p.x,
+                p.y,
+            ]
+            for i, p in enumerate(points)
+            if self.cluster[i] >= 2
         ]
 
         base["lastView"] = [
             {
-                "type": "CoordinatePlot",
-                "points_blue": [[p.label, p.x, p.y] for p in points],
-            },
-            {
-                "type": "Text",
-                "content": f"",
+                "type": "var_coordinates_plot",
+                "title": "DBSCAN result",
+                "series": [
+                    {"name": "cluster 2", "color": "green", "points": points_green, "symbol": "triangle-up", "size": 8},
+                    {"name": "cluster 1", "color": "blue",  "points": points_blue,  "symbol": "circle",      "size": 8},
+                    {"name": "noise",     "color": "black", "points": points_black, "symbol": "x",           "size": 8},
+                ]
             },
         ]
 
         base["view1"] = view0 + base["view1"]
+        print(base)
         return base
 
     # ---------------------------------------------------------------------
     # Evaluation
     # ---------------------------------------------------------------------
     def evaluate(self, user_input):
-        return None
+        print(user_input)
+        results = {}
+        for id in range(0,self.num_points):
+            value = False
+            match user_input.get(str(id)):
+                case "CP":
+                    value = self.core_mask[id]
+                case "BP":
+                    value = self.border_mask[id]
+                case "NP":
+                    value = self.noise_mask[id]
+            if self.core_mask[id]: expected = "CP"
+            elif self.border_mask[id]: expected = "BP"
+            elif self.noise_mask[id]: expected = "NP"
+            else:
+                print(f"invalid input on field{id}: {user_input.get(id)}")
+                expected = "Undefined"
+            results[id] = {"correct": bool(value),
+                        "expected": expected}
+        print(results)
+        return results

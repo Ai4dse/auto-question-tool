@@ -421,50 +421,93 @@ export default function LayoutRenderer({
 
   /** 🔹 Evaluated text input with color feedback */
   const renderEvaluatedInput = (fieldId, value = "", options = {}) => {
-  const { asTextarea = false, rows = 4 } = options;
+    const {
+      asTextarea = false,
+      rows = 4,
+      variant = "text",          // "text" | "select"
+      selectOptions = [],
+      placeholder = "Please select...",
+    } = options;
 
-  const evalResult = evaluationResults?.[fieldId];
-  const isCorrect = evalResult?.correct;
-  const expected = evalResult?.expected;
+    const evalResult = evaluationResults?.[fieldId];
+    const isCorrect = evalResult?.correct;
+    const expected = evalResult?.expected;
 
-  const bgClass =
-    evalResult === undefined
-      ? ""
-      : isCorrect
-      ? "bg-success-subtle"
-      : "bg-danger-subtle";
+    // better tooltip condition: don't rely on truthiness
+    const hasExpected = expected !== undefined && expected !== null;
 
-  const handleChange = (e) => {
-    const raw = e.target.value;
-    const withUnicode = replaceOps(raw); // \\join -> ⋈{} etc., auch über Zeilenumbrüche
-    onChange(fieldId, withUnicode);
+    const feedbackClass =
+      evalResult === undefined ? "" : isCorrect ? "is-valid" : "is-invalid";
+
+    const title =
+      evalResult !== undefined && !isCorrect && hasExpected ? `Expected: ${expected}` : "";
+
+    // For text/textarea we apply replaceOps; for select we don't.
+    const handleChange = (e) => {
+      const raw = e.target.value;
+      const next = variant === "select" ? raw : replaceOps(raw);
+      onChange(fieldId, next);
+    };
+
+    // shared styling
+    const baseStyle = { fontFamily: "monospace", whiteSpace: "pre" };
+    const bgStyle =
+      evalResult === undefined
+        ? {}
+        : isCorrect
+        ? { backgroundColor: "var(--bs-success-bg-subtle)" }
+        : { backgroundColor: "var(--bs-danger-bg-subtle)" };
+    const controlledValue = userInput?.[fieldId] ?? (value ?? "");
+    return (
+      <div className="mb-2">
+        {variant === "select" ? (
+          <select
+            name={fieldId}
+            className={`form-select form-select-sm ${feedbackClass}`}
+            style={bgStyle}
+            onChange={handleChange}
+            value={controlledValue}
+            title={title}
+          >
+            <option value="" disabled hidden>
+              {placeholder}
+            </option>
+            {selectOptions.map((opt, i) => (
+              <option key={i} value={opt}>
+                {String(opt)}
+              </option>
+            ))}
+          </select>
+
+        ) : asTextarea ? (
+          <textarea
+            name={fieldId}
+            className={`form-control form-control-sm ${feedbackClass}`}
+            onChange={handleChange}
+            value={controlledValue}
+            title={title}
+            style={baseStyle}
+            rows={rows}
+          />
+        ) : (
+          <input
+            type="text"
+            name={fieldId}
+            className={`form-control form-control-sm ${feedbackClass}`}
+            onChange={handleChange}
+            value={controlledValue}
+            title={title}
+            style={baseStyle}
+          />
+        )}
+
+        {showExpected && !isCorrect && expected !== undefined && (
+          <small className="text-muted fst-italic">Correct: {expected}</small>
+        )}
+      </div>
+    );
   };
 
-  const commonProps = {
-    name: fieldId,
-    className: `form-control form-control-sm ${bgClass}`,
-    onChange: handleChange,
-    value: userInput?.[fieldId] ?? "",
-    title: !isCorrect && expected ? `Expected: ${expected}` : "",
-    style: { fontFamily: "monospace", whiteSpace: "pre" },
-  };
-
-  return (
-    <div className="mb-2">
-      {asTextarea ? (
-        <textarea {...commonProps} rows={rows} />
-      ) : (
-        <input type="text" {...commonProps} />
-      )}
-
-      {showExpected && !isCorrect && expected !== undefined && (
-        <small className="text-muted fst-italic">
-          Correct: {expected}
-        </small>
-      )}
-    </div>
-  );
-};
 
   /** 🔹 General renderer for all element types */
   const renderElement = (el, idx) => {
@@ -510,20 +553,15 @@ export default function LayoutRenderer({
         );
       case "Dropdown":
       case "dropdown": {
-        // el.children ist ein Array von "normalen" Layout-Elementen
-        const childrenEls = el.children || [];
+        const childrenEls = Array.isArray(el.children) ? el.children : [];
+        const title = el.title || el.label || "Details";
+        const key = el.id ?? idx;
 
         return (
-          <DropdownSection
-            key={idx}
-            title={el.title || el.label || "Details"}
-            defaultOpen={!!el.defaultOpen}
-          >
-            {Array.isArray(childrenEls)
-              ? childrenEls.map((child, cIdx) =>
-                  renderElement(child, `${idx}-${cIdx}`)
-                )
-              : null}
+          <DropdownSection key={key} title={title} defaultOpen={!!el.defaultOpen}>
+            {childrenEls.map((child, cIdx) =>
+              renderElement(child, child.id ?? `${key}-${cIdx}`)
+            )}
           </DropdownSection>
         );
       }
@@ -705,6 +743,45 @@ export default function LayoutRenderer({
             </div>
           </div>
         );
+      case "LayoutTable":
+      case "layout_table": {
+        const rows = Number(el.rows ?? 0);
+        const cols = Number(el.cols ?? 0);
+        const cells = Array.isArray(el.cells) ? el.cells : [];
+        const tableKey = el.id ?? idx;
+
+        const getCell = (r, c) => {
+          const row = Array.isArray(cells[r]) ? cells[r] : null;
+          return row && row[c] ? row[c] : null;
+        };
+
+        return (
+          <div key={tableKey} className="card mb-4 shadow-sm">
+            <div className="card-body">
+              <h5 className="card-title mb-3">{el.title || el.label || "Layout Table"}</h5>
+
+              <div className="table-responsive">
+                <table className="table table-bordered table-sm align-middle">
+                  <tbody>
+                    {Array.from({ length: rows }).map((_, r) => (
+                      <tr key={`r-${tableKey}-${r}`}>
+                        {Array.from({ length: cols }).map((__, c) => {
+                          const cellEl = getCell(r, c);
+                          return (
+                            <td key={`c-${tableKey}-${r}-${c}`} style={{ verticalAlign: "top" }}>
+                              {cellEl ? renderElement(cellEl, `${tableKey}-${r}-${c}`) : null}
+                            </td>
+                          );
+                        })}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        );
+      };
       case "MatrixInput":
       case "matrix_input":
         return (
@@ -807,6 +884,130 @@ export default function LayoutRenderer({
             {renderEvaluatedInput(el.id, userInput?.[el.id])}
           </div>
         );
+        case "DropdownInput":
+        case "dropdown_input":
+          return (
+            <div key={idx} className="mb-3">
+              <label className="form-label fw-semibold">{el.label}</label>
+
+              {renderEvaluatedInput(el.id, userInput?.[el.id] ?? "", {
+                variant: "select",
+                selectOptions: Array.isArray(el.options) ? el.options : [],
+                placeholder: el.placeholder ?? "Please select...",
+              })}
+            </div>
+          );
+      case "VarCoordinatePlot":
+      case "var_coordinates_plot": {
+        const toXY = (arr = []) =>
+          Array.isArray(arr)
+            ? arr
+                .map((p) => {
+                  if (Array.isArray(p) && p.length >= 3) {
+                    return { label: String(p[0]), x: Number(p[1]), y: Number(p[2]) };
+                  } else if (typeof p === "object" && p !== null && "x" in p && "y" in p) {
+                    return {
+                      label: String(p.label || ""),
+                      x: Number(p.x),
+                      y: Number(p.y),
+                    };
+                  } else {
+                    console.warn("Invalid point:", p);
+                    return null;
+                  }
+                })
+                .filter(Boolean)
+            : [];
+
+        // Convert "points_blue", "points_green", etc into series entries (legacy support)
+        const legacySeriesFromEl = (el) => {
+          const out = [];
+          const colorKeys = Object.keys(el || {}).filter((k) => k.startsWith("points_"));
+
+          for (const key of colorKeys) {
+            const color = key.replace("points_", ""); // "blue", "green", ...
+            const value = el[key];
+
+            // New-ish per-color format: { points: [...], name: "..." }
+            if (value && typeof value === "object" && !Array.isArray(value)) {
+              out.push({
+                name: value.name || color,
+                color,
+                points: toXY(value.points),
+                symbol: value.symbol,
+                size: value.size,
+              });
+            } else {
+              // Old format: points_blue: [...]
+              out.push({
+                name: color,
+                color,
+                points: toXY(value),
+              });
+            }
+          }
+          return out;
+        };
+
+        // Prefer new API el.series, otherwise fall back to legacy points_* fields
+        const seriesRaw = Array.isArray(el.series) ? el.series : legacySeriesFromEl(el);
+
+        // Normalize the series
+        const series = seriesRaw
+          .map((s, idx) => {
+            // Allow passing points directly as an array, too
+            const points = toXY(s?.points ?? s);
+            return {
+              name: typeof s?.name === "string" && s.name.length ? s.name : `Series ${idx + 1}`,
+              color: typeof s?.color === "string" && s.color.length ? s.color : undefined,
+              symbol: typeof s?.symbol === "string" && s.symbol.length ? s.symbol : "circle",
+              size: Number.isFinite(s?.size) ? s.size : 8,
+              points,
+            };
+          })
+          .filter((s) => s.points.length > 0);
+
+        const traces = series.map((s) => ({
+          x: s.points.map((p) => p.x),
+          y: s.points.map((p) => p.y),
+          text: s.points.map((p) => p.label),
+          mode: "markers+text",
+          type: "scatter",
+          name: s.name,
+          textposition: "top right",
+          marker: {
+            // plotly will accept undefined color (it will auto-pick),
+            // or you can default it if you want.
+            color: s.color,
+            symbol: s.symbol,
+            size: s.size,
+          },
+        }));
+
+        return (
+          <div key={idx} className="card mb-4 shadow-sm">
+            <div className="card-body">
+              <h5 className="card-title mb-3">{el.title || "Coordinate Plot"}</h5>
+              <Plot
+                data={traces}
+                layout={{
+                  xaxis: { title: "X" },
+                  yaxis: { title: "Y" },
+                  margin: { t: 20, r: 20, b: 40, l: 40 },
+                  autosize: true,
+                  legend: { orientation: "h" },
+                }}
+                style={{ width: "100%", height: "350px" }}
+                useResizeHandler
+                config={{ responsive: true, displayModeBar: false }}
+              />
+            </div>
+          </div>
+        );
+      }
+
+
+
       case "CoordinatePlot":
       case "coordinates_plot": {
         const toXY = (arr = []) =>

@@ -119,15 +119,57 @@ export default function QuestionPage() {
 
   const filterResultsForView = (allResults, view) => {
     if (!allResults || !view) return {};
-    const fieldIds = [];
-    view.forEach((el) => {
-      if (el.type === "TableInput" && el.rows) {
-        el.rows.forEach((row) => row.fields.forEach((_, fIdx) => fieldIds.push(`${row.id}_${fIdx}`)));
-      } else if (el.id) fieldIds.push(el.id);
-    });
+
+    // Normalize backend result keys to strings once (handles 1 vs "1")
+    const normalizedResults = {};
+    for (const [k, v] of Object.entries(allResults)) {
+      normalizedResults[String(k)] = v;
+    }
+
+    // Collect ids that exist in currently active view
+    const fieldIds = new Set();
+
+    const walk = (el) => {
+      if (!el || typeof el !== "object") return;
+
+      const type = String(el.type || "").toLowerCase();
+
+      //Special case: TableInput has internally-generated field IDs
+      if ((type === "tableinput" || type === "table_input") && Array.isArray(el.rows)) {
+        el.rows.forEach((row) => {
+          if (!row) return;
+          const rowId = row.id;
+          const fields = Array.isArray(row.fields) ? row.fields : [];
+          fields.forEach((_, fIdx) => {
+            fieldIds.add(String(`${rowId}_${fIdx}`));
+          });
+        });
+        return;
+      }
+
+      //Exception container: layout_table contains nested elements in cells[][]
+      if (type === "layouttable" || type === "layout_table") {
+        const cells = Array.isArray(el.cells) ? el.cells : [];
+        for (const row of cells) {
+          if (!Array.isArray(row)) continue;
+          for (const cell of row) walk(cell);
+        }
+        return;
+      }
+
+      //Normal case: leaf elements with an id
+      if (el.id !== undefined && el.id !== null && el.id !== "") {
+        fieldIds.add(String(el.id));
+      }
+    };
+    view.forEach(walk);
+
+    // Filter the results down to ids present in this view
     const filtered = {};
-    for (const [key, val] of Object.entries(allResults)) {
-      if (fieldIds.includes(key)) filtered[key] = val;
+    for (const id of fieldIds) {
+      if (normalizedResults[id] !== undefined) {
+        filtered[id] = normalizedResults[id];
+      }
     }
     return filtered;
   };
