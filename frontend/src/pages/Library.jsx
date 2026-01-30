@@ -1,22 +1,28 @@
 // frontend/src/pages/Library.jsx
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
-import QuestionControls from "../components/QuestionControls";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { API_URL } from "../api";
+
+import SettingField from "../components/settings/SettingField";
+import {
+  getDefaultsFromSchema,
+  buildQueryFromSettings,
+  ensureSeedValue,
+} from "../components/settings/settingUtils";
 
 export default function Library() {
   const [hoveredConfig, setHoveredConfig] = useState(null);
   const [questionSettings, setQuestionSettings] = useState({});
   const hoverTimeout = useRef(null);
 
+  // stable random seed per question card (until user edits it)
+  const seedCache = useRef({});
+
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
-  const generateRandomSeed = () => Math.floor(Math.random() * 1_000_000).toString();
-
-  // Helpers for hover control
   const handleEnter = (id) => {
     if (hoverTimeout.current) clearTimeout(hoverTimeout.current);
     setHoveredConfig(id);
@@ -26,7 +32,13 @@ export default function Library() {
     hoverTimeout.current = setTimeout(() => setHoveredConfig(null), 150);
   };
 
-  //fetch questions once on mount
+  const updateSetting = (qid, name, value) => {
+    setQuestionSettings((prev) => ({
+      ...prev,
+      [qid]: { ...(prev[qid] || {}), [name]: value },
+    }));
+  };
+
   useEffect(() => {
     let cancelled = false;
 
@@ -41,14 +53,30 @@ export default function Library() {
         const data = await res.json();
         if (cancelled) return;
 
-        const normalized = (Array.isArray(data) ? data : []).map((q) => ({
-          id: q.id,
-          title: q.title || q.id,
-          desc: q.desc || "",
-          difficulty: Array.isArray(q.difficulty) ? q.difficulty : ["easy", "medium", "hard"],
-          mode: Array.isArray(q.mode) ? q.mode : ["steps", "exam"],
-          tags: Array.isArray(q.tags) ? q.tags : [],
-        }));
+        const normalized = (Array.isArray(data) ? data : []).map((q) => {
+          // Expect schema from backend: q.settings
+          // Backcompat: minimal schema if missing
+          const settings =
+            (q.settings && typeof q.settings === "object" ? q.settings : null) ||
+            {
+              difficulty: {
+                kind: "select",
+                visibility: "open",
+                options: Array.isArray(q.difficulty) && q.difficulty.length ? q.difficulty : ["easy", "medium", "hard"],
+                default: "medium",
+              },
+              seed: { kind: "number", visibility: "hidden" },
+            };
+
+          return {
+            id: q.id,
+            title: q.title || q.id,
+            desc: q.desc || "",
+            mode: Array.isArray(q.mode) ? q.mode : ["steps", "exam"],
+            tags: Array.isArray(q.tags) ? q.tags : [],
+            settings,
+          };
+        });
 
         normalized.sort((a, b) => a.title.localeCompare(b.title));
         setQuestions(normalized);
@@ -74,19 +102,26 @@ export default function Library() {
 
       <div className="row">
         {questions.map((q) => {
-          const availableDifficulties =
-            Array.isArray(q.difficulty) && q.difficulty.length ? q.difficulty : ["easy", "medium", "hard"];
+          const schema = q.settings || {};
+          const defaults = getDefaultsFromSchema(schema);
+          const local = questionSettings[q.id] || {};
 
-          const settings = questionSettings[q.id] || {
-            seed: "",
-            difficulty: availableDifficulties.includes("medium")
-              ? "medium"
-              : availableDifficulties[0],
-          };
+          // Effective = defaults + local overrides
+          let effective = { ...defaults, ...local };
 
-          const seedToUse = settings.seed?.length ? settings.seed : generateRandomSeed();
-          const difficulty = settings.difficulty;
-          const questionUrl = `/question/${q.id}?seed=${seedToUse}&difficulty=${difficulty}`;
+          // ✅ crucial: if schema has seed and user hasn't set it -> stable random seed
+          effective = ensureSeedValue({
+            schema,
+            effectiveValues: effective,
+            seedCache,
+            questionId: q.id,
+          });
+
+          const params = buildQueryFromSettings(schema, effective);
+          const questionUrl = `/question/${q.id}?${params.toString()}`;
+
+          const openEntries = Object.entries(schema).filter(([, def]) => def?.visibility === "open");
+          const hiddenEntries = Object.entries(schema).filter(([, def]) => def?.visibility === "hidden");
 
           return (
             <div key={q.id} className="col-md-4 mb-4">
@@ -98,7 +133,7 @@ export default function Library() {
                       <p className="card-text text-muted">{q.desc}</p>
                     </div>
 
-                    {/* ⚙️ Options Icon + hover container */}
+                    {/* ⚙️ Hidden settings */}
                     <div
                       className="position-relative"
                       onMouseEnter={() => handleEnter(q.id)}
@@ -106,46 +141,43 @@ export default function Library() {
                     >
                       <button className="btn btn-sm btn-outline-secondary">⚙️</button>
 
-                      {hoveredConfig === q.id && (
+                      {hoveredConfig === q.id && hiddenEntries.length > 0 && (
                         <div
-                          className="position-absolute top-100 end-0 mt-2 z-3"
+                          className="position-absolute top-100 end-0 mt-2 z-3 bg-white border rounded p-3 shadow-sm"
+                          style={{ minWidth: 260 }}
                           onMouseEnter={() => handleEnter(q.id)}
                           onMouseLeave={handleLeave}
                         >
-                          <QuestionControls
-                            initialSeed={settings.seed}
-                            onSeedChange={(seed) =>
-                              setQuestionSettings((prev) => ({
-                                ...prev,
-                                [q.id]: { ...prev[q.id], seed },
-                              }))
-                            }
-                          />
+                          <div className="fw-semibold mb-2">Settings</div>
+
+                          {hiddenEntries.map(([name, def]) => (
+                            <SettingField
+                              key={name}
+                              name={name}
+                              def={def}
+                              value={effective[name]}
+                              onChange={(n, v) => updateSetting(q.id, n, v)}
+                            />
+                          ))}
                         </div>
                       )}
                     </div>
                   </div>
 
-                  {/* Difficulty Dropdown */}
-                  <div className="mt-3 mb-3">
-                    <label className="fw-semibold me-2">Difficulty:</label>
-                    <select
-                      value={difficulty}
-                      onChange={(e) =>
-                        setQuestionSettings((prev) => ({
-                          ...prev,
-                          [q.id]: { ...prev[q.id], difficulty: e.target.value },
-                        }))
-                      }
-                      className="form-select form-select-sm w-auto d-inline-block"
-                    >
-                      {availableDifficulties.map((level) => (
-                        <option key={level} value={level}>
-                          {level}
-                        </option>
+                  {/* Open settings area */}
+                  {openEntries.length > 0 && (
+                    <div className="mt-3 mb-3">
+                      {openEntries.map(([name, def]) => (
+                        <SettingField
+                          key={name}
+                          name={name}
+                          def={def}
+                          value={effective[name]}
+                          onChange={(n, v) => updateSetting(q.id, n, v)}
+                        />
                       ))}
-                    </select>
-                  </div>
+                    </div>
+                  )}
 
                   <Link to={questionUrl} className="btn btn-primary w-100">
                     Open

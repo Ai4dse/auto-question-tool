@@ -4,43 +4,87 @@ QUESTION_CONFIG = {
         "metadata": {
             "title": "K-Means Clustering",
             "mode": ["steps", "exam"],
-            "difficulty": ["easy", "medium", "hard"],
             "desc": "Cluster data points into groups.",
-            "tags": ["clustering", "unsupervised"]
-        }
+            "tags": ["clustering", "unsupervised"],
+            "settings": {
+                "difficulty": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["easy", "medium", "hard"],
+                    "default": "easy",
+                },
+                "seed": {
+                    "kind": "number",
+                    "visibility": "hidden",
+                },
+            },
+        },
     },
-    
+
     "agnes": {
         "class_path": "app.question_types.agnes.AGNESQuestion",
         "metadata": {
             "title": "AGNES",
             "mode": ["steps", "exam"],
-            "difficulty": ["easy", "medium", "hard"],
             "desc": "Practice the Agglomerative Nesting cluster algorithm.",
-            "tags": ["clustering", "unsupervised"]
-        }
+            "tags": ["clustering", "unsupervised"],
+            "settings": {
+                "difficulty": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["easy", "medium", "hard"],
+                    "default": "easy",
+                },
+                "seed": {
+                    "kind": "number",
+                    "visibility": "hidden",
+                },
+            },
+        },
     },
-    
+
     "dbscan": {
         "class_path": "app.question_types.dbscan.DBSCANQuestion",
         "metadata": {
             "title": "DBSCAN",
             "mode": ["steps", "exam"],
-            "difficulty": ["easy", "medium", "hard"],
             "desc": "Practice the DBSCAN algorithm.",
-            "tags": ["clustering", "unsupervised"]
-        }
+            "tags": ["clustering", "unsupervised"],
+            "settings": {
+                "difficulty": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["easy", "medium", "hard"],
+                    "default": "easy",
+                },
+                "seed": {
+                    "kind": "number",
+                    "visibility": "hidden",
+                },
+            },
+        },
     },
-    
+
     "addition": {
         "class_path": "app.question_types.addition.AdditionQuestion",
         "metadata": {
             "title": "Simple Addition",
             "mode": ["steps", "exam"],
-            "difficulty": ["easy", "medium", "hard"],
             "desc": "Practice simple arithmetic.",
-            "tags": ["arithmetic"]
-        }
+            "tags": ["arithmetic"],
+            "settings": {
+                "difficulty": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["easy", "medium", "hard"],
+                    "default": "easy",
+                },
+                "seed": {
+                    "kind": "number",
+                    "visibility": "hidden",
+                },
+            },
+        },
     },
 
     "hungarian_method": {
@@ -48,10 +92,21 @@ QUESTION_CONFIG = {
         "metadata": {
             "title": "Hungarian Method",
             "mode": ["steps", "exam"],
-            "difficulty": ["easy", "medium", "hard"],
             "desc": "Practice the hungarian_method.",
-            "tags": ["arithmetic"]
-        }
+            "tags": ["arithmetic"],
+            "settings": {
+                "difficulty": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["easy", "medium", "hard"],
+                    "default": "easy",
+                },
+                "seed": {
+                    "kind": "number",
+                    "visibility": "hidden",
+                },
+            },
+        },
     },
 
     "relational_algebra": {
@@ -59,9 +114,20 @@ QUESTION_CONFIG = {
         "metadata": {
             "title": "Relational Algebra",
             "mode": ["steps", "exam"],
-            "difficulty": ["easy", "medium", "hard"],
             "desc": "Practice relational algebra.",
-            "tags": ["arithmetic"]
-        }
-    }
+            "tags": ["arithmetic"],
+            "settings": {
+                "difficulty": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["easy", "medium", "hard"],
+                    "default": "easy",
+                },
+                "seed": {
+                    "kind": "number",
+                    "visibility": "hidden",
+                }
+            },
+        },
+    },
 }
