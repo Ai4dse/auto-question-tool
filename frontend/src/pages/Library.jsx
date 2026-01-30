@@ -5,10 +5,10 @@ import "bootstrap/dist/css/bootstrap.min.css";
 import { API_URL } from "../api";
 
 import SettingField from "../components/settings/SettingField";
+
 import {
   getDefaultsFromSchema,
   buildQueryFromSettings,
-  ensureSeedValue,
 } from "../components/settings/settingUtils";
 
 export default function Library() {
@@ -16,8 +16,8 @@ export default function Library() {
   const [questionSettings, setQuestionSettings] = useState({});
   const hoverTimeout = useRef(null);
 
-  // stable random seed per question card (until user edits it)
-  const seedCache = useRef({});
+  const randomDefaultsCache = useRef({});
+
 
   const [questions, setQuestions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -54,8 +54,6 @@ export default function Library() {
         if (cancelled) return;
 
         const normalized = (Array.isArray(data) ? data : []).map((q) => {
-          // Expect schema from backend: q.settings
-          // Backcompat: minimal schema if missing
           const settings =
             (q.settings && typeof q.settings === "object" ? q.settings : null) ||
             {
@@ -103,19 +101,14 @@ export default function Library() {
       <div className="row">
         {questions.map((q) => {
           const schema = q.settings || {};
-          const defaults = getDefaultsFromSchema(schema);
-          const local = questionSettings[q.id] || {};
-
-          // Effective = defaults + local overrides
-          let effective = { ...defaults, ...local };
-
-          // ✅ crucial: if schema has seed and user hasn't set it -> stable random seed
-          effective = ensureSeedValue({
+          const defaults = getDefaultsFromSchema({
             schema,
-            effectiveValues: effective,
-            seedCache,
+            randomCache: randomDefaultsCache,
             questionId: q.id,
           });
+          const local = questionSettings[q.id] || {};
+
+          let effective = { ...defaults, ...local };
 
           const params = buildQueryFromSettings(schema, effective);
           const questionUrl = `/question/${q.id}?${params.toString()}`;
@@ -133,7 +126,7 @@ export default function Library() {
                       <p className="card-text text-muted">{q.desc}</p>
                     </div>
 
-                    {/* ⚙️ Hidden settings */}
+                    {/* Hidden settings */}
                     <div
                       className="position-relative"
                       onMouseEnter={() => handleEnter(q.id)}
@@ -164,7 +157,7 @@ export default function Library() {
                     </div>
                   </div>
 
-                  {/* Open settings area */}
+                  {/* Open settings */}
                   {openEntries.length > 0 && (
                     <div className="mt-3 mb-3">
                       {openEntries.map(([name, def]) => (

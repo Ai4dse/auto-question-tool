@@ -1,5 +1,5 @@
 // frontend/src/pages/QuestionPage.jsx
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import LayoutRenderer from "../components/LayoutRenderer";
 import { API_URL } from "../api";
@@ -7,10 +7,6 @@ import { API_URL } from "../api";
 export default function QuestionPage() {
   const { type } = useParams();
   const { search } = useLocation();
-  const searchParams = new URLSearchParams(search);
-  const rawSeed = searchParams.get("seed");
-  const seed = /^\d+$/.test(rawSeed) ? rawSeed : undefined;
-  const difficulty = searchParams.get("difficulty") || "medium";
 
   const [question, setQuestion] = useState(null);
   const [formData, setFormData] = useState({});
@@ -20,9 +16,24 @@ export default function QuestionPage() {
   const [finished, setFinished] = useState(false);
   const [reactiveTables, setReactiveTables] = useState({});
 
+  // ✅ collect ALL url params (no hardcoded settings)
+  const queryString = useMemo(() => {
+    const sp = new URLSearchParams(search);
+
+    // light sanitation: drop seed if invalid (optional)
+    const seed = sp.get("seed");
+    if (seed != null && seed !== "" && !/^\d+$/.test(seed)) {
+      sp.delete("seed");
+    }
+
+    const s = sp.toString();
+    return s ? `?${s}` : "";
+  }, [search]);
+
   useEffect(() => {
     if (!type) return;
-    fetch(`${API_URL}/question/${type}?seed=${seed || "1234"}&difficulty=${difficulty}`)
+
+    fetch(`${API_URL}/question/${type}${queryString}`)
       .then((res) => res.json())
       .then((data) => {
         setQuestion(data);
@@ -34,26 +45,18 @@ export default function QuestionPage() {
         setReactiveTables({});
       })
       .catch((err) => console.error("Error loading question:", err));
-  }, [type, seed, difficulty]);
+  }, [type, queryString]);
 
   useEffect(() => {
     if (!question) return;
     if (type !== "relational_algebra") return;
 
     const stmt = formData["0"] ?? "";
-    const seedToUse = question.seed || seed || "1234";
-    const difficultyToUse = question.difficulty || difficulty || "medium";
 
     if (!stmt.trim()) {
       setReactiveTables((prev) => ({
         ...prev,
-        "0": {
-          columns: [],
-          rows: [],
-          tree: null,       
-          error: null,
-          status: "idle",
-        },
+        "0": { columns: [], rows: [], tree: null, error: null, status: "idle" },
       }));
       return;
     }
@@ -63,20 +66,14 @@ export default function QuestionPage() {
     const timeoutId = setTimeout(() => {
       setReactiveTables((prev) => ({
         ...prev,
-        "0": {
-          ...(prev["0"] || {}),
-          status: "loading",
-        },
+        "0": { ...(prev["0"] || {}), status: "loading" },
       }));
 
-      fetch(
-        `${API_URL}/question/${type}/preview?seed=${seedToUse}&difficulty=${difficultyToUse}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ statement: stmt }),
-        }
-      )
+      fetch(`${API_URL}/question/${type}/preview${queryString}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ statement: stmt }),
+      })
         .then((res) => res.json())
         .then((data) => {
           if (cancelled) return;
@@ -86,7 +83,7 @@ export default function QuestionPage() {
             "0": {
               columns: data.columns || [],
               rows: data.rows || [],
-              tree: data.tree || null,   
+              tree: data.tree || null,
               error: data.error || null,
               status: "ready",
             },
@@ -100,7 +97,7 @@ export default function QuestionPage() {
             "0": {
               columns: [],
               rows: [],
-              tree: null,                  // 🔹 clear tree on error
+              tree: null,
               error: "Preview request failed.",
               status: "error",
             },
@@ -112,42 +109,33 @@ export default function QuestionPage() {
       cancelled = true;
       clearTimeout(timeoutId);
     };
-  }, [formData["0"], question, type, seed, difficulty]);
+  }, [formData["0"], question, type, queryString]);
 
   const handleChange = (id, value) => setFormData((prev) => ({ ...prev, [id]: value }));
 
+  // filterResultsForView unchanged...
   const filterResultsForView = (allResults, view) => {
     if (!allResults || !view) return {};
 
-    // Normalize backend result keys to strings once (handles 1 vs "1")
     const normalizedResults = {};
-    for (const [k, v] of Object.entries(allResults)) {
-      normalizedResults[String(k)] = v;
-    }
+    for (const [k, v] of Object.entries(allResults)) normalizedResults[String(k)] = v;
 
-    // Collect ids that exist in currently active view
     const fieldIds = new Set();
-
     const walk = (el) => {
       if (!el || typeof el !== "object") return;
+      const t = String(el.type || "").toLowerCase();
 
-      const type = String(el.type || "").toLowerCase();
-
-      //Special case: TableInput has internally-generated field IDs
-      if ((type === "tableinput" || type === "table_input") && Array.isArray(el.rows)) {
+      if ((t === "tableinput" || t === "table_input") && Array.isArray(el.rows)) {
         el.rows.forEach((row) => {
           if (!row) return;
           const rowId = row.id;
           const fields = Array.isArray(row.fields) ? row.fields : [];
-          fields.forEach((_, fIdx) => {
-            fieldIds.add(String(`${rowId}_${fIdx}`));
-          });
+          fields.forEach((_, fIdx) => fieldIds.add(String(`${rowId}_${fIdx}`)));
         });
         return;
       }
 
-      //Exception container: layout_table contains nested elements in cells[][]
-      if (type === "layouttable" || type === "layout_table") {
+      if (t === "layouttable" || t === "layout_table") {
         const cells = Array.isArray(el.cells) ? el.cells : [];
         for (const row of cells) {
           if (!Array.isArray(row)) continue;
@@ -156,29 +144,21 @@ export default function QuestionPage() {
         return;
       }
 
-      //Normal case: leaf elements with an id
-      if (el.id !== undefined && el.id !== null && el.id !== "") {
-        fieldIds.add(String(el.id));
-      }
+      if (el.id !== undefined && el.id !== null && el.id !== "") fieldIds.add(String(el.id));
     };
     view.forEach(walk);
 
-    // Filter the results down to ids present in this view
     const filtered = {};
     for (const id of fieldIds) {
-      if (normalizedResults[id] !== undefined) {
-        filtered[id] = normalizedResults[id];
-      }
+      if (normalizedResults[id] !== undefined) filtered[id] = normalizedResults[id];
     }
     return filtered;
   };
 
   const handleSubmitView = (viewName) => {
     if (!question) return;
-    const seedToUse = question.seed || seed || "1234";
-    const difficultyToUse = question.difficulty || difficulty || "medium";
 
-    fetch(`${API_URL}/question/${type}/evaluate?seed=${seedToUse}&difficulty=${difficultyToUse}`, {
+    fetch(`${API_URL}/question/${type}/evaluate${queryString}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(formData),
@@ -206,7 +186,10 @@ export default function QuestionPage() {
 
   if (!question) return <div>Loading...</div>;
 
-  const displayHeader = `${type?.replace(/_/g, " ")} (${difficulty})`;
+  // ✅ header: show difficulty only if present in URL (or returned by backend)
+  const sp = new URLSearchParams(search);
+  const difficultyLabel = sp.get("difficulty") || question.difficulty;
+  const displayHeader = `${type?.replace(/_/g, " ")}${difficultyLabel ? ` (${difficultyLabel})` : ""}`;
 
   return (
     <div className="container py-4">
@@ -288,7 +271,6 @@ export default function QuestionPage() {
           )}
         </div>
       )}
-
     </div>
   );
 }

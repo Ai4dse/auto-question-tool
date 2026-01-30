@@ -32,12 +32,20 @@ QUESTION_CONFIG = {
                 "difficulty": {
                     "kind": "select",
                     "visibility": "open",
+                    "label": "Difficulty",
                     "options": ["easy", "medium", "hard"],
                     "default": "easy",
+                },
+                "linkage_method": {
+                    "kind": "select",
+                    "visibility": "hidden",
+                    "label": "Linkage Method",
+                    "options": ["single", "complete", "average"],
                 },
                 "seed": {
                     "kind": "number",
                     "visibility": "hidden",
+                    "label": "Random Seed",
                 },
             },
         },
