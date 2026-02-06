@@ -374,6 +374,452 @@ function MatrixInputGrid({ el, idx, userInput, onChange, renderEvaluatedInput })
     </div>
   );
 }
+function DendrogramBuilder({ el, idx, userInput, onChange, renderEvaluatedInput }) {
+  const id = el.id || `dendro_${idx}`;
+
+  const pointLabels = (Array.isArray(el.points) ? el.points : []).map((p) => String(p));
+  const leafRefs = pointLabels.map((_, i) => `L:${i}`);
+
+  const MERGE_CHILD_PREFIX = `${id}:merge:`;
+  const MERGE_DIST_PREFIX = `${id}:merge_dist:`;
+
+  const distKey = (k) => `${MERGE_DIST_PREFIX}${k}`;
+  const childrenKey = (k) => `${id}:merge:${k}:children`;
+
+  const parseMerges = () => {
+    const out = [];
+    for (const key of Object.keys(userInput || {})) {
+      if (!key.startsWith(MERGE_CHILD_PREFIX)) continue;
+      const m = key.match(new RegExp(`^${id}:merge:(\\d+):children$`));
+      if (!m) continue;
+
+      const k = Number(m[1]);
+      const raw = String(userInput?.[key] ?? "");
+      const [a, b] = raw.split("|");
+      if (!a || !b) continue;
+
+      out.push({ k, a, b });
+    }
+    out.sort((x, y) => x.k - y.k);
+    return out;
+  };
+
+  const merges = parseMerges();
+  const mergeRefs = merges.map((m) => `M:${m.k}`);
+
+  const nextMergeId = () => {
+    let max = -1;
+    for (const m of merges) max = Math.max(max, m.k);
+    return max + 1;
+  };
+
+  const [selected, setSelected] = useState(null);
+  const [msg, setMsg] = useState("");
+
+  const isLeaf = (ref) => ref.startsWith("L:");
+  const leafIndex = (ref) => Number(ref.split(":")[1]);
+  const mergeId = (ref) => Number(ref.split(":")[1]);
+
+  // parent map: childRef -> parentRef (used to enforce "only roots selectable")
+  const parentOf = new Map();
+  for (const m of merges) {
+    const p = `M:${m.k}`;
+    parentOf.set(m.a, p);
+    parentOf.set(m.b, p);
+  }
+  const isRoot = (ref) => !parentOf.has(ref);
+
+  const maxMerges = Math.max(0, pointLabels.length - 1);
+
+  const createMerge = (aRef, bRef) => {
+    setMsg("");
+
+    if (aRef === bRef) return;
+
+    if (!isRoot(aRef) || !isRoot(bRef)) {
+      setMsg("You can only merge top-most clusters / unused points.");
+      return;
+    }
+
+    if (merges.length >= maxMerges) {
+      setMsg("Max merges reached (a dendrogram on n leaves has n−1 merges).");
+      return;
+    }
+
+    const k = nextMergeId();
+
+    onChange(childrenKey(k), `${aRef}|${bRef}`);
+
+    if (!Object.prototype.hasOwnProperty.call(userInput || {}, distKey(k))) {
+      onChange(distKey(k), "");
+    }
+  };
+
+  const onSelectRef = (ref) => {
+    setMsg("");
+    if (!isRoot(ref)) return;
+
+    if (selected === null) return setSelected(ref);
+    if (selected === ref) return setSelected(null);
+
+    createMerge(selected, ref);
+    setSelected(null);
+  };
+
+  // ---------- CASCADE DELETE ----------
+  const computeCascadeDelete = (k0) => {
+    // Build reverse dependency: childRef -> Set(parentMergeK)
+    // If a merge uses child "M:7", then deleting 7 should delete that merge too.
+    const rev = new Map(); // ref -> Set<number>
+    for (const m of merges) {
+      const parentK = m.k;
+      for (const childRef of [m.a, m.b]) {
+        if (!rev.has(childRef)) rev.set(childRef, new Set());
+        rev.get(childRef).add(parentK);
+      }
+    }
+
+    const startRef = `M:${k0}`;
+    const toDelete = new Set([k0]);
+    const queue = [startRef];
+
+    while (queue.length) {
+      const ref = queue.shift(); // "M:<k>"
+      const parents = rev.get(ref);
+      if (!parents) continue;
+
+      for (const pk of parents) {
+        if (!toDelete.has(pk)) {
+          toDelete.add(pk);
+          queue.push(`M:${pk}`);
+        }
+      }
+    }
+
+    // delete deeper merges first (higher k is usually "later"; but safest is descending)
+    return Array.from(toDelete).sort((a, b) => b - a);
+  };
+
+  const removeMergeCascade = (k) => {
+    const ks = computeCascadeDelete(k);
+
+    for (const kk of ks) {
+      onChange(childrenKey(kk), "");
+      onChange(distKey(kk), "");
+    }
+
+    setSelected(null);
+    setMsg("");
+  };
+
+  const clearAll = () => {
+    // remove everything by deleting all merges (descending)
+    const allKs = merges.map((m) => m.k).sort((a, b) => b - a);
+    for (const k of allKs) {
+      onChange(childrenKey(k), "");
+      onChange(distKey(k), "");
+    }
+    setSelected(null);
+    setMsg("");
+  };
+  // ---------- END CASCADE DELETE ----------
+
+  // ----- Layout computation -----
+  const W = Number(el.width ?? 900);
+
+  const padX = Number(el.padX ?? 60);
+  const bottomPad = Number(el.bottomPad ?? 60);
+  const topPad = Number(el.topPad ?? 30);
+  const levelStep = Number(el.levelStep ?? 70);
+  const firstLevelOffset = Number(el.firstLevelOffset ?? 90);
+
+  const levels = merges.length;
+  const neededHeight =
+    topPad + bottomPad + firstLevelOffset + Math.max(0, levels - 1) * levelStep;
+  const H = Math.max(Number(el.height ?? 360), neededHeight);
+
+  const baseY = H - bottomPad;
+  const levelY = (level) => baseY - firstLevelOffset - level * levelStep;
+
+  const xForLeaf = (i) => {
+    if (pointLabels.length <= 1) return W / 2;
+    const span = W - 2 * padX;
+    return padX + (span * i) / (pointLabels.length - 1);
+  };
+
+  const nodePos = new Map();
+  for (let i = 0; i < pointLabels.length; i++) {
+    nodePos.set(`L:${i}`, { x: xForLeaf(i), y: baseY });
+  }
+
+  for (let level = 0; level < merges.length; level++) {
+    const m = merges[level];
+    const pRef = `M:${m.k}`;
+    const a = nodePos.get(m.a);
+    const b = nodePos.get(m.b);
+    if (!a || !b) continue;
+    nodePos.set(pRef, { x: (a.x + b.x) / 2, y: levelY(level) });
+  }
+
+  const refLabel = (ref) => {
+    if (ref.startsWith("L:")) return pointLabels[leafIndex(ref)] ?? ref;
+    return `C${mergeId(ref)}`;
+  };
+
+
+  const nodeR = 16;
+  const allRefs = [...leafRefs, ...mergeRefs];
+
+  return (
+    <div className="card mb-4 shadow-sm">
+      <div className="card-body">
+        <div className="d-flex justify-content-between align-items-center mb-2">
+          <h5 className="card-title mb-0">{el.title || "Dendrogram Builder"}</h5>
+          <div className="d-flex gap-2">
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-danger"
+              onClick={clearAll}
+              disabled={merges.length === 0}
+            >
+              Clear all
+            </button>
+          </div>
+        </div>
+
+        <div className="text-muted small mb-2">
+          Click any two <b>root</b> items (unused points or top-most clusters) to merge them.
+        </div>
+
+        {msg && <div className="alert alert-warning py-2">{msg}</div>}
+
+        <div className="mb-3 d-flex flex-wrap gap-2">
+          {leafRefs.map((ref) => {
+            const isSel = selected === ref;
+            const disabled = !isRoot(ref);
+            return (
+              <button
+                key={`${id}-${ref}`}
+                type="button"
+                disabled={disabled}
+                className={`btn btn-sm ${isSel ? "btn-primary" : "btn-outline-primary"} ${
+                  disabled ? "opacity-50" : ""
+                }`}
+                onClick={() => onSelectRef(ref)}
+                title={disabled ? "Already part of a cluster" : ""}
+              >
+                {refLabel(ref)}
+              </button>
+            );
+          })}
+
+          {mergeRefs.length > 0 && (
+            <>
+              <span className="mx-2 text-muted small align-self-center">Clusters:</span>
+              {mergeRefs.map((ref) => {
+                const isSel = selected === ref;
+                const disabled = !isRoot(ref);
+                return (
+                  <button
+                    key={`${id}-${ref}`}
+                    type="button"
+                    disabled={disabled}
+                    className={`btn btn-sm ${isSel ? "btn-success" : "btn-outline-success"} ${
+                      disabled ? "opacity-50" : ""
+                    }`}
+                    onClick={() => onSelectRef(ref)}
+                    title={disabled ? "Not top-most cluster" : ""}
+                  >
+                    {refLabel(ref)}
+                  </button>
+                );
+              })}
+            </>
+          )}
+        </div>
+
+        <div
+          className="border rounded p-2 bg-light"
+          style={{ overflowX: "auto", overflowY: "auto", maxHeight: "600px" }}
+        >
+          <svg width={W} height={H} style={{ display: "block" }}>
+            <line x1={padX} y1={baseY} x2={W - padX} y2={baseY} stroke="#999" strokeWidth="2" />
+
+            {merges.map((m) => {
+              const pRef = `M:${m.k}`;
+              const p = nodePos.get(pRef);
+              const a = nodePos.get(m.a);
+              const b = nodePos.get(m.b);
+              if (!p || !a || !b) return null;
+
+              const heightValRaw = userInput?.[distKey(m.k)];
+              const heightVal = heightValRaw !== undefined && heightValRaw !== null ? String(heightValRaw) : "";
+
+              const btnSize = 18;
+
+              // vertical layout above the node
+              const valueY = p.y + 32;                 // value text y
+              const btnYTop = p.y - 42;
+              const btnXLeft = p.x - btnSize / 2;      // centered
+
+              //background pill for readability
+              const showPill = !!heightVal;
+
+
+              return (
+                <g key={`${id}-merge-${m.k}`}>
+                  {/* edges */}
+                  <line x1={a.x} y1={a.y} x2={p.x} y2={p.y} stroke="#333" strokeWidth="3" />
+                  <line x1={b.x} y1={b.y} x2={p.x} y2={p.y} stroke="#333" strokeWidth="3" />
+
+                  {/* show current height value near merge node */}
+                  {heightVal && (
+                    <g>
+                      {/* "pill" behind text */}
+                      {showPill && (
+                        <rect
+                          x={p.x - 24}
+                          y={valueY - 14}
+                          width={48}
+                          height={20}
+                          rx={8}
+                          ry={8}
+                          fill="#fff"
+                          stroke="#bbb"
+                          strokeWidth="1"
+                          opacity="0.95"
+                        />
+                      )}
+
+                      <text
+                        x={p.x}
+                        y={valueY}
+                        textAnchor="middle"
+                        style={{
+                          fontFamily: "monospace",
+                          fontSize: 14,
+                          fill: "#111",
+                          userSelect: "none",
+                          pointerEvents: "none",
+                        }}
+                      >
+                        {heightVal}
+                      </text>
+                    </g>
+)}
+
+                  {/* SVG-native delete button */}
+                  <g
+                    transform={`translate(${btnXLeft}, ${btnYTop})`}
+                    style={{ cursor: "pointer" }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeMergeCascade(m.k);
+                    }}
+                  >
+                    <rect
+                      x={0}
+                      y={0}
+                      width={btnSize}
+                      height={btnSize}
+                      rx={4}
+                      ry={4}
+                      fill="#fff"
+                      stroke="#dc3545"
+                      strokeWidth={2}
+                    />
+                    <text
+                      x={btnSize / 2}
+                      y={btnSize / 2 + 5}
+                      textAnchor="middle"
+                      style={{
+                        fontFamily: "monospace",
+                        fontSize: 16,
+                        fill: "#dc3545",
+                        userSelect: "none",
+                        pointerEvents: "none",
+                      }}
+                    >
+                      ×
+                    </text>
+
+                    {/* slightly larger hit target */}
+                    <rect x={-6} y={-6} width={btnSize + 12} height={btnSize + 12} fill="transparent" />
+                  </g>
+
+                </g>
+              );
+            })}
+
+
+            {allRefs.map((ref) => {
+              const pos = nodePos.get(ref);
+              if (!pos) return null;
+
+              const root = isRoot(ref);
+              const isSel = selected === ref;
+              const isCluster = ref.startsWith("M:");
+
+              return (
+                <g
+                  key={`${id}-node-${ref}`}
+                  style={{ cursor: root ? "pointer" : "not-allowed", opacity: root ? 1 : 0.35 }}
+                  onClick={() => root && onSelectRef(ref)}
+                >
+                  <circle
+                    cx={pos.x}
+                    cy={pos.y}
+                    r={nodeR}
+                    fill={isSel ? (isCluster ? "#198754" : "#0d6efd") : "#fff"}
+                    stroke={isCluster ? "#198754" : "#0d6efd"}
+                    strokeWidth="3"
+                  />
+                  <text
+                    x={pos.x}
+                    y={pos.y + 5}
+                    textAnchor="middle"
+                    style={{ fontFamily: "monospace", fontSize: 12, fill: "#111" }}
+                  >
+                    {isCluster ? `C${mergeId(ref)}` : (pointLabels[leafIndex(ref)] ?? "")}
+                  </text>
+
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+
+        <div className="mt-3">
+          <div className="fw-semibold mb-2">Stored fields</div>
+
+          {merges.length === 0 ? (
+            <div className="text-muted small">No merges yet.</div>
+          ) : (
+            <div className="d-flex flex-column gap-2">
+              {merges.map((m) => {
+                const fieldId = distKey(m.k);
+                const prettyChild = (ref) => {
+                  if (ref.startsWith("L:")) return pointLabels[Number(ref.split(":")[1])] ?? ref;
+                  if (ref.startsWith("M:")) return `C${Number(ref.split(":")[1])}`;
+                  return ref;
+                };
+
+                const label = `Merge C${m.k}: ${prettyChild(m.a)} + ${prettyChild(m.b)} → height`;
+
+                return (
+                  <div key={`${id}-merge-field-${m.k}`} className="mb-2">
+                    <label className="form-label fw-semibold">{label}</label>
+                    {renderEvaluatedInput(fieldId, userInput?.[fieldId] ?? "")}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function DropdownSection({ title, children, defaultOpen = false }) {
   const [isOpen, setIsOpen] = useState(defaultOpen);
@@ -413,6 +859,7 @@ export default function LayoutRenderer({
   userInput = {},
   showExpected = false,
   reactiveTables = {},
+  registerFieldId = null,
 }) {
   if (!layout) return null;
 
@@ -421,6 +868,7 @@ export default function LayoutRenderer({
 
   /** 🔹 Evaluated text input with color feedback */
   const renderEvaluatedInput = (fieldId, value = "", options = {}) => {
+    if (typeof registerFieldId === "function") registerFieldId(String(fieldId));
     const {
       asTextarea = false,
       rows = 4,
@@ -512,6 +960,18 @@ export default function LayoutRenderer({
   /** 🔹 General renderer for all element types */
   const renderElement = (el, idx) => {
     switch (el.type) {
+      case "DendrogramBuilder":
+      case "dendrogram_builder":
+        return (
+          <DendrogramBuilder
+            key={el.id ?? idx}
+            el={el}
+            idx={idx}
+            userInput={userInput}
+            onChange={onChange}
+            renderEvaluatedInput={renderEvaluatedInput}
+          />
+        );
       case "Text":
       case "text":
         return (
@@ -519,7 +979,6 @@ export default function LayoutRenderer({
             {el.value || el.content}
           </p>
         );
-
       case "Table":
       case "table":
         return (

@@ -1,5 +1,5 @@
 // frontend/src/pages/QuestionPage.jsx
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import LayoutRenderer from "../components/LayoutRenderer";
 import { API_URL } from "../api";
@@ -16,7 +16,15 @@ export default function QuestionPage() {
   const [finished, setFinished] = useState(false);
   const [reactiveTables, setReactiveTables] = useState({});
 
-  // ✅ collect ALL url params (no hardcoded settings)
+  const viewFieldIdsRef = useRef({}); // { [viewName]: Set<string> }
+
+  const registerFieldIdForView = (viewName, fieldId) => {
+    const v = String(viewName);
+    const id = String(fieldId);
+    if (!viewFieldIdsRef.current[v]) viewFieldIdsRef.current[v] = new Set();
+      viewFieldIdsRef.current[v].add(id);
+    };
+
   const queryString = useMemo(() => {
     const sp = new URLSearchParams(search);
 
@@ -113,44 +121,13 @@ export default function QuestionPage() {
 
   const handleChange = (id, value) => setFormData((prev) => ({ ...prev, [id]: value }));
 
-  // filterResultsForView unchanged...
-  const filterResultsForView = (allResults, view) => {
-    if (!allResults || !view) return {};
-
-    const normalizedResults = {};
-    for (const [k, v] of Object.entries(allResults)) normalizedResults[String(k)] = v;
-
-    const fieldIds = new Set();
-    const walk = (el) => {
-      if (!el || typeof el !== "object") return;
-      const t = String(el.type || "").toLowerCase();
-
-      if ((t === "tableinput" || t === "table_input") && Array.isArray(el.rows)) {
-        el.rows.forEach((row) => {
-          if (!row) return;
-          const rowId = row.id;
-          const fields = Array.isArray(row.fields) ? row.fields : [];
-          fields.forEach((_, fIdx) => fieldIds.add(String(`${rowId}_${fIdx}`)));
-        });
-        return;
-      }
-
-      if (t === "layouttable" || t === "layout_table") {
-        const cells = Array.isArray(el.cells) ? el.cells : [];
-        for (const row of cells) {
-          if (!Array.isArray(row)) continue;
-          for (const cell of row) walk(cell);
-        }
-        return;
-      }
-
-      if (el.id !== undefined && el.id !== null && el.id !== "") fieldIds.add(String(el.id));
-    };
-    view.forEach(walk);
-
+  const filterResultsForView = (allResults, viewName) => {
+    const ids = viewFieldIdsRef.current?.[viewName];
+    if (!allResults || !ids || ids.size === 0) return {};
     const filtered = {};
-    for (const id of fieldIds) {
-      if (normalizedResults[id] !== undefined) filtered[id] = normalizedResults[id];
+    for (const id of ids) {
+      const key = String(id);
+      if (allResults[key] !== undefined) filtered[key] = allResults[key];
     }
     return filtered;
   };
@@ -165,7 +142,7 @@ export default function QuestionPage() {
     })
       .then((res) => res.json())
       .then((data) => {
-        const filteredResults = filterResultsForView(data.results, question.layout[viewName]);
+        const filteredResults = filterResultsForView(data.results, viewName);
         setViewResults((prev) => ({ ...prev, [viewName]: filteredResults }));
         setViewStatus((prev) => ({ ...prev, [viewName]: "evaluated" }));
       })
@@ -186,7 +163,6 @@ export default function QuestionPage() {
 
   if (!question) return <div>Loading...</div>;
 
-  // ✅ header: show difficulty only if present in URL (or returned by backend)
   const sp = new URLSearchParams(search);
   const difficultyLabel = sp.get("difficulty") || question.difficulty;
   const displayHeader = `${type?.replace(/_/g, " ")}${difficultyLabel ? ` (${difficultyLabel})` : ""}`;
@@ -200,7 +176,7 @@ export default function QuestionPage() {
         const results = viewResults[viewName] || {};
         const isLastVisible = index === visibleViews.length - 1;
         const nextExists = question.layout[`view${visibleViews.length + 1}`];
-
+        viewFieldIdsRef.current[viewName] = new Set();
         return (
           <div key={viewName} className="card mb-4 shadow-sm">
             <div className="card-body">
@@ -212,6 +188,7 @@ export default function QuestionPage() {
                 userInput={formData}
                 showExpected={status === "showingResults"}
                 reactiveTables={reactiveTables}
+                registerFieldId={(fieldId) => registerFieldIdForView(viewName, fieldId)}
               />
 
               <button
