@@ -1,7 +1,6 @@
 # app/question_types/agnes.py
 
-import random
-import numpy as np
+from app.common import *
 from app.ui_layout import Point
 
 DIFFICULTY_SETTINGS = {
@@ -50,6 +49,54 @@ class AGNESQuestion:
         else:
             raise ValueError(f"Unknown distance metric: {self.dist}")
 
+    def build_dendrogram_merges(self):
+
+        n = self.D.shape[0]
+        assert self.D.shape == (n, n)
+
+        clusters = {f"L:{i}": [i] for i in range(n)}
+        self.merges = []
+        self.merge_dists = []
+        next_merge_idx = 0
+
+        def cluster_distance(a_key, b_key):
+            A = clusters[a_key]
+            B = clusters[b_key]
+            # all pairwise distances between members
+            block = self.D[np.ix_(A, B)]
+            if self.linkage == "single":
+                return float(np.min(block))
+            elif self.linkage == "complete":
+                return float(np.max(block))
+            elif self.linkage == "average":
+                return float(np.mean(block))
+
+        while len(clusters) > 1:
+            keys = sorted(clusters.keys())  # for deterministic tie-breaking
+            best = None  # (dist, a_key, b_key)
+
+            for i in range(len(keys)):
+                for j in range(i + 1, len(keys)):
+                    a, b = keys[i], keys[j]
+                    dist = cluster_distance(a, b)
+                    cand = (dist, a, b)
+                    if best is None or cand < best:   # tuple ordering = distance, then name tie-break
+                        best = cand
+
+            dist, a, b = best
+            # record merge exactly in the format you want
+            self.merges.append(f"{a}|{b}")
+            self.merge_dists.append(dist)
+
+            # create new merged cluster
+            new_key = f"M:{next_merge_idx}"
+            next_merge_idx += 1
+            clusters[new_key] = clusters[a] + clusters[b]
+            del clusters[a]
+            del clusters[b]
+
+        print(self.merges)
+        print(self.merge_dists)
     # ---------------------------------------------------------------------
     # Internal DBSCAN computation
     # ---------------------------------------------------------------------
@@ -58,6 +105,7 @@ class AGNESQuestion:
         X = np.array([(p.x, p.y) for p in self.points], dtype=float)
         self.D = self._distance_matrix(X)
         self.cluster = [0] * self.num_points
+        self.build_dendrogram_merges()
 
     # ---------------------------------------------------------------------
     # Layout builder
@@ -172,13 +220,13 @@ class AGNESQuestion:
                                 "expected": f"{self.D[i][j]}"}
                 continue
         #dendogram eval
-        for i in range(self.num_points):
+        for i in range(len(self.merges)):
             id_merge = f"dendo:merge:{i}:children"
             id_dist = f"dendo:merge_dist:{i}"
-            results[id_merge] = { "correct": user_input.get(id_merge) == str(self.D[i][j]),
-                                "expected": user_input.get(id_merge)}
-            results[id_dist] = { "correct": user_input.get(id_dist) == str(self.D[i][j]),
-                                "expected": user_input.get(id_dist)}
+            results[id_merge] = { "correct": user_input.get(id_merge) == str(normalize_number(self.merges[i])),
+                                "expected": f"{self.merges[i]}"}
+            results[id_dist] = { "correct": user_input.get(id_dist) == str(normalize_number(self.merge_dists[i])),
+                                "expected": f"{self.merge_dists[i]}"}
         print(user_input)
         print(results)
         return results

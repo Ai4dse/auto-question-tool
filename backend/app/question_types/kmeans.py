@@ -71,9 +71,9 @@ class KMeansQuestion:
                     min_idx = 0
 
                     for j, (cx, cy) in enumerate(centroids):
-                        
+
                         dist = math.sqrt((px - cx) ** 2 + (py - cy) ** 2)
-                        
+
                         point_distances.append(f"{dist:.2f}".rstrip("0").rstrip("."))
 
                         if dist < min_dist or (math.isclose(dist, min_dist) and j < min_idx):
@@ -91,7 +91,7 @@ class KMeansQuestion:
                     stable_clusters = False
                     break
                 prev_assignments = assignments[:]
-                
+
                 # Step 3: Recompute centroids
                 new_centroids = []
                 for k in range(self.num_centroids):
@@ -240,7 +240,7 @@ class KMeansQuestion:
                     "correct": user_input.get(id) == valuesCentroids,
                     "expected": valuesCentroids
                 }
-                    
+
             cluster_points = {
                 i: [p.label for j, p in enumerate(self.points) if assignments[j] == i]
                 for i in range(self.num_centroids)
