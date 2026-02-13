@@ -375,6 +375,7 @@ function MatrixInputGrid({ el, idx, userInput, onChange, renderEvaluatedInput })
   );
 }
 function DendrogramBuilder({ el, idx, userInput, onChange, renderEvaluatedInput }) {
+
   const id = el.id || `dendro_${idx}`;
 
   const pointLabels = (Array.isArray(el.points) ? el.points : []).map((p) => String(p));
@@ -430,6 +431,8 @@ function DendrogramBuilder({ el, idx, userInput, onChange, renderEvaluatedInput 
   const isRoot = (ref) => !parentOf.has(ref);
 
   const maxMerges = Math.max(0, pointLabels.length - 1);
+  const remainingMerges = Math.max(0, maxMerges - merges.length);
+  const isComplete = merges.length === maxMerges;
 
   const createMerge = (aRef, bRef) => {
     setMsg("");
@@ -589,6 +592,18 @@ function DendrogramBuilder({ el, idx, userInput, onChange, renderEvaluatedInput 
 
         <div className="text-muted small mb-2">
           Click any two <b>root</b> items (unused points or top-most clusters) to merge them.
+        </div>
+        <div className="d-flex align-items-center gap-2 mb-2">
+          <span className={`badge ${isComplete ? "bg-success" : "bg-warning text-dark"}`}>
+            {isComplete
+              ? "Dendrogram complete"
+              : `Incomplete: ${remainingMerges} merge${remainingMerges === 1 ? "" : "s"} missing`}
+          </span>
+          {!isComplete && (
+            <span className="text-muted small">
+              Merge until you reach {maxMerges} total merges.
+            </span>
+          )}
         </div>
 
         {msg && <div className="alert alert-warning py-2">{msg}</div>}

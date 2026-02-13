@@ -225,8 +225,8 @@ class AGNESQuestion:
             id_dist = f"dendo:merge_dist:{i}"
             results[id_merge] = { "correct": user_input.get(id_merge) == str(normalize_number(self.merges[i])),
                                 "expected": f"{self.merges[i]}"}
-            results[id_dist] = { "correct": user_input.get(id_dist) == str(normalize_number(self.merge_dists[i])),
-                                "expected": f"{self.merge_dists[i]}"}
+            results[id_dist] = { "correct": user_input.get(id_dist) == str(normalize_number(self.merge_dists[i])) and user_input.get(id_merge) == str(normalize_number(self.merges[i])),
+                                "expected": f"{self.merge_dists[i]}, {str(self.merges[i])}"}
         print(user_input)
         print(results)
         return results
