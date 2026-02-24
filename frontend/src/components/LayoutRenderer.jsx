@@ -503,17 +503,58 @@ function DendrogramBuilder({ el, idx, userInput, onChange, renderEvaluatedInput 
     return Array.from(toDelete).sort((a, b) => b - a);
   };
 
-  const removeMergeCascade = (k) => {
-    const ks = computeCascadeDelete(k);
+  // parse "M:7" -> 7
+  const mergeNumFromRef = (ref) => Number(String(ref).split(":")[1]);
 
-    for (const kk of ks) {
-      onChange(childrenKey(kk), "");
-      onChange(distKey(kk), "");
+  // rewrite a child ref if it is a merge ref and exists in map
+  const remapRef = (ref, oldToNew) => {
+    if (!String(ref).startsWith("M:")) return ref;
+    const oldK = mergeNumFromRef(ref);
+    const newK = oldToNew.get(oldK);
+    return Number.isFinite(newK) ? `M:${newK}` : ref; // should always exist after cascade
+  };
+
+  // Compact all merges in userInput to 0..(k-1) based on current merges list,
+  // excluding the ones in deleteSet.
+  const compactMergesAfterDelete = (deleteSet) => {
+    // merges that remain
+    const kept = merges.filter((m) => !deleteSet.has(m.k)).sort((a, b) => a.k - b.k);
+
+    // oldK -> newK mapping
+    const oldToNew = new Map();
+    kept.forEach((m, i) => oldToNew.set(m.k, i));
+
+    // 1) Clear ALL existing merge keys (both kept and deleted) so we don't leave stale ids behind.
+    for (const m of merges) {
+      onChange(childrenKey(m.k), "");
+      onChange(distKey(m.k), "");
     }
+
+    // 2) Re-create kept merges under new compact ids
+    for (const m of kept) {
+      const newK = oldToNew.get(m.k);
+
+      const newA = remapRef(m.a, oldToNew);
+      const newB = remapRef(m.b, oldToNew);
+
+      onChange(childrenKey(newK), `${newA}|${newB}`);
+
+      // carry over the old height value to the new id
+      const oldHeight = userInput?.[distKey(m.k)] ?? "";
+      onChange(distKey(newK), oldHeight);
+    }
+  };
+
+  const removeMergeCascade = (k0) => {
+    const ks = computeCascadeDelete(k0);
+    const deleteSet = new Set(ks);
+
+    compactMergesAfterDelete(deleteSet);
 
     setSelected(null);
     setMsg("");
   };
+
 
   const clearAll = () => {
     // remove everything by deleting all merges (descending)

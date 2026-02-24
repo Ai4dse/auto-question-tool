@@ -56,6 +56,7 @@ class AGNESQuestion:
 
         clusters = {f"L:{i}": [i] for i in range(n)}
         self.merges = []
+        self.merges_inverse = []
         self.merge_dists = []
         next_merge_idx = 0
 
@@ -86,6 +87,7 @@ class AGNESQuestion:
             dist, a, b = best
             # record merge exactly in the format you want
             self.merges.append(f"{a}|{b}")
+            self.merges_inverse.append(f"{b}|{a}")
             self.merge_dists.append(dist)
 
             # create new merged cluster
@@ -223,9 +225,9 @@ class AGNESQuestion:
         for i in range(len(self.merges)):
             id_merge = f"dendo:merge:{i}:children"
             id_dist = f"dendo:merge_dist:{i}"
-            results[id_merge] = { "correct": user_input.get(id_merge) == str(normalize_number(self.merges[i])),
+            results[id_merge] = { "correct": user_input.get(id_merge) == str(normalize_number(self.merges[i])) or str(normalize_number(self.merges_inverse[i])),
                                 "expected": f"{self.merges[i]}"}
-            results[id_dist] = { "correct": user_input.get(id_dist) == str(normalize_number(self.merge_dists[i])) and user_input.get(id_merge) == str(normalize_number(self.merges[i])),
+            results[id_dist] = { "correct": user_input.get(id_dist) == str(normalize_number(self.merge_dists[i])) and (user_input.get(id_merge) == str(normalize_number(self.merges[i])) or str(normalize_number(self.merges_inverse[i]))),
                                 "expected": f"{self.merge_dists[i]}, {str(self.merges[i])}"}
         print(user_input)
         print(results)
