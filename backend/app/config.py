@@ -98,9 +98,9 @@ QUESTION_CONFIG = {
     "hungarian_method": {
         "class_path": "app.question_types.hungarian_method.HungarianMethodQuestion",
         "metadata": {
-            "title": "Hungarian Method",
+            "title": "Ungarische Methode",
             "mode": ["steps", "exam"],
-            "desc": "Practice the hungarian_method.",
+            "desc": "Anwenden der ungarischen Methode.",
             "tags": ["arithmetic"],
             "settings": {
                 "difficulty": {
@@ -120,9 +120,9 @@ QUESTION_CONFIG = {
     "relational_algebra": {
         "class_path": "app.question_types.relational_algebra.RelationalAlgebra",
         "metadata": {
-            "title": "Relational Algebra",
+            "title": "Relationale Algebra",
             "mode": ["steps", "exam"],
-            "desc": "Practice relational algebra.",
+            "desc": "Übungen und Visualisierungen.",
             "tags": ["arithmetic"],
             "settings": {
                 "difficulty": {

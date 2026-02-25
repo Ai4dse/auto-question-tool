@@ -261,15 +261,44 @@ function renderMathLike(text) {
  */
 const normLabel = (x) => (Array.isArray(x) ? String(x[0] ?? "") : String(x ?? ""));
 
-function MatrixInputGrid({ el, idx, userInput, onChange, renderEvaluatedInput }) {
+function MatrixInputGrid({
+  el,
+  idx,
+  userInput,
+  onChange,
+  renderEvaluatedInput,
+  registerFieldId,
+  evaluationResults,
+  showExpected,
+}) {
   const id = el.id || `matrix_${idx}`;
+  const checkboxId = el.checkboxId || id;
   const rows = el.rows || [];
   const cols = el.cols || [];
   const placeholders = el.values || [];
 
-  const isRowStruck = (r) => !!userInput?.[`${id}:row:${r}`];
-  const isColStruck = (c) => !!userInput?.[`${id}:col:${c}`];
+  const registerField = (fieldId) => {
+    if (typeof registerFieldId === "function") registerFieldId(String(fieldId));
+  };
+
+  const isRowStruck = (r) => !!userInput?.[`${checkboxId}:row:${r}`];
+  const isColStruck = (c) => !!userInput?.[`${checkboxId}:col:${c}`];
   const cellKey = (r, c) => `${id}:cell:${r},${c}`;
+
+  const renderCheckboxFeedback = (fieldId) => {
+    const evalResult = evaluationResults?.[fieldId];
+    const isCorrect = evalResult?.correct;
+    const expected = evalResult?.expected;
+    const feedbackClass = evalResult === undefined ? "" : isCorrect ? "is-valid" : "is-invalid";
+
+    return {
+      feedbackClass,
+      feedbackEl:
+        showExpected && evalResult !== undefined && !isCorrect && expected !== undefined ? (
+          <small className="text-muted fst-italic d-block">Correct: {String(expected)}</small>
+        ) : null,
+    };
+  };
 
   // Seed userInput with placeholder values once per matrix identity/size
   useEffect(() => {
@@ -312,10 +341,13 @@ function MatrixInputGrid({ el, idx, userInput, onChange, renderEvaluatedInput })
             </thead>
 
             <tbody>
-              {rows.map((rLabel, rIdx) => {
-                const rowStruck = isRowStruck(rIdx);
+                {rows.map((rLabel, rIdx) => {
+                  const rowStruck = isRowStruck(rIdx);
+                  const rowStrikeKey = `${checkboxId}:row:${rIdx}`;
+                  const rowFeedback = renderCheckboxFeedback(rowStrikeKey);
+                  registerField(rowStrikeKey);
 
-                return (
+                  return (
                   <tr
                     key={`r-${rIdx}`}
                     className={rowStruck ? "text-decoration-line-through text-muted" : ""}
@@ -340,11 +372,12 @@ function MatrixInputGrid({ el, idx, userInput, onChange, renderEvaluatedInput })
                     <td className="text-center">
                       <input
                         type="checkbox"
-                        className="form-check-input"
-                        checked={!!userInput?.[`${id}:row:${rIdx}`]}
-                        onChange={(e) => onChange(`${id}:row:${rIdx}`, e.target.checked)}
+                        className={`form-check-input ${rowFeedback.feedbackClass}`}
+                          checked={!!userInput?.[rowStrikeKey]}
+                          onChange={(e) => onChange(rowStrikeKey, e.target.checked)}
                         aria-label={`Strike row ${normLabel(rLabel)}`}
                       />
+                      {rowFeedback.feedbackEl}
                     </td>
                   </tr>
                 );
@@ -354,17 +387,23 @@ function MatrixInputGrid({ el, idx, userInput, onChange, renderEvaluatedInput })
             <tfoot>
               <tr>
                 <th className="small text-muted text-center">Strike col</th>
-                {cols.map((_, cIdx) => (
-                  <td key={`c-foot-${cIdx}`} className="text-center">
-                    <input
-                      type="checkbox"
-                      className="form-check-input"
-                      checked={!!userInput?.[`${id}:col:${cIdx}`]}
-                      onChange={(e) => onChange(`${id}:col:${cIdx}`, e.target.checked)}
-                      aria-label={`Strike column ${normLabel(cols[cIdx])}`}
-                    />
-                  </td>
-                ))}
+                {cols.map((_, cIdx) => {
+                  const colStrikeKey = `${checkboxId}:col:${cIdx}`;
+                  const colFeedback = renderCheckboxFeedback(colStrikeKey);
+                  registerField(colStrikeKey);
+                  return (
+                    <td key={`c-foot-${cIdx}`} className="text-center">
+                      <input
+                        type="checkbox"
+                        className={`form-check-input ${colFeedback.feedbackClass}`}
+                        checked={!!userInput?.[colStrikeKey]}
+                        onChange={(e) => onChange(colStrikeKey, e.target.checked)}
+                        aria-label={`Strike column ${normLabel(cols[cIdx])}`}
+                      />
+                      {colFeedback.feedbackEl}
+                    </td>
+                  );
+                })}
                 <td />
               </tr>
             </tfoot>
@@ -1307,6 +1346,9 @@ export default function LayoutRenderer({
             userInput={userInput}
             onChange={onChange}
             renderEvaluatedInput={renderEvaluatedInput}
+            registerFieldId={registerFieldId}
+            evaluationResults={evaluationResults}
+            showExpected={showExpected}
           />
         );
       case "ExpressionInput":
