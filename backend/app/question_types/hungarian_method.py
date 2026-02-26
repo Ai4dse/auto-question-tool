@@ -1,8 +1,10 @@
 import itertools
+import math
 import random
 
 import numpy as np
 
+from app.resources.number_norm_helper import normalize_number
 from app.resources.synonyms import synonym_pairs
 
 
@@ -248,7 +250,10 @@ class HungarianMethodQuestion:
     # Layout helpers
     # ------------------------------------------------------------------
     def _as_values(self, matrix_tuple):
-        return [list(row) for row in matrix_tuple]
+        return [
+            [self._format_expected_value(cell) for cell in row]
+            for row in matrix_tuple
+        ]
 
     def _matrix_input(self, matrix_id, title, values=None):
         payload = {
@@ -478,11 +483,29 @@ class HungarianMethodQuestion:
     # ------------------------------------------------------------------
     # Evaluation helpers
     # ------------------------------------------------------------------
-    def _compare_numeric(self, actual, expected):
+    def _to_float(self, value):
         try:
-            return float(actual) == float(expected)
+            if value is None:
+                return None
+            return float(str(value).replace(",", "."))
         except (TypeError, ValueError):
-            return str(actual) == str(expected)
+            return None
+
+    def _format_expected_value(self, value):
+        if isinstance(value, bool):
+            return str(value)
+
+        normalized = normalize_number(value, max_decimals=6)
+        if normalized is None:
+            return ""
+        return str(normalized)
+
+    def _compare_numeric(self, actual, expected):
+        actual_f = self._to_float(actual)
+        expected_f = self._to_float(expected)
+        if actual_f is not None and expected_f is not None:
+            return math.isclose(actual_f, expected_f, rel_tol=1e-9, abs_tol=1e-8)
+        return self._format_expected_value(actual) == self._format_expected_value(expected)
 
     def _matrix_stage_matches(self, user_input, matrix_id, expected_matrix):
         for r in range(self.matrix_size):
@@ -580,7 +603,7 @@ class HungarianMethodQuestion:
         uniq = []
         seen = set()
         for v in values:
-            text = str(v)
+            text = self._format_expected_value(v)
             if text not in seen:
                 seen.add(text)
                 uniq.append(text)

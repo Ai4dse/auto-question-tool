@@ -63,7 +63,7 @@ def test_steps_layout_contains_progressive_views():
 
     step2_matrix_inputs = [el for el in layout["view2"] if el.get("type") == "MatrixInput"]
     assert step2_matrix_inputs
-    assert step2_matrix_inputs[0].get("values") == [list(row) for row in question.step1_matrix]
+    assert step2_matrix_inputs[0].get("values") == question._as_values(question.step1_matrix)
 
     first_step3_elements = layout["view3"]
     first_step3_matrix = [el for el in first_step3_elements if el.get("type") == "MatrixInput"][0]
