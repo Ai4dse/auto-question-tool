@@ -9,7 +9,7 @@
     "id": "dbscan",
     "issues": ["none"],
     "description": "Mark Border Core and Noise Ponts in a 2d Data distribution with dbscan",
-    "completed": false
+    "completed": true
   },
   {
     "id": "kmeans",
@@ -21,7 +21,7 @@
     "id": "hungarian_method",
     "issues": ["none"],
     "description": "Match terms using the hungarian method",
-    "completed": false
+    "completed": true
   }
   ,
   {
@@ -105,7 +105,7 @@
     "id": "agnes",
     "issues": ["none"],
     "description": "find clusters with a distance matrix utilizing a dendogram and an specifyed linkage method",
-    "completed": false
+    "completed": true
   }
   ,
   {
@@ -119,7 +119,7 @@
     "id": "stable_marriage",
     "issues": ["none"],
     "description": "Match terms using the stable marriage algorithm",
-    "completed": false
+    "completed": true
   }
   ,
   {

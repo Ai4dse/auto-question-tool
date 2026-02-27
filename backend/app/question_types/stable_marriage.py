@@ -190,7 +190,7 @@ class StableMarriageQuestion:
             },
             {
                 "type": "layout_table",
-                "title": "Eingabe fuer diesen Schritt",
+                "title": "Eingabe für diesen Schritt",
                 "rows": 1,
                 "cols": 3,
                 "cells": [[

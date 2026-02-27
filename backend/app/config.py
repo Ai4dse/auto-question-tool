@@ -143,7 +143,7 @@ QUESTION_CONFIG = {
         "class_path": "app.question_types.stable_marriage.StableMarriageQuestion",
         "metadata": {
             "title": "Stable Marriage",
-            "desc": "Finde ein stabiles Matching aus zwei Praeferenzlisten.",
+            "desc": "Finde ein stabiles Matching aus zwei Präferenzlisten.",
             "tags": ["matching", "algorithms"],
             "settings": {
                 "mode": {

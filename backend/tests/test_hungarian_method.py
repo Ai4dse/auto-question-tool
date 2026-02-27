@@ -124,6 +124,40 @@ def test_steps_accepts_alternative_correct_cover_choice():
         assert results[f"hm_cover_1:col:{c}"]["correct"]
 
 
+def test_steps_rejects_mixed_cover_across_different_valid_options():
+    question = _find_steps_question_with_branching_cover()
+    if question is None:
+        pytest.skip("No medium instance with branching cover choices found in seed range")
+    assert question is not None
+
+    first_options = sorted({r["step3_covers"][0] for r in question.step_routes})
+    option_set = set(first_options)
+
+    row_sets = sorted({rows for rows, _ in option_set})
+    col_sets = sorted({cols for _, cols in option_set})
+
+    mixed_cover = None
+    for rows in row_sets:
+        for cols in col_sets:
+            candidate = (rows, cols)
+            if candidate not in option_set:
+                mixed_cover = candidate
+                break
+        if mixed_cover is not None:
+            break
+
+    if mixed_cover is None:
+        pytest.skip("Could not construct a mixed invalid cover from available branching options")
+
+    user_input = _cover_input("hm_cover_1", mixed_cover, question.matrix_size)
+    results = question.evaluate(user_input)
+
+    for r in range(question.matrix_size):
+        assert not results[f"hm_cover_1:row:{r}"]["correct"]
+    for c in range(question.matrix_size):
+        assert not results[f"hm_cover_1:col:{c}"]["correct"]
+
+
 def test_step2_expected_is_not_blank_when_answer_is_wrong():
     question = HungarianMethodQuestion(seed=25, difficulty="medium", mode="steps")
 

@@ -302,14 +302,11 @@ class HungarianMethodQuestion:
         base["view1"] = [
             {
                 "type": "Text",
-                "content": (
-                    "Schritt 1: Zeilenreduktion. Subtrahieren Sie in jeder Zeile das Minimum "
-                    "von allen Eintragen."
-                ),
+                "content": (),
             },
             self._matrix_input(
                 "hm_step1",
-                "Ausgangsmatrix (bearbeiten Sie die Felder fur Schritt 1)",
+                "Zeilenreduktion.",
                 values=[
                     self.numbers[i:i + self.matrix_size]
                     for i in range(0, len(self.numbers), self.matrix_size)
@@ -321,13 +318,12 @@ class HungarianMethodQuestion:
             {
                 "type": "Text",
                 "content": (
-                    "Schritt 2: Spaltenreduktion. Verwenden Sie Ihr Ergebnis aus Schritt 1 und "
-                    "subtrahieren Sie in jeder Spalte das jeweilige Minimum."
+                    
                 ),
             },
             self._matrix_input(
                 "hm_step2",
-                "Schritt 2 Matrix",
+                "Spaltenreduktion.",
                 values=self._as_values(self.step1_matrix),
             ),
         ]
@@ -339,15 +335,12 @@ class HungarianMethodQuestion:
             base[f"view{view_idx}"] = [
                 {
                     "type": "Text",
-                    "content": (
-                        f"Schritt 3.{i}: Uberdecken Sie alle Nullen mit minimaler Anzahl an Linien "
-                        "(Strike row / Strike col)."
-                    ),
+                    "content": (),
                 },
                 {
                     **self._matrix_input(
                         display_matrix_id,
-                        f"Linienauswahl fur Schritt 3.{i}",
+                        f"Überdeckung mit Linien.",
                         values=self._source_values_for_cover_step(i),
                     ),
                     "checkboxId": cover_id,
@@ -358,11 +351,9 @@ class HungarianMethodQuestion:
             base[f"view{view_idx}"] = [
                 {
                     "type": "Text",
-                    "content": (
-                        f"Schritt 4.{i}: Bilden Sie die neue Matrix anhand der gewahlten Linien."
-                    ),
+                    "content": (),
                 },
-                self._matrix_input(f"hm_step4_{i}", f"Schritt 4.{i} Matrix"),
+                self._matrix_input(f"hm_step4_{i}", f"Reduktion mit Linien"),
             ]
             view_idx += 1
 
@@ -371,15 +362,12 @@ class HungarianMethodQuestion:
         base[f"view{view_idx}"] = [
             {
                 "type": "Text",
-                "content": (
-                    "Finaler Schritt 3: Uberdecken Sie alle Nullen mit n Linien. Danach kann die "
-                    "optimale Zuordnung bestimmt werden."
-                ),
+                "content": (),
             },
             {
                 **self._matrix_input(
                     terminal_display_matrix_id,
-                    "Finale Linienauswahl",
+                    "Überdecken mit Linien.",
                     values=self._source_values_for_terminal_cover_step(),
                 ),
                 "checkboxId": terminal_cover_id,
@@ -392,8 +380,8 @@ class HungarianMethodQuestion:
             {
                 "type": "DropdownInput",
                 "id": f"hm_final_assign_{row}",
-                "label": f"Zuordnung fur {self.schema_a[row]}",
-                "placeholder": "Bitte auswahlen...",
+                "label": f"Zuordnung für {self.schema_a[row]}",
+                "placeholder": "Bitte auswählen...",
                 "options": self.schema_b,
             }
             for row in range(self.matrix_size)
@@ -402,7 +390,7 @@ class HungarianMethodQuestion:
         base[f"view{view_idx}"] = [
             {
                 "type": "Text",
-                "content": "Finale Zuordnung: Wahlen Sie fur jede Zeile aus Schema A genau ein Attribut aus Schema B.",
+                "content": "Finale Zuordnung: Wählen Sie für jede Zeile aus Schema A genau ein Attribut aus Schema B.",
             },
             {
                 "type": "layout_table",
@@ -416,7 +404,7 @@ class HungarianMethodQuestion:
         base["lastView"] = [
             {
                 "type": "Text",
-                "content": "Ubung abgeschlossen.",
+                "content": "Übung abgeschlossen.",
             }
         ]
         return base
@@ -431,8 +419,8 @@ class HungarianMethodQuestion:
             {
                 "type": "DropdownInput",
                 "id": f"exam_assign_{row}",
-                "label": f"Zuordnung fur {self.schema_a[row]}",
-                "placeholder": "Bitte auswahlen...",
+                "label": f"Zuordnung für {self.schema_a[row]}",
+                "placeholder": "Bitte auswählen...",
                 "options": self.schema_b,
             }
             for row in range(self.matrix_size)
@@ -626,28 +614,40 @@ class HungarianMethodQuestion:
                 }
 
     def _evaluate_cover_stage(self, results, user_input, matrix_id, expected_covers):
-        row_options = []
-        col_options = []
-        for cover in expected_covers:
-            row_options.append(set(cover[0]))
-            col_options.append(set(cover[1]))
+        normalized_expected = {
+            (
+                tuple(sorted(int(r) for r in cover[0])),
+                tuple(sorted(int(c) for c in cover[1])),
+            )
+            for cover in expected_covers
+        }
+
+        selected_rows = tuple(
+            r for r in range(self.matrix_size) if bool(user_input.get(f"{matrix_id}:row:{r}"))
+        )
+        selected_cols = tuple(
+            c for c in range(self.matrix_size) if bool(user_input.get(f"{matrix_id}:col:{c}"))
+        )
+
+        stage_is_correct = (selected_rows, selected_cols) in normalized_expected
+
+        expected_strings = []
+        for rows, cols in sorted(normalized_expected):
+            expected_strings.append(f"rows {list(rows)}, cols {list(cols)}")
+        expected_display = self._format_expected_options(expected_strings)
 
         for r in range(self.matrix_size):
             key = f"{matrix_id}:row:{r}"
-            actual = bool(user_input.get(key))
-            expected_vals = [r in rows for rows in row_options]
             results[key] = {
-                "correct": actual in expected_vals,
-                "expected": self._format_expected_options(expected_vals),
+                "correct": stage_is_correct,
+                "expected": expected_display,
             }
 
         for c in range(self.matrix_size):
             key = f"{matrix_id}:col:{c}"
-            actual = bool(user_input.get(key))
-            expected_vals = [c in cols for cols in col_options]
             results[key] = {
-                "correct": actual in expected_vals,
-                "expected": self._format_expected_options(expected_vals),
+                "correct": stage_is_correct,
+                "expected": expected_display,
             }
 
     # ------------------------------------------------------------------
