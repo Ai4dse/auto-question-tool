@@ -11,13 +11,17 @@
   },
   "dependencies": {
     "bootstrap": "^5.3.8",
+    "katex": "^0.16.33",
     "plotly.js": "^3.1.2",
     "react": "^19.1.1",
+    "react-d3-tree": "^3.6.0",
     "react-dom": "^19.1.1",
+    "react-markdown": "^10.1.0",
     "react-plotly.js": "^2.6.0",
     "react-router-dom": "^6.30.1",
     "recharts": "^3.3.0",
-    "react-d3-tree": "^3.6.0"
+    "rehype-katex": "^7.0.1",
+    "remark-math": "^6.0.0"
   },
   "devDependencies": {
     "@eslint/js": "^9.36.0",

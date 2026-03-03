@@ -165,4 +165,43 @@ QUESTION_CONFIG = {
             },
         },
     },
+
+    "sigma_rule": {
+        "class_path": "app.question_types.sigma_rule.SigmaRule",
+        "metadata": {
+            "title": "Outlier Detection",
+            "desc": "Erkenne Outlier mithilfe der Sigma Regel.",
+            "tags": ["matching", "algorithms"],
+            "settings": {
+                "mode": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["steps", "exam"],
+                    "default": "steps",
+                },
+                "difficulty": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["easy", "medium", "hard"],
+                    "default": "easy",
+                },
+                "seed": {
+                    "kind": "number",
+                    "visibility": "hidden",
+                },
+                "dimensions": {
+                    "kind": "select",
+                    "visibility": "hidden",
+                    "options": ["random","1","2"],
+                    "default": "random",
+                },
+                "num_points": {
+                    "kind": "select",
+                    "visibility": "hidden",
+                    "options": ["random","5","6","7","8","9","10","11","12","13","14","15","16","17","18","19","20"],
+                    "default": "random",
+                },
+            },
+        },
+    },
 }

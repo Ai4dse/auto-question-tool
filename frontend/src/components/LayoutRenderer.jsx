@@ -1,6 +1,10 @@
 import React, { useEffect, useState } from "react";
 import Plot from "react-plotly.js";
 import Tree from "react-d3-tree";
+import ReactMarkdown from "react-markdown";
+import remarkMath from "remark-math";
+import rehypeKatex from "rehype-katex";
+import "katex/dist/katex.min.css";
 import {
   ScatterChart,
   Scatter,
@@ -1070,9 +1074,11 @@ export default function LayoutRenderer({
       case "Text":
       case "text":
         return (
-          <p key={idx} className="mb-3" style={{ whiteSpace: "pre-line" }}>
-            {el.value || el.content}
-          </p>
+          <div key={idx} className="mb-3" style={{ whiteSpace: "pre-line" }}>
+            <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+              {el.value || el.content}
+            </ReactMarkdown>
+          </div>
         );
       case "Table":
       case "table":
@@ -1303,6 +1309,15 @@ export default function LayoutRenderer({
         const cols = Number(el.cols ?? 0);
         const cells = Array.isArray(el.cells) ? el.cells : [];
         const tableKey = el.id ?? idx;
+        const alignment = el.alignment ?? "middle";
+
+        const verticalClass =
+          alignment === "top"
+            ? "align-top"
+            : alignment === "bottom"
+            ? "align-bottom"
+            : "align-middle"; // default
+
 
         const getCell = (r, c) => {
           const row = Array.isArray(cells[r]) ? cells[r] : null;
@@ -1312,7 +1327,7 @@ export default function LayoutRenderer({
         return (
           <div key={tableKey} className="card mb-4 shadow-sm">
             <div className="card-body">
-              <h5 className="card-title mb-3">{el.title || el.label || "Layout Table"}</h5>
+              <h5 className="card-title mb-3">{el.title || el.label}</h5>
 
               <div className="table-responsive">
                 <table className="table table-bordered table-sm align-middle">
@@ -1322,9 +1337,13 @@ export default function LayoutRenderer({
                         {Array.from({ length: cols }).map((__, c) => {
                           const cellEl = getCell(r, c);
                           return (
-                            <td key={`c-${tableKey}-${r}-${c}`} style={{ verticalAlign: "top" }}>
+                            <td
+                              key={`c-${tableKey}-${r}-${c}`}
+                              className={`text-center ${verticalClass}`}
+                            >
                               {cellEl ? renderElement(cellEl, `${tableKey}-${r}-${c}`) : null}
                             </td>
+
                           );
                         })}
                       </tr>
@@ -1444,19 +1463,19 @@ export default function LayoutRenderer({
             })}
           </div>
         );
-        case "DropdownInput":
-        case "dropdown_input":
-          return (
-            <div key={idx} className="mb-3">
-              <label className="form-label fw-semibold">{el.label}</label>
+      case "DropdownInput":
+      case "dropdown_input":
+        return (
+          <div key={idx} className="mb-3">
+            <label className="form-label fw-semibold">{el.label}</label>
 
-              {renderEvaluatedInput(el.id, userInput?.[el.id] ?? "", {
-                variant: "select",
-                selectOptions: Array.isArray(el.options) ? el.options : [],
-                placeholder: el.placeholder ?? "Please select...",
-              })}
-            </div>
-          );
+             {renderEvaluatedInput(el.id, userInput?.[el.id] ?? "", {
+              variant: "select",
+              selectOptions: Array.isArray(el.options) ? el.options : [],
+              placeholder: el.placeholder ?? "Please select...",
+            })}
+          </div>
+        );
       case "VarCoordinatePlot":
       case "var_coordinates_plot": {
         const toXY = (arr = []) =>
