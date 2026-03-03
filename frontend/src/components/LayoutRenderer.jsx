@@ -1456,7 +1456,12 @@ export default function LayoutRenderer({
       case "text_input":
         return (
           <div key={idx} className="mb-3">
-            <label className="form-label fw-semibold">{el.label}</label>
+            {el.label && (
+              <label className="form-label fw-semibold">
+                {el.label}
+              </label>
+            )}
+
             {renderEvaluatedInput(el.id, userInput?.[el.id], {
               asTextarea: Number(el.rows || 0) > 1,
               rows: Number(el.rows || 4),

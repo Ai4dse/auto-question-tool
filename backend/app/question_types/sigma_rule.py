@@ -29,6 +29,7 @@ class SigmaRule:
         self.points = [Point(f"P{i}", x, y) for i, (x, y) in enumerate(coords)]
         self.sorted_points_x = sorted(self.points, key=lambda p: p.x)
         self.sorted_points_y = sorted(self.points, key=lambda p: p.y)
+        self.alpha = round(random.uniform(0.2, 1.0), 1)
 
 
     def _generate_steps_layout(self):
@@ -84,16 +85,31 @@ class SigmaRule:
                 "type": "layout_table",
                 "rows": 2,
                 "cols": 2,
-                "cells": [[{"type": "text", "value": "#### Mittelwert",},{"type": "TextInput","id": "Mittelwert",}],[{"type": "text", "value": "#### Standartabweichung",},{"type": "TextInput","id": "Standartabweichung",}]]
+                "cells": [[{"type": "text", "value": "##### Mittelwert",},{"type": "TextInput","id": "Mittelwert",}],[{"type": "text", "value": "##### Standartabweichung",},{"type": "TextInput","id": "Standartabweichung",}]]
                 }
             ]
 
-        base["view1"] = point_display + [
+        base["view1"] = point_display
+        base["view2"] = [
             {
                 "type": "Text",
-                "content": f"nun muss der mittelwert berechnet werden",
+                "content": "Jetzt sind wir bereit die ober und untergrenzen zu berechnen \n dafür ist ein $$ \\alpha = "+ str(self.alpha) +"$$ gegeben \n Dabei ist zu beachten das\nObergrenze: $$\\mu + \\alpha * \\sigma$$\n\nUntergrenze: $$\\mu - \\alpha * \\sigma$$",
             },
+            {
+                "type": "layout_table",
+                "rows": 2,
+                "cols": 2,
+                "cells": [[{"type": "text", "value": "##### Obergrenze",},{"type": "TextInput","id": "Obergrenze",}],[{"type": "text", "value": "##### Untergrenze",},{"type": "TextInput","id": "Untergrenze",}]]
+            }
         ]
+        base["view3"] = [
+            {
+                "type": "Text",
+                "content": "Durch die Berechneten Grenzen können wir Punkte als Outlier Ausschlließen",
+            },
+            {"type": "TextInput","label": "Outlier:" ,"id": "Outlier",}
+        ]
+        base["last_view"] = []
         return base
 
     def _generate_exam_layout(self):
