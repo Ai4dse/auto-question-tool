@@ -1,3 +1,4 @@
+import math
 import random
 import re
 
@@ -9,9 +10,9 @@ DIFFICULTY_SETTINGS = {
     "hard": {"num_points": 10, "dimensions": 2},
 }
 
-class SigmaRule:
+class TukeyFences:
 
-    def __init__(self, seed=None, difficulty="easy", mode="steps", dimensions = "random", num_points = "random", **kwargs):
+    def __init__(self, seed=None, difficulty="easy", mode="steps", dimensions="random", num_points="random", **kwargs):
         print(kwargs)
         self.difficulty = str(difficulty).lower()
         config = DIFFICULTY_SETTINGS.get(self.difficulty, DIFFICULTY_SETTINGS["easy"])
@@ -22,34 +23,44 @@ class SigmaRule:
 
         self.dimensions = int(dimensions) if dimensions != "random" else DIFFICULTY_SETTINGS[self.difficulty]["dimensions"]
         self.num_points = int(num_points) if num_points != "random" else DIFFICULTY_SETTINGS[self.difficulty]["num_points"]
+
+        # --- Punktgeneration: unverändert wie bei dir ---
         min_c = -1 * self.num_points
         max_c = 2 * self.num_points
         coords = set()
         while len(coords) < self.num_points:
             coords.add((random.randint(min_c, max_c), random.randint(min_c, max_c)))
-        coords_list = sorted(coords)  # e.g. sort by x then y
+        coords_list = sorted(coords)
         self.points = [Point(f"P{i}", x, y) for i, (x, y) in enumerate(coords_list)]
 
         self.sorted_points_x = sorted(self.points, key=lambda p: p.x)
         self.sorted_points_y = sorted(self.points, key=lambda p: p.y)
-        self.alpha = round(random.uniform(0.2, 1.0), 1)
+
+        # --- Tukey Fences Faktor fix ---
+        self.k = round(random.uniform(0.5, 1.2), 1)
+
+        # Erwartungswerte für Evaluation / UI
         self.results_x = {
-        "mean_x" : 0,
-        "stddev_x" : 0,
-        "upper_x": 0,
-        "lower_x": 0,
+            "q1_x": 0,
+            "q3_x": 0,
+            "iqr_x": 0,
+            "upper_x": 0,
+            "lower_x": 0,
         }
         self.results_y = {
-        "mean_y": 0,
-        "stddev_y": 0,
-        "upper_y": 0,
-        "lower_y": 0
+            "q1_y": 0,
+            "q3_y": 0,
+            "iqr_y": 0,
+            "upper_y": 0,
+            "lower_y": 0,
         }
-        self._detect_outliers_sigma()
 
-    def _detect_outliers_sigma(self):
+        self._detect_outliers_tukey()
+
+
+    def _detect_outliers_tukey(self):
         """
-        Detect outliers using the sigma rule.
+        Detect outliers using Tukey fences (k=1.5).
         - If self.dimensions == 1: use x only.
         - If self.dimensions == 2: use x and y; outlier if flagged in either dimension.
         Updates:
@@ -57,37 +68,58 @@ class SigmaRule:
         self.inl:  list of inlier Points
         """
 
-        def mean(vals):
-            return sum(vals) / len(vals) if vals else 0.0
-
-        def stddev(vals):
-            n = len(vals)
+        def median(sorted_vals):
+            n = len(sorted_vals)
             if n == 0:
                 return 0.0
-            mu = mean(vals)
-            var = sum((v - mu) ** 2 for v in vals) / n
-            return math.sqrt(var)
+            mid = n // 2
+            if n % 2 == 1:
+                return float(sorted_vals[mid])
+            return (sorted_vals[mid - 1] + sorted_vals[mid]) / 2.0
+
+        def tukey_quartiles(vals):
+            """
+            Option A (median-of-halves / Tukey hinges):
+            - sort
+            - if n odd: exclude the median from halves
+            - if n even: split into equal halves
+            """
+            s = sorted(vals)
+            n = len(s)
+            if n == 0:
+                return 0.0, 0.0
+
+            if n % 2 == 1:
+                lower_half = s[: n // 2]
+                upper_half = s[n // 2 + 1 :]
+            else:
+                lower_half = s[: n // 2]
+                upper_half = s[n // 2 :]
+
+            q1 = median(lower_half)
+            q3 = median(upper_half)
+            return q1, q3
 
         def flagged(points, attr):
             vals = [getattr(p, attr) for p in points]
-            mu = mean(vals)
-            sd = stddev(vals)
+            q1, q3 = tukey_quartiles(vals)
+            iqr = q3 - q1
+            lower = q1 - self.k * iqr
+            upper = q3 + self.k * iqr
 
-            if sd == 0:
-                return set()
-
-            lower = mu - sd * self.alpha
-            upper = mu + sd * self.alpha
+            # in results schreiben (für UI/Evaluation)
             if attr == "x":
-                self.results_x[f"stddev_x"] = sd
-                self.results_x[f"mean_x"] = mu
-                self.results_x[f"lower_x"] = lower
-                self.results_x[f"upper_x"] = upper
+                self.results_x["q1_x"] = q1
+                self.results_x["q3_x"] = q3
+                self.results_x["iqr_x"] = iqr
+                self.results_x["lower_x"] = lower
+                self.results_x["upper_x"] = upper
             elif attr == "y":
-                self.results_y[f"stddev_y"] = sd
-                self.results_y[f"mean_y"] = mu
-                self.results_y[f"lower_y"] = lower
-                self.results_y[f"upper_y"] = upper
+                self.results_y["q1_y"] = q1
+                self.results_y["q3_y"] = q3
+                self.results_y["iqr_y"] = iqr
+                self.results_y["lower_y"] = lower
+                self.results_y["upper_y"] = upper
 
             return {p for p in points if getattr(p, attr) < lower or getattr(p, attr) > upper}
 
@@ -102,8 +134,10 @@ class SigmaRule:
         self.outl = [p for p in pts if p in outliers]
         self.inl  = [p for p in pts if p not in outliers]
 
+
     def _generate_steps_layout(self):
         base = {}
+
         if self.dimensions > 1:
             # -------- 2 dimensions UI --------
 
@@ -125,24 +159,30 @@ class SigmaRule:
                     "type": "Text",
                     "content": (
                         "Starten wir mit Dimension **X**.\n"
-                        "Dafür benötigen wir Mittelwert und Standardabweichung.\n\n"
-                        "$$\\sigma = \\sqrt{\\frac{1}{" + str(self.num_points) + "}\\sum_{i=1}^{" + str(self.num_points) + "}(p_i-\\mu)^2}$$\n\n"
-                        "Der Mittelwert ist:\n\n"
-                        "$$\\mu = \\frac{1}{" + str(self.num_points) + "}\\sum_{i=1}^{" + str(self.num_points) + "}p_i$$"
+                        "Dafür benötigen wir **Q1**, **Q3** und daraus den **IQR**.\n\n"
+                        "Option A (Median-of-halves / Tukey hinges):\n"
+                        "- Sortiere die Werte.\n"
+                        "- Bei ungeradem n: Median **nicht** in die Hälften aufnehmen.\n"
+                        "- Q1 = Median der unteren Hälfte, Q3 = Median der oberen Hälfte.\n\n"
+                        "**IQR**: $$IQR = Q3 - Q1$$"
                     ),
                 },
                 {
                     "type": "layout_table",
-                    "rows": 2,
+                    "rows": 3,
                     "cols": 2,
                     "cells": [
                         [
-                            {"type": "text", "value": "##### Mittelwert (X)"},
-                            {"type": "TextInput", "id": "mean_x"},
+                            {"type": "text", "value": "##### Q1 (X)"},
+                            {"type": "TextInput", "id": "q1_x"},
                         ],
                         [
-                            {"type": "text", "value": "##### Standardabweichung (X)"},
-                            {"type": "TextInput", "id": "stddev_x"},
+                            {"type": "text", "value": "##### Q3 (X)"},
+                            {"type": "TextInput", "id": "q3_x"},
+                        ],
+                        [
+                            {"type": "text", "value": "##### IQR (X)"},
+                            {"type": "TextInput", "id": "iqr_x"},
                         ],
                     ],
                 },
@@ -152,10 +192,10 @@ class SigmaRule:
                 {
                     "type": "Text",
                     "content": (
-                        "Jetzt berechnen wir die Ober- und Untergrenze für **X**.\n"
-                        "Gegeben ist $$\\alpha = " + str(self.alpha) + "$$.\n\n"
-                        "Obergrenze: $$\\mu + \\alpha \\cdot \\sigma$$\n\n"
-                        "Untergrenze: $$\\mu - \\alpha \\cdot \\sigma$$"
+                        "Jetzt berechnen wir die Tukey-Fences für **X**.\n"
+                        "Gegeben ist $$k = " + str(self.k) + "$$.\n\n"
+                        "Obergrenze: $$Q3 + k \\cdot IQR$$\n\n"
+                        "Untergrenze: $$Q1 - k \\cdot IQR$$"
                     ),
                 },
                 {
@@ -180,24 +220,26 @@ class SigmaRule:
                     "type": "Text",
                     "content": (
                         "Jetzt wiederholen wir das Gleiche für Dimension **Y**.\n"
-                        "Wir berechnen Mittelwert und Standardabweichung für Y.\n\n"
-                        "$$\\sigma = \\sqrt{\\frac{1}{" + str(self.num_points) + "}\\sum_{i=1}^{" + str(self.num_points) + "}(p_i-\\mu)^2}$$\n\n"
-                        "Der Mittelwert ist:\n\n"
-                        "$$\\mu = \\frac{1}{" + str(self.num_points) + "}\\sum_{i=1}^{" + str(self.num_points) + "}p_i$$"
+                        "Wir berechnen **Q1**, **Q3** und **IQR** für Y.\n\n"
+                        "**IQR**: $$IQR = Q3 - Q1$$"
                     ),
                 },
                 {
                     "type": "layout_table",
-                    "rows": 2,
+                    "rows": 3,
                     "cols": 2,
                     "cells": [
                         [
-                            {"type": "text", "value": "##### Mittelwert (Y)"},
-                            {"type": "TextInput", "id": "mean_y"},
+                            {"type": "text", "value": "##### Q1 (Y)"},
+                            {"type": "TextInput", "id": "q1_y"},
                         ],
                         [
-                            {"type": "text", "value": "##### Standardabweichung (Y)"},
-                            {"type": "TextInput", "id": "stddev_y"},
+                            {"type": "text", "value": "##### Q3 (Y)"},
+                            {"type": "TextInput", "id": "q3_y"},
+                        ],
+                        [
+                            {"type": "text", "value": "##### IQR (Y)"},
+                            {"type": "TextInput", "id": "iqr_y"},
                         ],
                     ],
                 },
@@ -207,10 +249,10 @@ class SigmaRule:
                 {
                     "type": "Text",
                     "content": (
-                        "Jetzt berechnen wir die Ober- und Untergrenze für **Y**.\n"
-                        "Gegeben ist $$\\alpha = " + str(self.alpha) + "$$.\n\n"
-                        "Obergrenze: $$\\mu + \\alpha \\cdot \\sigma$$\n\n"
-                        "Untergrenze: $$\\mu - \\alpha \\cdot \\sigma$$"
+                        "Jetzt berechnen wir die Tukey-Fences für **Y**.\n"
+                        "Gegeben ist $$k = " + str(self.k) + "$$.\n\n"
+                        "Obergrenze: $$Q3 + k \\cdot IQR$$\n\n"
+                        "Untergrenze: $$Q1 - k \\cdot IQR$$"
                     ),
                 },
                 {
@@ -235,7 +277,7 @@ class SigmaRule:
                     "type": "Text",
                     "content": (
                         "Jetzt haben wir die Grenzen für **X** und **Y** berechnet.\n"
-                        "Ein Punkt ist ein Outlier, wenn er in **X oder Y** außerhalb seiner Grenzen liegt.\n"
+                        "Ein Punkt ist ein Outlier, wenn er in **X oder Y** außerhalb seiner Tukey-Fences liegt.\n"
                         "Gib die Outlier als Labels an (z.B. `P1, P5, P9`)."
                     ),
                 },
@@ -245,7 +287,7 @@ class SigmaRule:
             base["lastView"] = [
                 {
                     "type": "var_coordinates_plot",
-                    "title": "Sigma Rule Result",
+                    "title": "Tukey Fences Result",
                     "series": [
                         {"name": "Inlier", "color": "blue", "points": [[p.label, p.x, p.y] for p in self.inl], "symbol": "circle", "size": 8},
                         {"name": "Outlier", "color": "greenblack", "points": [[p.label, p.x, p.y] for p in self.outl], "symbol": "x", "size": 8},
@@ -253,9 +295,8 @@ class SigmaRule:
                 },
             ]
 
-
         else:
-            # -------- 1 dimension UI (stylistically aligned with 2D) --------
+            # -------- 1 dimension UI --------
 
             base["view1"] = [
                 {
@@ -275,24 +316,30 @@ class SigmaRule:
                     "type": "Text",
                     "content": (
                         "Starten wir mit Dimension **X**.\n"
-                        "Dafür benötigen wir Mittelwert und Standardabweichung.\n\n"
-                        "$$\\sigma = \\sqrt{\\frac{1}{" + str(self.num_points) + "}\\sum_{i=1}^{" + str(self.num_points) + "}(p_i-\\mu)^2}$$\n\n"
-                        "Der Mittelwert ist:\n\n"
-                        "$$\\mu = \\frac{1}{" + str(self.num_points) + "}\\sum_{i=1}^{" + str(self.num_points) + "}p_i$$"
+                        "Dafür benötigen wir **Q1**, **Q3** und daraus den **IQR**.\n\n"
+                        "Option A (Median-of-halves / Tukey hinges):\n"
+                        "- Sortiere die Werte.\n"
+                        "- Bei ungeradem n: Median **nicht** in die Hälften aufnehmen.\n"
+                        "- Q1 = Median der unteren Hälfte, Q3 = Median der oberen Hälfte.\n\n"
+                        "**IQR**: $$IQR = Q3 - Q1$$"
                     ),
                 },
                 {
                     "type": "layout_table",
-                    "rows": 2,
+                    "rows": 3,
                     "cols": 2,
                     "cells": [
                         [
-                            {"type": "text", "value": "##### Mittelwert (X)"},
-                            {"type": "TextInput", "id": "mean_x"},
+                            {"type": "text", "value": "##### Q1 (X)"},
+                            {"type": "TextInput", "id": "q1_x"},
                         ],
                         [
-                            {"type": "text", "value": "##### Standardabweichung (X)"},
-                            {"type": "TextInput", "id": "stddev_x"},
+                            {"type": "text", "value": "##### Q3 (X)"},
+                            {"type": "TextInput", "id": "q3_x"},
+                        ],
+                        [
+                            {"type": "text", "value": "##### IQR (X)"},
+                            {"type": "TextInput", "id": "iqr_x"},
                         ],
                     ],
                 },
@@ -302,10 +349,10 @@ class SigmaRule:
                 {
                     "type": "Text",
                     "content": (
-                        "Jetzt berechnen wir die Ober- und Untergrenze für **X**.\n"
-                        "Gegeben ist $$\\alpha = " + str(self.alpha) + "$$.\n\n"
-                        "Obergrenze: $$\\mu + \\alpha \\cdot \\sigma$$\n\n"
-                        "Untergrenze: $$\\mu - \\alpha \\cdot \\sigma$$"
+                        "Jetzt berechnen wir die Tukey-Fences für **X**.\n"
+                        "Gegeben ist $$k = " + str(self.k) + "$$.\n\n"
+                        "Obergrenze: $$Q3 + k \\cdot IQR$$\n\n"
+                        "Untergrenze: $$Q1 - k \\cdot IQR$$"
                     ),
                 },
                 {
@@ -330,7 +377,7 @@ class SigmaRule:
                     "type": "Text",
                     "content": (
                         "Jetzt haben wir die Grenzen für **X** berechnet.\n"
-                        "Ein Punkt ist ein Outlier, wenn er außerhalb der Grenzen liegt.\n"
+                        "Ein Punkt ist ein Outlier, wenn er außerhalb der Tukey-Fences liegt.\n"
                         "Gib die Outlier als Labels an (z.B. `P1, P5, P9`)."
                     ),
                 },
@@ -340,7 +387,7 @@ class SigmaRule:
             base["lastView"] = [
                 {
                     "type": "var_coordinates_plot",
-                    "title": "Sigma Rule Result",
+                    "title": "Tukey Fences Result",
                     "series": [
                         {"name": "Inlier", "color": "blue", "points": [[p.label, p.x, 0] for p in self.inl], "symbol": "circle", "size": 8},
                         {"name": "Outlier", "color": "greenblack", "points": [[p.label, p.x, 0] for p in self.outl], "symbol": "x", "size": 8},
@@ -348,8 +395,8 @@ class SigmaRule:
                 },
             ]
 
-
         return base
+
 
     def _generate_exam_layout(self):
         base = {}
@@ -373,22 +420,21 @@ class SigmaRule:
                 {
                     "type": "Text",
                     "content": (
-                        "### Prüfungsaufgabe: Sigma-Regel (2D)\n\n"
-                        "Bestimme für **X** und **Y** jeweils den **Mittelwert (μ)** und die **Standardabweichung (σ)**.\n"
-                        f"Es gilt: **α = {self.alpha}**.\n\n"
-                        "Berechne anschließend für jede Dimension die Grenzen:\n"
-                        "- `Upper = μ + α · σ`\n"
-                        "- `Lower = μ − α · σ`\n\n"
+                        "### Prüfungsaufgabe: Tukey Fences (2D)\n\n"
+                        "Bestimme für **X** und **Y** jeweils **Q1**, **Q3**, **IQR** und die Tukey-Fences.\n"
+                        f"Es gilt: **{self.k}**.\n\n"
                         "#### Abgabeformat\n"
                         "Gib deine Ergebnisse **genau in dieser Form** an (jede Angabe in einer neuen Zeile):\n\n"
                         "**Für X (im Feld „Antworten X“):**\n"
-                        "- `Mean: <zahl>`\n"
-                        "- `Stddev: <zahl>`\n"
+                        "- `Q1: <zahl>`\n"
+                        "- `Q3: <zahl>`\n"
+                        "- `IQR: <zahl>`\n"
                         "- `Lower: <zahl>`\n"
                         "- `Upper: <zahl>`\n\n"
                         "**Für Y (im Feld „Antworten Y“):**\n"
-                        "- `Mean: <zahl>`\n"
-                        "- `Stddev: <zahl>`\n"
+                        "- `Q1: <zahl>`\n"
+                        "- `Q3: <zahl>`\n"
+                        "- `IQR: <zahl>`\n"
                         "- `Lower: <zahl>`\n"
                         "- `Upper: <zahl>`\n\n"
                         "**Outlier (separates Feld):**\n"
@@ -397,13 +443,13 @@ class SigmaRule:
                 },
                 {
                     "type": "TextInput",
-                    "label": "Antworten X (Mean/Stddev/Lower/Upper)",
+                    "label": "Antworten X (Q1/Q3/IQR/Lower/Upper)",
                     "id": "answers_x",
                     "rows": 7,
                 },
                 {
                     "type": "TextInput",
-                    "label": "Antworten Y (Mean/Stddev/Lower/Upper)",
+                    "label": "Antworten Y (Q1/Q3/IQR/Lower/Upper)",
                     "id": "answers_y",
                     "rows": 7,
                 },
@@ -417,7 +463,7 @@ class SigmaRule:
             base["lastView"] = [
                 {
                     "type": "var_coordinates_plot",
-                    "title": "Sigma Rule Result",
+                    "title": "Tukey Fences Result",
                     "series": [
                         {"name": "Inlier", "color": "blue", "points": [[p.label, p.x, p.y] for p in self.inl], "symbol": "circle", "size": 8},
                         {"name": "Outlier", "color": "greenblack", "points": [[p.label, p.x, p.y] for p in self.outl], "symbol": "x", "size": 8},
@@ -444,16 +490,14 @@ class SigmaRule:
                 {
                     "type": "Text",
                     "content": (
-                        "### Prüfungsaufgabe: Sigma-Regel (1D)\n\n"
-                        "Bestimme für **X** den **Mittelwert (μ)** und die **Standardabweichung (σ)**.\n"
-                        f"Es gilt: **α = {self.alpha}**.\n\n"
-                        "Berechne anschließend die Grenzen:\n"
-                        "- `Upper = μ + α · σ`\n"
-                        "- `Lower = μ − α · σ`\n\n"
+                        "### Prüfungsaufgabe: Tukey Fences (1D)\n\n"
+                        "Bestimme für **X**: **Q1**, **Q3**, **IQR** und die Tukey-Fences.\n"
+                        f"Es gilt: **{self.k}**.\n\n"
                         "#### Abgabeformat\n"
                         "Gib deine Ergebnisse **genau in dieser Form** an (jede Angabe in einer neuen Zeile):\n"
-                        "- `Mean: <zahl>`\n"
-                        "- `Stddev: <zahl>`\n"
+                        "- `Q1: <zahl>`\n"
+                        "- `Q3: <zahl>`\n"
+                        "- `IQR: <zahl>`\n"
                         "- `Lower: <zahl>`\n"
                         "- `Upper: <zahl>`\n\n"
                         "Outlier in einem separaten Feld:\n"
@@ -462,7 +506,7 @@ class SigmaRule:
                 },
                 {
                     "type": "TextInput",
-                    "label": "Antworten (Mean/Stddev/Lower/Upper)",
+                    "label": "Antworten (Q1/Q3/IQR/Lower/Upper)",
                     "id": "answers_x",
                     "rows": 7,
                 },
@@ -476,7 +520,7 @@ class SigmaRule:
             base["lastView"] = [
                 {
                     "type": "var_coordinates_plot",
-                    "title": "Sigma Rule Result",
+                    "title": "Tukey Fences Result",
                     "series": [
                         {"name": "Inlier", "color": "blue", "points": [[p.label, p.x, 0] for p in self.inl], "symbol": "circle", "size": 8},
                         {"name": "Outlier", "color": "greenblack", "points": [[p.label, p.x, 0] for p in self.outl], "symbol": "x", "size": 8},
@@ -513,9 +557,7 @@ class SigmaRule:
 
         expected_labels = [p.label.lower() for p in self.outl]
 
-        # Extract tokens like P1, P2, P10 etc.
         found_labels = re.findall(r"[a-zA-Z]+\d+", user_outlier_input)
-
         found_labels = [label.lower() for label in found_labels]
 
         correct = set(found_labels) == set(expected_labels)
@@ -526,6 +568,7 @@ class SigmaRule:
         }
         return results
 
+
     def _evaluate_exam(self, user_input):
         user_input = user_input or {}
         results = {}
@@ -534,13 +577,17 @@ class SigmaRule:
             """
             Extrahiert eine Zahl zu einem Key aus Freitext.
             Akzeptiert z.B.:
-            - "Mean: 7"
-            - "Stddev = 2.5"
-            - "lower -1"
+            - "IQR: 7"
+            - "IQR = 7"
+            - "iqr 7"
             """
             text = "" if text is None else str(text)
 
+            # Zahlpattern: optionales Vorzeichen, digits, optional decimal (.,)
             num = r"([-+]?\d+(?:[.,]\d+)?)"
+
+            # Key tolerant match: Q1, Q3, IQR, Lower, Upper
+            # erlaubt :, = oder whitespace
             pattern = rf"(?im)\b{re.escape(key)}\b\s*[:=]?\s*{num}"
             m = re.search(pattern, text)
             return m.group(1) if m else None
@@ -551,9 +598,11 @@ class SigmaRule:
             correct = True nur wenn alle Werte stimmen.
             expected = zusammengefasster Erwartungsstring.
             """
+
             exam_to_expected = {
-                "Mean": f"mean_{key_prefix}",
-                "Stddev": f"stddev_{key_prefix}",
+                "Q1": f"q1_{key_prefix}",
+                "Q3": f"q3_{key_prefix}",
+                "IQR": f"iqr_{key_prefix}",
                 "Lower": f"lower_{key_prefix}",
                 "Upper": f"upper_{key_prefix}",
             }
@@ -563,6 +612,7 @@ class SigmaRule:
 
             for exam_key, exp_key in exam_to_expected.items():
                 expected_value = expected_map.get(exp_key)
+
                 found = extract_value(text, exam_key)
 
                 if str(normalize_number(found)) != str(normalize_number(expected_value)):
@@ -574,6 +624,7 @@ class SigmaRule:
                 "correct": all_correct,
                 "expected": "\n".join(expected_parts),
             }
+
 
         # --- X ---
         answers_x = user_input.get("answers_x", "")
@@ -593,6 +644,7 @@ class SigmaRule:
         found_labels = re.findall(r"[a-zA-Z]+\d+", user_outlier_input)
         found_labels = [label.lower() for label in found_labels]
 
+        # Optional: wenn "none" vorkommt und keine expected outliers
         if ("none" in user_outlier_input or "kein" in user_outlier_input) and len(expected_labels) == 0:
             correct = True
         else:
