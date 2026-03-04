@@ -15,6 +15,7 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { API_URL } from "../api";
 
 const replaceOps = (value) => {
   return value
@@ -950,6 +951,37 @@ function DropdownSection({ title, children, defaultOpen = false }) {
   );
 }
 
+function PdfViewerSection({ title, src, height = 700, defaultOpen = false }) {
+  const [isOpen, setIsOpen] = useState(defaultOpen);
+
+  return (
+    <div className="card mb-4 shadow-sm">
+      <button
+        type="button"
+        className="btn btn-link w-100 text-start d-flex justify-content-between align-items-center px-3 py-2"
+        onClick={() => setIsOpen((v) => !v)}
+        style={{ textDecoration: "none" }}
+      >
+        <span className="fw-semibold">{title || "Schema (PDF)"}</span>
+        <span className="ms-2">{isOpen ? "▾" : "▸"}</span>
+      </button>
+
+      {isOpen && (
+        <div className="card-body pt-2">
+          <iframe
+            src={src}
+            title={title || "Schema PDF"}
+            style={{ width: "100%", height: `${height}px`, border: "1px solid #dee2e6", borderRadius: "0.375rem" }}
+          />
+          <div className="mt-2">
+            <a href={src} target="_blank" rel="noreferrer">PDF in neuem Tab öffnen</a>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function LayoutRenderer({
   layout,
   activeView = "view1",
@@ -1072,14 +1104,23 @@ export default function LayoutRenderer({
           />
         );
       case "Text":
-      case "text":
+      case "text": {
+        const rawMarkdown = el.value ?? el.content ?? "";
+        const markdownText =
+          typeof rawMarkdown === "string"
+            ? rawMarkdown
+            : Array.isArray(rawMarkdown)
+            ? rawMarkdown.map((part) => String(part ?? "")).join("\n")
+            : String(rawMarkdown);
+
         return (
           <div key={idx} className="mb-3" style={{ whiteSpace: "pre-line" }}>
             <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
-              {el.value || el.content}
+              {markdownText}
             </ReactMarkdown>
           </div>
         );
+      }
       case "Table":
       case "table":
         return (
@@ -1123,6 +1164,24 @@ export default function LayoutRenderer({
               renderElement(child, child.id ?? `${key}-${cIdx}`)
             )}
           </DropdownSection>
+        );
+      }
+      case "PdfViewer":
+      case "pdf_viewer": {
+        const rawSrc = String(el.src || "").trim();
+        const src = rawSrc.startsWith("http://") || rawSrc.startsWith("https://")
+          ? rawSrc
+          : `${API_URL}${rawSrc}`;
+        const height = Number(el.height || 700);
+
+        return (
+          <PdfViewerSection
+            key={idx}
+            title={el.title || "Schema (PDF)"}
+            src={src}
+            height={height}
+            defaultOpen={false}
+          />
         );
       }
       case "SchemaGrid":
@@ -1218,7 +1277,7 @@ export default function LayoutRenderer({
       case "reactive_table": {
         const listenId = el.listenTo; // e.g. "0"
         const data = reactiveTables?.[listenId] || {};
-        const { columns = [], rows = [], error, status } = data;
+        const { columns = [], rows = [], total_rows = rows.length, error, status } = data;
 
         return (
           <div key={idx} className="card mb-4 shadow-sm">
@@ -1226,6 +1285,10 @@ export default function LayoutRenderer({
               <h5 className="card-title mb-3">
                 {el.label || el.title || "Result"}
               </h5>
+
+              {!error && status === "ready" && el.id === "sql_preview" && (
+                <p className="text-muted small mb-2">Anzahl Zeilen: {total_rows}</p>
+              )}
 
               {status === "loading" && (
                 <p className="text-muted small mb-2">Evaluating...</p>
@@ -1244,7 +1307,7 @@ export default function LayoutRenderer({
               )}
 
               {rows.length > 0 && (
-                <div className="table-responsive">
+                <div className="table-responsive" style={el.id === "sql_preview" ? { maxHeight: "360px", overflowY: "auto" } : {}}>
                   <table className="table table-bordered table-sm align-middle">
                     <thead className="table-light">
                       <tr>
@@ -1373,6 +1436,7 @@ export default function LayoutRenderer({
       case "ExpressionInput":
       case "expression_input": {
         const fieldId = el.id;
+        if (typeof registerFieldId === "function") registerFieldId(String(fieldId));
         const value = userInput?.[fieldId] ?? el.default ?? "";
         const evalResult = evaluationResults?.[fieldId];
         const isCorrect = evalResult?.correct;

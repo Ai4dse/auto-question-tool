@@ -139,6 +139,33 @@ QUESTION_CONFIG = {
         },
     },
 
+    "sql_query": {
+        "class_path": "app.question_types.sql_query.SqlQueryQuestion",
+        "metadata": {
+            "title": "SQL Query",
+            "desc": "Practice read-only SQL query writing against a real dataset.",
+            "tags": ["sql", "databases"],
+            "settings": {
+                "mode": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["steps", "exam"],
+                    "default": "steps",
+                },
+                "difficulty": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["easy", "medium", "hard"],
+                    "default": "easy",
+                },
+                "seed": {
+                    "kind": "number",
+                    "visibility": "hidden",
+                },
+            },
+        },
+    },
+
     "stable_marriage": {
         "class_path": "app.question_types.stable_marriage.StableMarriageQuestion",
         "metadata": {

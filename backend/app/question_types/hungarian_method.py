@@ -302,7 +302,7 @@ class HungarianMethodQuestion:
         base["view1"] = [
             {
                 "type": "Text",
-                "content": (),
+                "content": "",
             },
             self._matrix_input(
                 "hm_step1",
@@ -317,9 +317,7 @@ class HungarianMethodQuestion:
         base["view2"] = [
             {
                 "type": "Text",
-                "content": (
-                    
-                ),
+                "content": "",
             },
             self._matrix_input(
                 "hm_step2",
@@ -335,7 +333,7 @@ class HungarianMethodQuestion:
             base[f"view{view_idx}"] = [
                 {
                     "type": "Text",
-                    "content": (),
+                    "content": "",
                 },
                 {
                     **self._matrix_input(
@@ -351,7 +349,7 @@ class HungarianMethodQuestion:
             base[f"view{view_idx}"] = [
                 {
                     "type": "Text",
-                    "content": (),
+                    "content": "",
                 },
                 self._matrix_input(f"hm_step4_{i}", f"Reduktion mit Linien"),
             ]
@@ -362,7 +360,7 @@ class HungarianMethodQuestion:
         base[f"view{view_idx}"] = [
             {
                 "type": "Text",
-                "content": (),
+                "content": "",
             },
             {
                 **self._matrix_input(

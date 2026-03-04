@@ -1,0 +1,7 @@
+name,SUM(s.population) * 100 / c.population
+Chile,30.1257
+Armenia,34.6463
+Uruguay,38.5001
+South Korea,46.8962
+Australia,56.3117
+Singapore,75.3034

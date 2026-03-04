@@ -1,4 +1,5 @@
 from fastapi import FastAPI, Request, Query, HTTPException
+from fastapi.staticfiles import StaticFiles
 from mongoengine import connect
 from fastapi.middleware.cors import CORSMiddleware
 from .generator_loader import load_question_generators
@@ -11,6 +12,7 @@ from typing import Any, Dict
 app = FastAPI()
 
 app.include_router(auth_router)
+app.mount("/resources", StaticFiles(directory="app/resources"), name="resources")
 
 MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017/user_data")
 

@@ -1,0 +1,13 @@
+name,COUNT(DISTINCT gl.lake)
+Kenya,2
+Serbia and Montenegro,2
+Albania,3
+Iran,3
+Kazakstan,3
+Zambia,4
+Australia,5
+Ethiopia,5
+Tanzania,5
+Finland,6
+Russia,8
+Canada,9

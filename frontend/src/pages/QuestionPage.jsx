@@ -15,6 +15,7 @@ export default function QuestionPage() {
   const [viewStatus, setViewStatus] = useState({});
   const [finished, setFinished] = useState(false);
   const [reactiveTables, setReactiveTables] = useState({});
+  const [resolvedSeed, setResolvedSeed] = useState(null);
 
   const viewFieldIdsRef = useRef({}); // { [viewName]: Set<string> }
 
@@ -25,7 +26,7 @@ export default function QuestionPage() {
       viewFieldIdsRef.current[v].add(id);
     };
 
-  const queryString = useMemo(() => {
+  const baseQueryString = useMemo(() => {
     const sp = new URLSearchParams(search);
 
     // light sanitation: drop seed if invalid (optional)
@@ -38,13 +39,29 @@ export default function QuestionPage() {
     return s ? `?${s}` : "";
   }, [search]);
 
+  const requestQueryString = useMemo(() => {
+    const sp = new URLSearchParams(search);
+    const seed = sp.get("seed");
+    if (seed != null && seed !== "" && !/^\d+$/.test(seed)) {
+      sp.delete("seed");
+    }
+    if (!sp.get("seed") && resolvedSeed != null) {
+      sp.set("seed", String(resolvedSeed));
+    }
+
+    const s = sp.toString();
+    return s ? `?${s}` : "";
+  }, [search, resolvedSeed]);
+
   useEffect(() => {
     if (!type) return;
+    setResolvedSeed(null);
 
-    fetch(`${API_URL}/question/${type}${queryString}`)
+    fetch(`${API_URL}/question/${type}${baseQueryString}`)
       .then((res) => res.json())
       .then((data) => {
         setQuestion(data);
+        setResolvedSeed(data?.seed ?? null);
         setFormData({});
         setVisibleViews(["view1"]);
         setViewResults({});
@@ -53,18 +70,18 @@ export default function QuestionPage() {
         setReactiveTables({});
       })
       .catch((err) => console.error("Error loading question:", err));
-  }, [type, queryString]);
+  }, [type, baseQueryString]);
 
   useEffect(() => {
     if (!question) return;
-    if (type !== "relational_algebra") return;
+    if (type !== "relational_algebra" && type !== "sql_query") return;
 
     const stmt = formData["0"] ?? "";
 
     if (!stmt.trim()) {
       setReactiveTables((prev) => ({
         ...prev,
-        "0": { columns: [], rows: [], tree: null, error: null, status: "idle" },
+        "0": { columns: [], rows: [], total_rows: 0, tree: null, error: null, status: "idle" },
       }));
       return;
     }
@@ -77,7 +94,7 @@ export default function QuestionPage() {
         "0": { ...(prev["0"] || {}), status: "loading" },
       }));
 
-      fetch(`${API_URL}/question/${type}/preview${queryString}`, {
+      fetch(`${API_URL}/question/${type}/preview${requestQueryString}`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ statement: stmt }),
@@ -91,6 +108,7 @@ export default function QuestionPage() {
             "0": {
               columns: data.columns || [],
               rows: data.rows || [],
+              total_rows: Number.isFinite(data.total_rows) ? data.total_rows : (data.rows || []).length,
               tree: data.tree || null,
               error: data.error || null,
               status: "ready",
@@ -105,6 +123,7 @@ export default function QuestionPage() {
             "0": {
               columns: [],
               rows: [],
+              total_rows: 0,
               tree: null,
               error: "Preview request failed.",
               status: "error",
@@ -117,7 +136,7 @@ export default function QuestionPage() {
       cancelled = true;
       clearTimeout(timeoutId);
     };
-  }, [formData["0"], question, type, queryString]);
+  }, [formData["0"], question, type, requestQueryString]);
 
   const handleChange = (id, value) => setFormData((prev) => ({ ...prev, [id]: value }));
 
@@ -135,7 +154,7 @@ export default function QuestionPage() {
   const handleSubmitView = (viewName) => {
     if (!question) return;
 
-    fetch(`${API_URL}/question/${type}/evaluate${queryString}`, {
+    fetch(`${API_URL}/question/${type}/evaluate${requestQueryString}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(formData),
@@ -161,11 +180,12 @@ export default function QuestionPage() {
     } else setFinished(true);
   };
 
-  if (!question) return <div>Loading...</div>;
+  if (!question) return <div>Lade...</div>;
 
   const sp = new URLSearchParams(search);
   const difficultyLabel = sp.get("difficulty") || question.difficulty;
-  const displayHeader = `${type?.replace(/_/g, " ")}${difficultyLabel ? ` (${difficultyLabel})` : ""}`;
+  const displayType = type === "sql_query" ? "SQL-Abfrage" : type?.replace(/_/g, " ");
+  const displayHeader = `${displayType}${difficultyLabel ? ` (${difficultyLabel})` : ""}`;
 
   return (
     <div className="container py-4">
@@ -196,7 +216,7 @@ export default function QuestionPage() {
                 onClick={() => handleSubmitView(viewName)}
                 className="btn btn-primary mt-3 me-2"
               >
-                Submit
+                Abgeben
               </button>
 
               {status === "evaluated" && (
@@ -205,7 +225,7 @@ export default function QuestionPage() {
                   onClick={() => handleShowResults(viewName)}
                   className="btn btn-warning mt-3 me-2"
                 >
-                  Show Results
+                  Ergebnisse anzeigen
                 </button>
               )}
 
@@ -215,7 +235,7 @@ export default function QuestionPage() {
                   onClick={() => handleNextStep(viewName)}
                   className="btn btn-success mt-3"
                 >
-                  {nextExists ? "Next Step →" : "Show Final Results"}
+                  {nextExists ? "Naechster Schritt ->" : "Endergebnisse anzeigen"}
                 </button>
               )}
             </div>
@@ -240,7 +260,7 @@ export default function QuestionPage() {
             </div>
           ) : (
             <>
-              <h3>Final Results:</h3>
+              <h3>Endergebnisse:</h3>
               <pre className="bg-light p-3 rounded border overflow-auto">
                 {JSON.stringify(viewResults, null, 2)}
               </pre>

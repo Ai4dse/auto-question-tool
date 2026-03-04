@@ -7,13 +7,31 @@ services:
     volumes:
       - mongo_data:/data/db
 
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    environment:
+      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_DATABASE=exercise_db
+    volumes:
+      - mysql_data:/var/lib/mysql
+      - ./backend/app/resources/sql/readonly_user.sql:/docker-entrypoint-initdb.d/00_readonly_user.sql
+      - ./backend/app/resources/sql/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ./backend/app/resources/sql/data.sql:/docker-entrypoint-initdb.d/02_data.sql
+
   backend:
     build: ./backend
     container_name: backend
     environment:
       - MONGO_URL=mongodb://mongo:27017/user_data
+      - SQL_HOST=mysql
+      - SQL_PORT=3306
+      - SQL_DB=exercise_db
+      - SQL_USER=sql_reader
+      - SQL_PASSWORD=sql_reader_pass
     depends_on:
       - mongo
+      - mysql
     ports:
       - "8000:8000"
     volumes:
@@ -36,4 +54,5 @@ services:
 
 volumes:
   mongo_data:
+  mysql_data:
   frontend_node_modules:
