@@ -991,6 +991,7 @@ export default function LayoutRenderer({
   showExpected = false,
   reactiveTables = {},
   registerFieldId = null,
+  openLinksInNewTab = false,
 }) {
   if (!layout) return null;
 
@@ -1113,9 +1114,21 @@ export default function LayoutRenderer({
             ? rawMarkdown.map((part) => String(part ?? "")).join("\n")
             : String(rawMarkdown);
 
+        const markdownComponents = openLinksInNewTab
+          ? {
+              a: ({ ...props }) => (
+                <a {...props} target="_blank" rel="noopener noreferrer" />
+              ),
+            }
+          : undefined;
+
         return (
           <div key={idx} className="mb-3" style={{ whiteSpace: "pre-line" }}>
-            <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+            <ReactMarkdown
+              remarkPlugins={[remarkMath]}
+              rehypePlugins={[rehypeKatex]}
+              components={markdownComponents}
+            >
               {markdownText}
             </ReactMarkdown>
           </div>

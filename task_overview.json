@@ -63,7 +63,7 @@
     "id": "SQL",
     "issues": ["none"],
     "description": "build SQL queries for a given schema",
-    "completed": false
+    "completed": true
   }
    ,
   {

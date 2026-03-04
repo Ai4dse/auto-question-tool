@@ -1,0 +1,58 @@
+{
+  "exercises": [
+    {
+      "name": "regex_datumsangaben",
+      "question": "Gegeben sei folgender Text. Schreiben Sie einen regulären Ausdruck, welcher alle Datumsangaben findet.",
+      "solution": "\\b\\d{2}\\.\\d{2}\\.\\d{4}\\b",
+      "content": "Bitte senden Sie Ihre Anfrage bis zum 15.04.2025 an info@beispiel-tud.com oder kontaktieren Sie uns persönlich. Senden Sie zusätzlich eine Bestätigung bis zum 20.05.2025 an support@beispiel.de.",
+      "link": "https://regex101.com/r/DyMZrc/2",
+      "difficulty": "easy"
+    },
+    {
+      "name": "regex_email_domain",
+      "question": "Gegeben sei folgender Text. Schreiben Sie einen regulären Ausdruck, welcher die Domain aller Email-Adressen findet.",
+      "solution": "@[\\w-]+\\.[\\w]+",
+      "content": "Bitte senden Sie Ihre Anfrage bis zum 15.04.2025 an info@beispiel-tud.com oder kontaktieren Sie uns persönlich. Senden Sie zusätzlich eine Bestätigung bis zum 20.05.2025 an support@beispiel.de.",
+      "link": "https://regex101.com/r/DyMZrc/2",
+      "difficulty": "medium"
+    },
+    {
+      "name": "regex_wortgrenzen",
+      "question": "Gegeben sei folgender Text. Schreiben Sie einen regulären Ausdruck, welcher ein beliebiges Wort (kein Datum oder Email) findet. Was fällt Ihnen auf?",
+      "solution": "\\b\\w+\\b",
+      "content": "Bitte senden Sie Ihre Anfrage bis zum 15.04.2025 an info@beispiel-tud.com oder kontaktieren Sie uns persönlich. Senden Sie zusätzlich eine Bestätigung bis zum 20.05.2025 an support@beispiel.de.",
+      "link": "https://regex101.com/r/DyMZrc/2",
+      "difficulty": "medium"
+    },
+    {
+      "name": "regex_find_replace_datum",
+      "question": "Gegeben ist folgender Text. Schreiben Sie reguläre Ausdrücke für eine Find-&-Replace Funktion, welche alle Datumsangaben in dasselbe Format (TT.MM.JJJJ) überführt.",
+      "solution": {
+        "find": "(\\d{2})[./-](\\d{2})[./-](\\d{4})",
+        "replace": "\\1.\\2.\\3"
+      },
+      "content": "{\"name\": \"jonas lieber\",\"date\":\"28.11.1999\"}, {\"name\": \"max schmeling\",\"date\":\"13-04-2001\"}, {\"name\": \"anna wenzel\",\"date\":\"18/04/2000\"}",
+      "link": "https://regex101.com/r/0on9cx/1",
+      "difficulty": "hard"
+    },
+    {
+      "name": "regex_find_replace_name",
+      "question": "Gegeben ist folgender Text. Schreiben Sie reguläre Ausdrücke für eine Find-&-Replace Funktion, welche das Attribut \"name\" in die Attribute \"vorname\" und \"nachname\" zerlegt. Tipp: Nutzen Sie Capturing Groups.",
+      "solution": {
+        "find": "\\\"name\\\":\\s*\\\"(\\w+)\\s+(\\w+)\\\"",
+        "replace": "\"vorname\": \"\\1\", \"nachname\": \"\\2\""
+      },
+      "content": "{\"name\": \"jonas lieber\",\"date\":\"28.11.1999\"}, {\"name\": \"max schmeling\",\"date\":\"13-04-2001\"}, {\"name\": \"anna wenzel\",\"date\":\"18/04/2000\"}",
+      "link": "https://regex101.com/r/0on9cx/1",
+      "difficulty": "hard"
+    },
+    {
+      "name": "regex_log_validierung",
+      "question": "In einem Log-Dateisystem beginnt jeder Eintrag mit START, gefolgt von mindestens einer Ziffer. Optional kann ein Bindestrich mit 2 bis 4 Buchstaben folgen. Der Eintrag endet immer mit SUCCESS oder FAILURE. Erstellen Sie einen regulären Ausdruck, der einen Log-Eintrag gemäß dieser Beschreibung validiert.",
+      "solution": "^START\\d+(-[A-Za-z]{2,4})?(SUCCESS|FAILURE)$",
+      "content": "START123SUCCESS\nSTART4567-ABFAILURE\nSTART9-XyZSUCCESS",
+      "link": "",
+      "difficulty": "hard"
+    }
+  ]
+}

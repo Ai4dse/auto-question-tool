@@ -160,6 +160,11 @@ export default function QuestionPage() {
   const handleSubmitView = (viewName) => {
     if (!question) return;
 
+    if (type === "regex") {
+      setFinished(true);
+      return;
+    }
+
     fetch(`${API_URL}/question/${type}/evaluate${requestQueryString}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -215,6 +220,7 @@ export default function QuestionPage() {
                 showExpected={status === "showingResults"}
                 reactiveTables={reactiveTables}
                 registerFieldId={(fieldId) => registerFieldIdForView(viewName, fieldId)}
+                openLinksInNewTab={type === "regex"}
               />
 
               <button
@@ -261,6 +267,7 @@ export default function QuestionPage() {
                   evaluationResults={{}}
                   userInput={{}}
                   showExpected={true}
+                  openLinksInNewTab={type === "regex"}
                 />
               </div>
             </div>
