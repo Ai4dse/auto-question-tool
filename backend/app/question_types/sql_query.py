@@ -14,17 +14,30 @@ EXERCISE_RESULTS_DIR = "./app/resources/sql"
 
 
 class SqlQueryQuestion:
-    def __init__(self, seed=None, difficulty="easy"):
+    def __init__(self, seed=None, difficulty="easy", exercise_name=None):
         self.seed = int(seed) if seed is not None else random.randint(1, 999999)
         self.difficulty = str(difficulty).lower()
-        random.seed(self.seed)
+        self.exercise_name = str(exercise_name) if exercise_name is not None else None
+        self.rng = random.Random(self.seed)
 
         with open(EXERCISES_PATH, "r", encoding="utf-8") as f:
             exercises = json.load(f).get("exercises", [])
 
         filtered = [e for e in exercises if str(e.get("difficulty", "easy")).lower() == self.difficulty]
 
-        self.exercise = random.choice(filtered)
+        if not filtered:
+            raise ValueError(f"No SQL exercises found for difficulty '{self.difficulty}'.")
+
+        if self.exercise_name:
+            match = next((e for e in filtered if str(e.get("name")) == self.exercise_name), None)
+            if match is None:
+                raise ValueError(
+                    f"Unknown SQL exercise '{self.exercise_name}' for difficulty '{self.difficulty}'."
+                )
+            self.exercise = match
+        else:
+            self.exercise = self.rng.choice(filtered)
+
         self.expected_column_count, self.expected_rows = self._load_expected_result(self.exercise["result_path"])
 
     def _load_expected_result(self, result_path: str):

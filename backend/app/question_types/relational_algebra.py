@@ -11,20 +11,32 @@ DIFFICULTY_SETTINGS = {
 }
 
 class RelationalAlgebra:
-    def __init__(self, seed=None, difficulty="easy"):
+    def __init__(self, seed=None, difficulty="easy", exercise_name=None):
         self.difficulty = difficulty.lower()
         config = DIFFICULTY_SETTINGS.get(self.difficulty, DIFFICULTY_SETTINGS["easy"])
 
         self.seed = seed or random.randint(1, 999999)
-        random.seed(self.seed)
-        np.random.seed(self.seed)
+        self.exercise_name = str(exercise_name) if exercise_name is not None else None
+        self.rng = random.Random(self.seed)
+        self.np_rng = np.random.default_rng(self.seed)
 
         #Aufgabenauswahl
         with open('./app/resources/relational_algebra_exercises/exercises.json', 'r') as f:
             exercises = json.load(f)['exercises']
         
-        filtered = [ex for ex in exercises if ex["difficulty"] == difficulty]
-        self.exercise = random.choice(filtered)
+        filtered = [ex for ex in exercises if ex["difficulty"] == self.difficulty]
+        if not filtered:
+            raise ValueError(f"No relational algebra exercises found for difficulty '{self.difficulty}'.")
+
+        if self.exercise_name:
+            match = next((ex for ex in filtered if str(ex.get("name")) == self.exercise_name), None)
+            if match is None:
+                raise ValueError(
+                    f"Unknown relational algebra exercise '{self.exercise_name}' for difficulty '{self.difficulty}'."
+                )
+            self.exercise = match
+        else:
+            self.exercise = self.rng.choice(filtered)
 
         _, dfs = load_schema(f'./app/resources/schemas/{self.exercise["schema"]}/')
         #_, dfs = load_schema(f'./app/resouces/schemas/university')

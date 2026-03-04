@@ -16,6 +16,7 @@ export default function QuestionPage() {
   const [finished, setFinished] = useState(false);
   const [reactiveTables, setReactiveTables] = useState({});
   const [resolvedSeed, setResolvedSeed] = useState(null);
+  const [resolvedExerciseName, setResolvedExerciseName] = useState(null);
 
   const viewFieldIdsRef = useRef({}); // { [viewName]: Set<string> }
 
@@ -48,20 +49,25 @@ export default function QuestionPage() {
     if (!sp.get("seed") && resolvedSeed != null) {
       sp.set("seed", String(resolvedSeed));
     }
+    if (!sp.get("exercise_name") && resolvedExerciseName) {
+      sp.set("exercise_name", String(resolvedExerciseName));
+    }
 
     const s = sp.toString();
     return s ? `?${s}` : "";
-  }, [search, resolvedSeed]);
+  }, [search, resolvedSeed, resolvedExerciseName]);
 
   useEffect(() => {
     if (!type) return;
     setResolvedSeed(null);
+    setResolvedExerciseName(null);
 
     fetch(`${API_URL}/question/${type}${baseQueryString}`)
       .then((res) => res.json())
       .then((data) => {
         setQuestion(data);
         setResolvedSeed(data?.seed ?? null);
+        setResolvedExerciseName(data?.exercise_name ?? null);
         setFormData({});
         setVisibleViews(["view1"]);
         setViewResults({});

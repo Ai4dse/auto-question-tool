@@ -102,7 +102,7 @@ def get_question_by_type(type_name: str, request: Request):
 
     try:
         question = QuestionClass(**kwargs)
-    except TypeError as e:
+    except (TypeError, ValueError) as e:
         # This is NOT "missing settings" handling; it’s just surfacing constructor errors.
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -115,6 +115,7 @@ def get_question_by_type(type_name: str, request: Request):
         "type": type_name,
         "seed": getattr(question, "seed", None),
         "difficulty": difficulty,
+        "exercise_name": getattr(question, "exercise", {}).get("name") if hasattr(question, "exercise") else None,
         "metadata": base_config.get("metadata", {}),
         "layout": serialize(layout),
     }
@@ -135,7 +136,7 @@ async def evaluate_question(type_name: str, request: Request):
 
     try:
         q = QuestionClass(**kwargs)
-    except TypeError as e:
+    except (TypeError, ValueError) as e:
         raise HTTPException(status_code=400, detail=str(e))
 
     try:
@@ -146,6 +147,7 @@ async def evaluate_question(type_name: str, request: Request):
     return {
         "seed": getattr(q, "seed", None),
         "difficulty": getattr(q, "difficulty", None),
+        "exercise_name": getattr(q, "exercise", {}).get("name") if hasattr(q, "exercise") else None,
         "results": result,
     }
 
@@ -165,7 +167,7 @@ async def preview_question(type_name: str, request: Request):
 
     try:
         q = QuestionClass(**kwargs)
-    except TypeError as e:
+    except (TypeError, ValueError) as e:
         raise HTTPException(status_code=400, detail=str(e))
 
     if not hasattr(q, "preview"):
