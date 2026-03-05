@@ -6,6 +6,12 @@
     "completed": true
   },
   {
+    "id": "regular_expressions",
+    "issues": ["none"],
+    "description": "Regex Stuff",
+    "completed": true
+  },
+  {
     "id": "dbscan",
     "issues": ["none"],
     "description": "Mark Border Core and Noise Ponts in a 2d Data distribution with dbscan",
@@ -126,13 +132,13 @@
     "id": "sigma_rule",
     "issues": ["none"],
     "description": "calculate upper, lower bounds and detect outliers using the sigma rule",
-    "completed": false
+    "completed": true
   }
   ,
   {
     "id": "tukey_fences",
     "issues": ["none"],
     "description": "calculate upper, lower bounds and detect outliers using the tukey fences approach",
-    "completed": false
+    "completed": true
   }
 ]

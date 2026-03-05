@@ -68,7 +68,7 @@ class RegexQuestion:
             },
             {
                 "type": "Text",
-                "content": f'{self.exercise["question"]} \nText: {self.exercise["content"]}',
+                "content": f'- {self.exercise["question"]} \n- {self.exercise["content"]}',
             },
             {
                 "type": "Text",

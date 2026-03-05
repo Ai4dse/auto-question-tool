@@ -4,7 +4,7 @@ QUESTION_CONFIG = {
         "metadata": {
             "title": "K-Means Clustering",
             "mode": ["steps", "exam"],
-            "desc": "Cluster data points into groups.",
+            "desc": "Gruppiere Datenpunkte mit dem K-Means-Algorithmus.",
             "tags": ["clustering", "unsupervised"],
             "settings": {
                 "difficulty": {
@@ -26,7 +26,7 @@ QUESTION_CONFIG = {
         "metadata": {
             "title": "AGNES",
             "mode": ["steps", "exam"],
-            "desc": "Practice the Agglomerative Nesting cluster algorithm.",
+            "desc": "Führe hierarchisches Clustering mit AGNES durch.",
             "tags": ["clustering", "unsupervised"],
             "settings": {
                 "difficulty": {
@@ -56,7 +56,7 @@ QUESTION_CONFIG = {
         "metadata": {
             "title": "DBSCAN",
             "mode": ["steps", "exam"],
-            "desc": "Practice the DBSCAN algorithm.",
+            "desc": "Erkenne Cluster und Ausreißer mit DBSCAN.",
             "tags": ["clustering", "unsupervised"],
             "settings": {
                 "difficulty": {
@@ -78,7 +78,7 @@ QUESTION_CONFIG = {
         "metadata": {
             "title": "Simple Addition",
             "mode": ["steps", "exam"],
-            "desc": "Practice simple arithmetic.",
+            "desc": "Übe grundlegende Addition mit kleinen Rechenschritten.",
             "tags": ["arithmetic"],
             "settings": {
                 "difficulty": {
@@ -100,7 +100,7 @@ QUESTION_CONFIG = {
         "metadata": {
             "title": "Ungarische Methode",
             "mode": ["steps", "exam"],
-            "desc": "Anwenden der ungarischen Methode.",
+            "desc": "Löse Zuordnungsprobleme mit der ungarischen Methode.",
             "tags": ["arithmetic"],
             "settings": {
                 "difficulty": {
@@ -122,7 +122,7 @@ QUESTION_CONFIG = {
         "metadata": {
             "title": "Relationale Algebra",
             "mode": ["steps", "exam"],
-            "desc": "Übungen und Visualisierungen.",
+            "desc": "Übe relationale Algebra mit Tabellenoperationen.",
             "tags": ["arithmetic"],
             "settings": {
                 "difficulty": {
@@ -143,7 +143,7 @@ QUESTION_CONFIG = {
         "class_path": "app.question_types.sql_query.SqlQueryQuestion",
         "metadata": {
             "title": "SQL Query",
-            "desc": "Practice read-only SQL query writing against a real dataset.",
+            "desc": "Formuliere SQL-Abfragen auf einem realistischen Datensatz.",
             "tags": ["sql", "databases"],
             "settings": {
                 "mode": {
@@ -170,7 +170,7 @@ QUESTION_CONFIG = {
         "class_path": "app.question_types.regex.RegexQuestion",
         "metadata": {
             "title": "Regex",
-            "desc": "Practice regular expressions on curated text exercises.",
+            "desc": "Erstelle reguläre Ausdrücke für typische Textmuster.",
             "tags": ["regex", "text-processing"],
             "settings": {
                 "mode": {
@@ -197,7 +197,7 @@ QUESTION_CONFIG = {
         "class_path": "app.question_types.stable_marriage.StableMarriageQuestion",
         "metadata": {
             "title": "Stable Marriage",
-            "desc": "Finde ein stabiles Matching aus zwei Präferenzlisten.",
+            "desc": "Finde ein stabiles Matching aus Präferenzlisten.",
             "tags": ["matching", "algorithms"],
             "settings": {
                 "mode": {
@@ -224,7 +224,7 @@ QUESTION_CONFIG = {
         "class_path": "app.question_types.sigma_rule.SigmaRule",
         "metadata": {
             "title": "Outlier Detection",
-            "desc": "Erkenne Outlier mithilfe der Sigma Regel.",
+            "desc": "Identifiziere Ausreißer mit der Sigma-Regel.",
             "tags": ["matching", "algorithms"],
             "settings": {
                 "mode": {
@@ -263,7 +263,7 @@ QUESTION_CONFIG = {
         "class_path": "app.question_types.tukey_fences.TukeyFences",
         "metadata": {
             "title": "Outlier Detection2",
-            "desc": "Erkenne Outlier mithilfe der Tukey Fences.",
+            "desc": "Identifiziere Ausreißer mit Tukey-Fences.",
             "tags": ["matching", "algorithms"],
             "settings": {
                 "mode": {
