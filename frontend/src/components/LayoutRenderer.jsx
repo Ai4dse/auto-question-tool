@@ -982,6 +982,411 @@ function PdfViewerSection({ title, src, height = 700, defaultOpen = false }) {
   );
 }
 
+function AprioriBuilderCore({
+  title,
+  description,
+  fieldId,
+  userInput,
+  onChange,
+  evaluationResults,
+  showExpected,
+  registerFieldId,
+  singleLevel = false,
+  initialRows = 1,
+  baseLevel = 1,
+}) {
+  const emptyRow = () => ({ itemset: "", support: "", probability: "", belowMinsup: false });
+  const makeLevel = () => ({ rows: Array.from({ length: initialRows }, emptyRow), terminate: false });
+
+  const parseStored = (raw) => {
+    try {
+      const parsed = raw ? (typeof raw === "string" ? JSON.parse(raw) : raw) : null;
+      if (singleLevel && parsed && Array.isArray(parsed.rows)) return parsed;
+      if (!singleLevel && parsed && Array.isArray(parsed.levels) && parsed.levels.length > 0) return parsed;
+    } catch (_err) {
+      // fallback below
+    }
+    return singleLevel ? makeLevel() : { levels: [makeLevel()] };
+  };
+
+  const [builder, setBuilder] = useState(() => parseStored(userInput?.[fieldId]));
+
+  useEffect(() => {
+    onChange(fieldId, JSON.stringify(builder));
+  }, [builder, fieldId, onChange]);
+
+  const levels = singleLevel ? [builder] : (builder.levels || []);
+
+  const setLevels = (nextLevels) => {
+    if (singleLevel) {
+      setBuilder(nextLevels[0] || makeLevel());
+    } else {
+      setBuilder((prev) => ({ ...prev, levels: nextLevels }));
+    }
+  };
+
+  const updateLevel = (levelIdx, updater) => {
+    const nextLevels = [...levels];
+    const current = { ...(nextLevels[levelIdx] || makeLevel()) };
+    updater(current);
+    nextLevels[levelIdx] = current;
+    setLevels(nextLevels);
+  };
+
+  const addLevel = () => setLevels([...levels, makeLevel()]);
+
+  const removeLevel = (levelIdx) => {
+    const remaining = levels.filter((_, i) => i !== levelIdx);
+    setLevels(remaining.length > 0 ? remaining : [makeLevel()]);
+  };
+
+  const addRow = (levelIdx) => updateLevel(levelIdx, (level) => {
+    level.rows = [...(level.rows || []), emptyRow()];
+  });
+
+  const removeRow = (levelIdx, rowIdx) => updateLevel(levelIdx, (level) => {
+    level.rows = [...(level.rows || [])].filter((_, i) => i !== rowIdx);
+  });
+
+  const updateRowField = (levelIdx, rowIdx, key, value) => updateLevel(levelIdx, (level) => {
+    const rows = [...(level.rows || [])];
+    rows[rowIdx] = { ...(rows[rowIdx] || {}), [key]: value };
+    level.rows = rows;
+  });
+
+  const updateTerminate = (levelIdx, checked) => updateLevel(levelIdx, (level) => {
+    level.terminate = checked;
+  });
+
+  const evalResult = evaluationResults?.[fieldId] ?? evaluationResults?.[`${fieldId}_solution`];
+  const isCorrect = evalResult?.correct;
+  const expected = evalResult?.expected;
+  const feedbackClass = evalResult === undefined ? "" : isCorrect ? "alert alert-success" : "alert alert-danger";
+  const solutionExpected =
+    expected && typeof expected === "object" && !Array.isArray(expected)
+      ? expected
+      : (() => {
+          const fallback = evaluationResults?.[`${fieldId}_solution`]?.expected;
+          return fallback && typeof fallback === "object" && !Array.isArray(fallback) ? fallback : null;
+        })();
+  const hasStructuredExpected = !!solutionExpected;
+
+  const rowFieldId = (levelIdx, rowIdx, key) =>
+    singleLevel ? `${fieldId}_r${rowIdx}_${key}` : `${fieldId}_l${levelIdx}_r${rowIdx}_${key}`;
+
+  const registerLocalField = (id) => {
+    if (typeof registerFieldId === "function") registerFieldId(String(id));
+  };
+
+  registerLocalField(fieldId);
+  registerLocalField(`${fieldId}_solution`);
+
+  const getCellEval = (id) => {
+    registerLocalField(id);
+    return evaluationResults?.[id];
+  };
+
+  const evalClass = (id) => {
+    const r = getCellEval(id);
+    if (r === undefined) return "";
+    return r.correct ? "is-valid" : "is-invalid";
+  };
+
+  const evalTitle = (id) => {
+    const r = getCellEval(id);
+    if (!r || r.correct || r.expected === undefined) return "";
+    return `Expected: ${r.expected}`;
+  };
+
+  const renderExpectedHint = (id) => {
+    const r = getCellEval(id);
+    if (!showExpected || !r || r.correct || r.expected === undefined) return null;
+    return <small className="text-muted fst-italic d-block mt-1">Correct: {r.expected}</small>;
+  };
+
+  return (
+    <div className="card mb-4 shadow-sm">
+      <div className="card-body">
+        <h5 className="card-title mb-3">{title}</h5>
+        <p className="text-muted mb-3">{description}</p>
+
+        {levels.map((level, levelIdx) => {
+          const rows = level?.rows || [];
+          const shownLevel = singleLevel ? Number(baseLevel || 1) : levelIdx + 1;
+          return (
+            <div key={`apr-level-${fieldId}-${levelIdx}`} className="border rounded p-3 mb-3 bg-light-subtle">
+              {!singleLevel && (
+                <div className="d-flex justify-content-between align-items-center mb-2">
+                  <h6 className="mb-0">Level {shownLevel}</h6>
+                  <button type="button" className="btn btn-sm btn-outline-danger" onClick={() => removeLevel(levelIdx)}>
+                    Level entfernen
+                  </button>
+                </div>
+              )}
+
+              <div className="row g-3">
+                <div className="col-12 col-lg-6">
+                  <div className="fw-semibold mb-2">C{shownLevel}</div>
+                  <div className="table-responsive">
+                    <table className="table table-bordered table-sm align-middle mb-2">
+                      <thead className="table-light">
+                        <tr>
+                          <th>Itemset</th>
+                          <th>Support</th>
+                          <th style={{ width: 48 }} />
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rows.map((row, rowIdx) => (
+                          <tr key={`c-${fieldId}-${levelIdx}-${rowIdx}`}>
+                            <td>
+                              {(() => {
+                                const id = rowFieldId(levelIdx, rowIdx, "itemset");
+                                return (
+                                  <>
+                                    <input
+                                      type="text"
+                                      className={`form-control form-control-sm ${evalClass(id)}`}
+                                      value={row?.itemset || ""}
+                                      onChange={(e) => updateRowField(levelIdx, rowIdx, "itemset", e.target.value)}
+                                      title={evalTitle(id)}
+                                    />
+                                    {renderExpectedHint(id)}
+                                  </>
+                                );
+                              })()}
+                            </td>
+                            <td>
+                              {(() => {
+                                const id = rowFieldId(levelIdx, rowIdx, "support");
+                                return (
+                                  <>
+                                    <input
+                                      type="text"
+                                      className={`form-control form-control-sm ${evalClass(id)}`}
+                                      value={row?.support || ""}
+                                      onChange={(e) => updateRowField(levelIdx, rowIdx, "support", e.target.value)}
+                                      title={evalTitle(id)}
+                                    />
+                                    {renderExpectedHint(id)}
+                                  </>
+                                );
+                              })()}
+                            </td>
+                            <td>
+                              <button
+                                type="button"
+                                className="btn btn-sm btn-outline-danger"
+                                onClick={() => removeRow(levelIdx, rowIdx)}
+                              >
+                                x
+                              </button>
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <button type="button" className="btn btn-sm btn-outline-primary" onClick={() => addRow(levelIdx)}>
+                    + Zeile in C{shownLevel}
+                  </button>
+                </div>
+
+                <div className="col-12 col-lg-6">
+                  <div className="fw-semibold mb-2">L{shownLevel}</div>
+                  <div className="table-responsive">
+                    <table className="table table-bordered table-sm align-middle mb-2">
+                      <thead className="table-light">
+                        <tr>
+                          <th>Itemset</th>
+                          <th>Support</th>
+                          <th>P</th>
+                          <th>fällt unter minsup?</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {rows.map((row, rowIdx) => (
+                          <tr key={`l-${fieldId}-${levelIdx}-${rowIdx}`}>
+                            <td>
+                              {(() => {
+                                const id = rowFieldId(levelIdx, rowIdx, "itemset");
+                                return (
+                                  <input
+                                    type="text"
+                                    className={`form-control form-control-sm ${evalClass(id)}`}
+                                    value={row?.itemset || ""}
+                                    readOnly
+                                    title={evalTitle(id)}
+                                  />
+                                );
+                              })()}
+                            </td>
+                            <td>
+                              {(() => {
+                                const id = rowFieldId(levelIdx, rowIdx, "support");
+                                return (
+                                  <input
+                                    type="text"
+                                    className={`form-control form-control-sm ${evalClass(id)}`}
+                                    value={row?.support || ""}
+                                    readOnly
+                                    title={evalTitle(id)}
+                                  />
+                                );
+                              })()}
+                            </td>
+                            <td>
+                              {(() => {
+                                const id = rowFieldId(levelIdx, rowIdx, "probability");
+                                return (
+                                  <>
+                                    <input
+                                      type="text"
+                                      className={`form-control form-control-sm ${evalClass(id)}`}
+                                      value={row?.probability || ""}
+                                      onChange={(e) => updateRowField(levelIdx, rowIdx, "probability", e.target.value)}
+                                      title={evalTitle(id)}
+                                    />
+                                    {renderExpectedHint(id)}
+                                  </>
+                                );
+                              })()}
+                            </td>
+                            <td className="text-center">
+                              {(() => {
+                                const id = rowFieldId(levelIdx, rowIdx, "belowMinsup");
+                                return (
+                                <input
+                                  className={`form-check-input ${evalClass(id)}`}
+                                  type="checkbox"
+                                  checked={!!row?.belowMinsup}
+                                  onChange={(e) => updateRowField(levelIdx, rowIdx, "belowMinsup", e.target.checked)}
+                                  title={evalTitle(id)}
+                                />
+                                );
+                              })()}
+                              {renderExpectedHint(rowFieldId(levelIdx, rowIdx, "belowMinsup"))}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
+
+              {!singleLevel && (
+                <div className="form-check mt-3">
+                  {(() => {
+                    const termFieldId = `${fieldId}_l${levelIdx}_terminate`;
+                    return (
+                      <>
+                  <input
+                    className={`form-check-input ${evalClass(termFieldId)}`}
+                    type="checkbox"
+                    id={`terminate-${fieldId}-${levelIdx}`}
+                    checked={!!level.terminate}
+                    onChange={(e) => updateTerminate(levelIdx, e.target.checked)}
+                    title={evalTitle(termFieldId)}
+                  />
+                      {renderExpectedHint(termFieldId)}
+                      </>
+                    );
+                  })()}
+                  <label className="form-check-label" htmlFor={`terminate-${fieldId}-${levelIdx}`}>
+                    Algorithmus terminiert nach Level {shownLevel}
+                  </label>
+                </div>
+              )}
+            </div>
+          );
+        })}
+
+        {!singleLevel && (
+          <button type="button" className="btn btn-outline-success" onClick={addLevel}>
+            + Level hinzufügen
+          </button>
+        )}
+
+        {evalResult !== undefined && (
+          <div className={`mt-3 py-2 px-3 rounded ${feedbackClass}`}>
+            {isCorrect ? "Eingabe korrekt." : "Eingabe nicht korrekt."}
+          </div>
+        )}
+        {showExpected && evalResult !== undefined && !isCorrect && expected !== undefined && !hasStructuredExpected && (
+          <small className="text-muted fst-italic d-block mt-1">Correct: {expected}</small>
+        )}
+
+        {showExpected && evalResult !== undefined && hasStructuredExpected && singleLevel && (
+          <div className="mt-3">
+            {solutionExpected?.message && <div className="mb-2 text-muted">{solutionExpected.message}</div>}
+            {Array.isArray(solutionExpected?.rows) && solutionExpected.rows.length > 0 && (
+              <div className="table-responsive">
+                <table className="table table-bordered table-sm align-middle mb-2">
+                  <thead className="table-light">
+                    <tr>
+                      <th>Itemset</th>
+                      <th>Support</th>
+                      <th>P</th>
+                      <th>fällt unter minsup?</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {solutionExpected.rows.map((row, i) => (
+                      <tr key={`expected-row-${i}`}>
+                        <td>{row.itemset}</td>
+                        <td>{row.support}</td>
+                        <td>{row.probability}</td>
+                        <td>{row.below}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+            {solutionExpected?.terminate !== undefined && (
+              <small className="text-muted fst-italic d-block">
+                Correct termination: {String(solutionExpected.terminate)}
+              </small>
+            )}
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
+function AprioriExamBuilder(props) {
+  const { el, ...rest } = props;
+  const fieldId = el.id || "apriori_exam";
+  return (
+    <AprioriBuilderCore
+      title={el.label || "Apriori Exam Builder"}
+      description=""
+      fieldId={fieldId}
+      singleLevel={false}
+      initialRows={1}
+      {...rest}
+    />
+  );
+}
+
+function AprioriLevelBuilder(props) {
+  const { el, ...rest } = props;
+  const fieldId = el.id || "apriori_level_builder";
+  return (
+    <AprioriBuilderCore
+      title={el.label || "Apriori Level Builder"}
+      description=""
+      fieldId={fieldId}
+      singleLevel={true}
+      initialRows={Number(el.initialRows || 3)}
+      baseLevel={Number(el.level || 1)}
+      {...rest}
+    />
+  );
+}
+
 export default function LayoutRenderer({
   layout,
   activeView = "view1",
@@ -1088,6 +1493,31 @@ export default function LayoutRenderer({
     );
   };
 
+  const renderEvaluatedCheckbox = (fieldId, checked = false) => {
+    if (typeof registerFieldId === "function") registerFieldId(String(fieldId));
+    const evalResult = evaluationResults?.[fieldId];
+    const isCorrect = evalResult?.correct;
+    const expected = evalResult?.expected;
+    const feedbackClass = evalResult === undefined ? "" : isCorrect ? "is-valid" : "is-invalid";
+    const hasUserValue = Object.prototype.hasOwnProperty.call(userInput || {}, fieldId);
+    const controlledChecked = hasUserValue ? !!userInput?.[fieldId] : !!checked;
+
+    return (
+      <div className="d-flex flex-column align-items-center">
+        <input
+          id={fieldId}
+          className={`form-check-input ${feedbackClass}`}
+          type="checkbox"
+          checked={controlledChecked}
+          onChange={(e) => onChange(fieldId, e.target.checked)}
+        />
+        {showExpected && evalResult !== undefined && !isCorrect && expected !== undefined && (
+          <small className="text-muted fst-italic">Correct: {expected}</small>
+        )}
+      </div>
+    );
+  };
+
 
   /** 🔹 General renderer for all element types */
   const renderElement = (el, idx) => {
@@ -1102,6 +1532,32 @@ export default function LayoutRenderer({
             userInput={userInput}
             onChange={onChange}
             renderEvaluatedInput={renderEvaluatedInput}
+          />
+        );
+      case "AprioriExamBuilder":
+      case "apriori_exam_builder":
+        return (
+          <AprioriExamBuilder
+            key={el.id ?? idx}
+            el={el}
+            userInput={userInput}
+            onChange={onChange}
+            evaluationResults={evaluationResults}
+            showExpected={showExpected}
+            registerFieldId={registerFieldId}
+          />
+        );
+      case "AprioriLevelBuilder":
+      case "apriori_level_builder":
+        return (
+          <AprioriLevelBuilder
+            key={el.id ?? idx}
+            el={el}
+            userInput={userInput}
+            onChange={onChange}
+            evaluationResults={evaluationResults}
+            showExpected={showExpected}
+            registerFieldId={registerFieldId}
           />
         );
       case "Text":
@@ -1364,10 +1820,31 @@ export default function LayoutRenderer({
                     {el.rows.map((row, rIdx) => (
                       <tr key={rIdx}>
                         {row.fields.map((field, fIdx) => {
-                          const fieldId = `${row.id}_${fIdx}`;
+                          const fallbackId = `${row.id}_${fIdx}`;
+
+                          const renderTableCell = () => {
+                            if (fIdx === 0 && (typeof field === "string" || typeof field === "number")) {
+                              return field;
+                            }
+
+                            if (field && typeof field === "object") {
+                              if (field.kind === "checkbox") {
+                                return renderEvaluatedCheckbox(field.id || fallbackId, !!field.value);
+                              }
+                              if (field.kind === "input") {
+                                return renderEvaluatedInput(field.id || fallbackId, field.value || "");
+                              }
+                              if (field.kind === "text") {
+                                return String(field.value || "");
+                              }
+                            }
+
+                            return fIdx === 0 ? field : renderEvaluatedInput(fallbackId, field);
+                          };
+
                           return (
                             <td key={fIdx} className={fIdx === 0 ? "fw-bold text-center" : ""}>
-                              {fIdx === 0 ? field : renderEvaluatedInput(fieldId, field)}
+                              {renderTableCell()}
                             </td>
                           );
                         })}
@@ -1545,6 +2022,36 @@ export default function LayoutRenderer({
             })}
           </div>
         );
+      case "CheckboxInput":
+      case "checkbox_input": {
+        const fieldId = el.id;
+        if (typeof registerFieldId === "function") registerFieldId(String(fieldId));
+        const evalResult = evaluationResults?.[fieldId];
+        const isCorrect = evalResult?.correct;
+        const expected = evalResult?.expected;
+        const feedbackClass = evalResult === undefined ? "" : isCorrect ? "is-valid" : "is-invalid";
+        const checked = !!userInput?.[fieldId];
+
+        return (
+          <div key={idx} className="mb-3">
+            <div className="form-check">
+              <input
+                className={`form-check-input ${feedbackClass}`}
+                type="checkbox"
+                id={fieldId}
+                checked={checked}
+                onChange={(e) => onChange(fieldId, e.target.checked)}
+              />
+              <label className="form-check-label fw-semibold" htmlFor={fieldId}>
+                {el.label || "Checkbox"}
+              </label>
+            </div>
+            {showExpected && evalResult !== undefined && !isCorrect && expected !== undefined && (
+              <small className="text-muted fst-italic">Correct: {expected}</small>
+            )}
+          </div>
+        );
+      }
       case "DropdownInput":
       case "dropdown_input":
         return (

@@ -297,4 +297,31 @@ QUESTION_CONFIG = {
             },
         },
     },
+
+    "apriori_algorithm": {
+        "class_path": "app.question_types.apriori_algorithm.AprioriAlgorithmQuestion",
+        "metadata": {
+            "title": "Apriori Algorithm",
+            "desc": "Bestimme frequent itemsets mit dem Apriori-Algorithmus.",
+            "tags": ["data mining", "association rules"],
+            "settings": {
+                "mode": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["steps", "exam"],
+                    "default": "steps",
+                },
+                "difficulty": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["easy", "medium", "hard"],
+                    "default": "easy",
+                },
+                "seed": {
+                    "kind": "number",
+                    "visibility": "hidden",
+                },
+            },
+        },
+    },
 }
