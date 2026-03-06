@@ -297,13 +297,12 @@ QUESTION_CONFIG = {
             },
         },
     },
-
-    "apriori_algorithm": {
-        "class_path": "app.question_types.apriori_algorithm.AprioriAlgorithmQuestion",
+    "ir_measures_tfidf": {
+        "class_path": "app.question_types.ir_measures_tfidf.IRMeasuresTFIDF",
         "metadata": {
-            "title": "Apriori Algorithm",
-            "desc": "Bestimme frequent itemsets mit dem Apriori-Algorithmus.",
-            "tags": ["data mining", "association rules"],
+            "title": "TFIDF",
+            "desc": "lol",
+            "tags": ["matching", "algorithms"],
             "settings": {
                 "mode": {
                     "kind": "select",
@@ -324,4 +323,30 @@ QUESTION_CONFIG = {
             },
         },
     },
+    "ir_measures_jaccard": {
+        "class_path": "app.question_types.ir_measures_jaccard.IRMeasuresJaccard",
+        "metadata": {
+            "title": "ir_measures_jaccard",
+            "desc": "Jaccard similarity between query and documents",
+            "tags": ["matching", "algorithms"],
+            "settings": {
+                "mode": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["steps", "exam"],
+                    "default": "steps",
+                },
+                "difficulty": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["easy", "medium", "hard"],
+                    "default": "easy",
+                },
+                "seed": {
+                    "kind": "number",
+                    "visibility": "hidden",
+                },
+            },
+        },
+    }
 }

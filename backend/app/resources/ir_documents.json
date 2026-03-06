@@ -1,0 +1,53 @@
+[
+    {
+        "Thema": "Haustier",
+        "Docs": [
+                    {
+                        "Nr": "D1",
+                        "content": ["Haustier", "Katze", "Haustier", "Hund", "Haustier", "Hase", "Huhn", "Nahrung"]
+                    },
+                    {
+                        "Nr": "D2",
+                        "content": ["Haustier", "Huhn", "Huhn", "Nahrung", "Körner", "Wasser", "Stall", "Laufen"]
+                    },
+                    {
+                        "Nr": "D3",
+                        "content": ["Nahrung", "Nahrung", "Fleisch", "Futter", "Napf", "Hund", "Katze", "Wasser", "Fleisch"]
+                    },
+                    {
+                        "Nr": "D4",
+                        "content": ["Napf", "Napf", "Futter", "Küche", "Haus", "Katze", "Milch", "Wasser"]
+                    },
+                    {
+                        "Nr": "D5",
+                        "content": ["Katze", "Katze", "Haus", "Fell", "Pflege", "Bürste", "Milch", "Napf"]
+                    }
+                ]
+    },
+    {
+    "Thema": "Nahrung",
+    "Docs": [
+                {
+                    "Nr": "D6",
+                    "content": ["Nahrung", "Milch", "Milch", "Wasser", "Nahrung", "Brot", "Käse", "Frühstück"]
+                },
+                {
+                    "Nr": "D7",
+                    "content": ["Nahrung", "Wasser", "Wasser", "Apfel", "Gemüse", "Salat", "Vitamine"]
+                },
+                {
+                    "Nr": "D8",
+                    "content": ["Futter", "Nahrung", "Futter", "Milch", "Napf", "Getreide", "Körner"]
+                },
+                {
+                    "Nr": "D9",
+                    "content": ["Nahrung", "Milch", "Wasser", "Suppe", "Gemüse", "Salz", "Küche"]
+                },
+                {
+                    "Nr": "D10",
+                    "content": ["Nahrung", "Futter", "Wasser", "Milch", "Reis", "Fleisch", "Mahlzeit"]
+                }
+            ]
+    }
+]
+
