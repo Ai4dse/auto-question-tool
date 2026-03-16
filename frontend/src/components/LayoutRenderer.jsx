@@ -418,6 +418,185 @@ function MatrixInputGrid({
     </div>
   );
 }
+function ERDiagram({ el }) {
+  const {
+    entities = [],
+    relations = [],
+    hidden_cardinalities = false,
+    card_type = "min_max",
+  } = el ?? {};
+
+  const getRelationValue = (relation, entityName) => {
+    if (card_type === "cardinality") {
+      return relation?.cardinality?.[entityName] ?? "";
+    }
+    return relation?.min_max?.[entityName] ?? "";
+  };
+
+  return (
+    <div className="mb-4">
+      {entities.length > 0 && (
+        <div className="mb-3">
+          <strong>Entities:</strong>
+          <div className="d-flex flex-wrap gap-2 mt-2">
+            {entities.map((entity, idx) => (
+              <span key={entity.name ?? idx} className="badge text-bg-secondary">
+                {entity.name}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="table-responsive">
+        <table className="table table-sm align-middle">
+          <thead>
+            <tr>
+              <th>Entity</th>
+              <th style={{ width: "120px" }}>
+                {card_type === "cardinality" ? "Card." : "Min-Max"}
+              </th>
+              <th>Relation</th>
+              <th style={{ width: "120px" }}>
+                {card_type === "cardinality" ? "Card." : "Min-Max"}
+              </th>
+              <th>Entity</th>
+            </tr>
+          </thead>
+          <tbody>
+            {relations.map((relation, idx) => {
+              const [leftEntity, rightEntity] = relation.entities ?? ["", ""];
+              const leftValue = getRelationValue(relation, leftEntity);
+              const rightValue = getRelationValue(relation, rightEntity);
+
+              return (
+                <tr key={`${relation.name}-${idx}`}>
+                  <td>
+                    <code>{leftEntity}</code>
+                  </td>
+                  <td className="text-center">
+                    {hidden_cardinalities ? "?" : <code>{leftValue}</code>}
+                  </td>
+                  <td className="text-center">
+                    <strong>{relation.name}</strong>
+                  </td>
+                  <td className="text-center">
+                    {hidden_cardinalities ? "?" : <code>{rightValue}</code>}
+                  </td>
+                  <td>
+                    <code>{rightEntity}</code>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
+
+function ERDiagramInput({ el, renderEvaluatedInput }) {
+  const {
+    entities = [],
+    relations = [],
+    card_type = "min_max",
+  } = el ?? {};
+
+  const selectOptions =
+    card_type === "cardinality"
+      ? ["1", "n", "m"]
+      : ["0..1", "1..1", "0..*", "1..*"];
+
+  const makeFieldId = (relationName, leftEntity, rightEntity, entityName) =>
+    `${relationName}__${leftEntity}__${rightEntity}__${entityName}`;
+
+  return (
+    <div className="mb-4">
+      {entities.length > 0 && (
+        <div className="mb-3">
+          <strong>Entities:</strong>
+          <div className="d-flex flex-wrap gap-2 mt-2">
+            {entities.map((entity, idx) => (
+              <span key={entity.name ?? idx} className="badge text-bg-light border">
+                {entity.name}
+              </span>
+            ))}
+          </div>
+        </div>
+      )}
+
+      <div className="table-responsive">
+        <table className="table table-sm align-middle">
+          <thead>
+            <tr>
+              <th>Entity</th>
+              <th style={{ width: "180px" }}>
+                {card_type === "cardinality" ? "Card." : "Min-Max"}
+              </th>
+              <th>Relation</th>
+              <th style={{ width: "180px" }}>
+                {card_type === "cardinality" ? "Card." : "Min-Max"}
+              </th>
+              <th>Entity</th>
+            </tr>
+          </thead>
+          <tbody>
+            {relations.map((relation, idx) => {
+              const [leftEntity, rightEntity] = relation.entities ?? ["", ""];
+              const leftFieldId = makeFieldId(
+                relation.name,
+                leftEntity,
+                rightEntity,
+                leftEntity
+              );
+              const rightFieldId = makeFieldId(
+                relation.name,
+                leftEntity,
+                rightEntity,
+                rightEntity
+              );
+
+              return (
+                <tr key={`${relation.name}-${idx}`}>
+                  <td>
+                    <code>{leftEntity}</code>
+                  </td>
+                  <td>
+                    {renderEvaluatedInput(leftFieldId, "", {
+                      variant: "select",
+                      selectOptions,
+                      placeholder:
+                        card_type === "cardinality"
+                          ? "Choose 1 / n / m"
+                          : "Choose min-max",
+                    })}
+                  </td>
+                  <td className="text-center">
+                    <strong>{relation.name}</strong>
+                  </td>
+                  <td>
+                    {renderEvaluatedInput(rightFieldId, "", {
+                      variant: "select",
+                      selectOptions,
+                      placeholder:
+                        card_type === "cardinality"
+                          ? "Choose 1 / n / m"
+                          : "Choose min-max",
+                    })}
+                  </td>
+                  <td>
+                    <code>{rightEntity}</code>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}
 function DendrogramBuilder({ el, idx, userInput, onChange, renderEvaluatedInput }) {
 
   const id = el.id || `dendro_${idx}`;
@@ -1558,6 +1737,24 @@ export default function LayoutRenderer({
             evaluationResults={evaluationResults}
             showExpected={showExpected}
             registerFieldId={registerFieldId}
+          />
+        );
+      case "ER_Diagram":
+      case "er_diagram":
+        return (
+          <ERDiagram
+            key={el.id ?? idx}
+            el={el}
+          />
+        );
+
+      case "ER_Diagram_input":
+      case "er_diagram_input":
+        return (
+          <ERDiagramInput
+            key={el.id ?? idx}
+            el={el}
+            renderEvaluatedInput={renderEvaluatedInput}
           />
         );
       case "Text":

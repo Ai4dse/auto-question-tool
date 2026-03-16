@@ -1,0 +1,202 @@
+[
+
+        {
+            "id": "online_shop_orders_invoices",
+            "title": "Online Shop – Orders and Invoices",
+            "difficulty": "easy",
+
+            "descriptive_text": "An online shop sells products to registered customers. Each customer can place multiple orders but an order always belongs to exactly one customer. Each order consists of one or more order lines. Each order line refers to exactly one product and stores the ordered quantity. A product can appear in many order lines across different orders. After an order is completed the shop generates exactly one invoice for that order. Each invoice belongs to exactly one order. Each invoice contains one or more invoice lines and every invoice line corresponds to exactly one order line. Products are grouped into categories and each product belongs to exactly one category while a category can contain many products.",
+
+            "entities": [
+                {"name": "CUSTOMER"},
+                {"name": "SALES_ORDER"},
+                {"name": "SALES_ORDER_LINE"},
+                {"name": "PRODUCT"},
+                {"name": "CATEGORY"},
+                {"name": "INVOICE"},
+                {"name": "INVOICE_LINE"}
+            ],
+
+            "relations": [
+
+                {
+                    "name": "places",
+                    "entities": ["CUSTOMER", "SALES_ORDER"],
+                    "cardinality": {"CUSTOMER": "1", "SALES_ORDER": "n"},
+                    "min_max": {"CUSTOMER": "0..*", "SALES_ORDER": "1..1"}
+                },
+
+                {
+                    "name": "contains",
+                    "entities": ["SALES_ORDER", "SALES_ORDER_LINE"],
+                    "cardinality": {"SALES_ORDER": "1", "SALES_ORDER_LINE": "n"},
+                    "min_max": {"SALES_ORDER": "1..*", "SALES_ORDER_LINE": "1..1"}
+                },
+
+                {
+                    "name": "ordered_product",
+                    "entities": ["PRODUCT", "SALES_ORDER_LINE"],
+                    "cardinality": {"PRODUCT": "1", "SALES_ORDER_LINE": "n"},
+                    "min_max": {"PRODUCT": "0..*", "SALES_ORDER_LINE": "1..1"}
+                },
+
+                {
+                    "name": "categorized_as",
+                    "entities": ["CATEGORY", "PRODUCT"],
+                    "cardinality": {"CATEGORY": "1", "PRODUCT": "n"},
+                    "min_max": {"CATEGORY": "0..*", "PRODUCT": "1..1"}
+                },
+
+                {
+                    "name": "billed_by",
+                    "entities": ["SALES_ORDER", "INVOICE"],
+                    "cardinality": {"SALES_ORDER": "1", "INVOICE": "1"},
+                    "min_max": {"SALES_ORDER": "1..1", "INVOICE": "1..1"}
+                },
+
+                {
+                    "name": "contains",
+                    "entities": ["INVOICE", "INVOICE_LINE"],
+                    "cardinality": {"INVOICE": "1", "INVOICE_LINE": "n"},
+                    "min_max": {"INVOICE": "1..*", "INVOICE_LINE": "1..1"}
+                },
+
+                {
+                    "name": "generated_from",
+                    "entities": ["SALES_ORDER_LINE", "INVOICE_LINE"],
+                    "cardinality": {"SALES_ORDER_LINE": "1", "INVOICE_LINE": "n"},
+                    "min_max": {"SALES_ORDER_LINE": "0..*", "INVOICE_LINE": "1..1"}
+                }
+
+            ]
+        },
+
+
+        {
+            "id": "university_course_registration",
+            "title": "University Course Registration",
+            "difficulty": "medium",
+
+            "descriptive_text": "A university organizes teaching into departments. Each department employs several professors but every professor belongs to exactly one department. Departments offer multiple courses and each course belongs to exactly one department. A course can be offered in many course sections each semester. Each course section is taught by exactly one professor while a professor may teach multiple sections. Students enroll in course sections and a student may enroll in many sections while each section can contain many students. The enrollment stores the grade achieved by the student.",
+
+            "entities": [
+                {"name": "DEPARTMENT"},
+                {"name": "PROFESSOR"},
+                {"name": "COURSE"},
+                {"name": "COURSE_SECTION"},
+                {"name": "STUDENT"},
+                {"name": "ENROLLMENT"}
+            ],
+
+            "relations": [
+
+                {
+                    "name": "employs",
+                    "entities": ["DEPARTMENT", "PROFESSOR"],
+                    "cardinality": {"DEPARTMENT": "1", "PROFESSOR": "n"},
+                    "min_max": {"DEPARTMENT": "1..*", "PROFESSOR": "1..1"}
+                },
+
+                {
+                    "name": "offers",
+                    "entities": ["DEPARTMENT", "COURSE"],
+                    "cardinality": {"DEPARTMENT": "1", "COURSE": "n"},
+                    "min_max": {"DEPARTMENT": "1..*", "COURSE": "1..1"}
+                },
+
+                {
+                    "name": "has_section",
+                    "entities": ["COURSE", "COURSE_SECTION"],
+                    "cardinality": {"COURSE": "1", "COURSE_SECTION": "n"},
+                    "min_max": {"COURSE": "0..*", "COURSE_SECTION": "1..1"}
+                },
+
+                {
+                    "name": "teaches",
+                    "entities": ["PROFESSOR", "COURSE_SECTION"],
+                    "cardinality": {"PROFESSOR": "1", "COURSE_SECTION": "n"},
+                    "min_max": {"PROFESSOR": "0..*", "COURSE_SECTION": "1..1"}
+                },
+
+                {
+                    "name": "student_enrollment",
+                    "entities": ["STUDENT", "ENROLLMENT"],
+                    "cardinality": {"STUDENT": "1", "ENROLLMENT": "n"},
+                    "min_max": {"STUDENT": "0..*", "ENROLLMENT": "1..1"}
+                },
+
+                {
+                    "name": "section_enrollment",
+                    "entities": ["COURSE_SECTION", "ENROLLMENT"],
+                    "cardinality": {"COURSE_SECTION": "1", "ENROLLMENT": "n"},
+                    "min_max": {"COURSE_SECTION": "0..*", "ENROLLMENT": "1..1"}
+                }
+
+            ]
+        },
+
+
+        {
+            "id": "hospital_appointment_system",
+            "title": "Hospital Appointment System",
+            "difficulty": "hard",
+
+            "descriptive_text": "A hospital manages patients and medical staff. Each patient can book multiple appointments but every appointment belongs to exactly one patient. Each appointment is handled by exactly one doctor while a doctor may handle many appointments. Doctors belong to hospital departments and each department employs multiple doctors. During an appointment a doctor may create a prescription. Each prescription belongs to exactly one appointment. Prescriptions contain several prescription items and each item refers to a specific medication. A medication may appear in many prescription items.",
+
+            "entities": [
+                {"name": "PATIENT"},
+                {"name": "APPOINTMENT"},
+                {"name": "DOCTOR"},
+                {"name": "DEPARTMENT"},
+                {"name": "PRESCRIPTION"},
+                {"name": "PRESCRIPTION_ITEM"},
+                {"name": "MEDICATION"}
+            ],
+
+            "relations": [
+
+                {
+                    "name": "books",
+                    "entities": ["PATIENT", "APPOINTMENT"],
+                    "cardinality": {"PATIENT": "1", "APPOINTMENT": "n"},
+                    "min_max": {"PATIENT": "0..*", "APPOINTMENT": "1..1"}
+                },
+
+                {
+                    "name": "handled_by",
+                    "entities": ["DOCTOR", "APPOINTMENT"],
+                    "cardinality": {"DOCTOR": "1", "APPOINTMENT": "n"},
+                    "min_max": {"DOCTOR": "0..*", "APPOINTMENT": "1..1"}
+                },
+
+                {
+                    "name": "department_staff",
+                    "entities": ["DEPARTMENT", "DOCTOR"],
+                    "cardinality": {"DEPARTMENT": "1", "DOCTOR": "n"},
+                    "min_max": {"DEPARTMENT": "1..*", "DOCTOR": "1..1"}
+                },
+
+                {
+                    "name": "creates_prescription",
+                    "entities": ["APPOINTMENT", "PRESCRIPTION"],
+                    "cardinality": {"APPOINTMENT": "1", "PRESCRIPTION": "1"},
+                    "min_max": {"APPOINTMENT": "0..1", "PRESCRIPTION": "1..1"}
+                },
+
+                {
+                    "name": "contains",
+                    "entities": ["PRESCRIPTION", "PRESCRIPTION_ITEM"],
+                    "cardinality": {"PRESCRIPTION": "1", "PRESCRIPTION_ITEM": "n"},
+                    "min_max": {"PRESCRIPTION": "1..*", "PRESCRIPTION_ITEM": "1..1"}
+                },
+
+                {
+                    "name": "refers_to",
+                    "entities": ["MEDICATION", "PRESCRIPTION_ITEM"],
+                    "cardinality": {"MEDICATION": "1", "PRESCRIPTION_ITEM": "n"},
+                    "min_max": {"MEDICATION": "0..*", "PRESCRIPTION_ITEM": "1..1"}
+                }
+
+            ]
+        }
+    ]

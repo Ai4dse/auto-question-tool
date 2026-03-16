@@ -351,6 +351,37 @@ QUESTION_CONFIG = {
             },
         },
     },
+    "er_modelling": {
+        "class_path": "app.question_types.er_modelling.ERModelling",
+        "metadata": {
+            "title": "er_modelling",
+            "desc": "Jaccard similarity between query and documents",
+            "tags": ["matching", "algorithms"],
+            "settings": {
+                "mode": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["steps", "exam"],
+                    "default": "steps",
+                },
+                "difficulty": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["easy", "medium", "hard"],
+                    "default": "easy",
+                },
+                "seed": {
+                    "kind": "number",
+                    "visibility": "hidden",
+                },
+                "card_type": {
+                    "kind": "select",
+                    "visibility": "hidden",
+                    "options": ["min_max", "cardinality"],
+                },
+            },
+        },
+    },
     "ir_measures_jaccard": {
         "class_path": "app.question_types.ir_measures_jaccard.IRMeasuresJaccard",
         "metadata": {
