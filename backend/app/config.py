@@ -1,3 +1,46 @@
+WEEK_CONFIG = {
+    1: {
+        "title": "Woche 1: Reguläre Ausdrücke",
+        "start_date": "2025-03-01",
+    },
+    2: {
+        "title": "Woche 2: Vektorraummodell",
+        "start_date": "2025-03-15",
+    },
+    3: {
+        "title": "Woche 3: ER-Diagramm",
+        "start_date": "2025-03-29",
+    },
+    4: {
+        "title": "Woche 4: Relationales Schema",
+        "start_date": "2025-04-12",
+    },
+    5: {
+        "title": "Woche 5: Relationale Algebra, SQL und XPath/XQuery",
+        "start_date": "2025-04-26",
+    },
+    6: {
+        "title": "Woche 6: Funktionale Abhängigkeiten und Normalformen",
+        "start_date": "2025-05-10",
+    },
+    7: {
+        "title": "Woche 7: Synthesealgorithmus und Star-/Snowflake-Schema",
+        "start_date": "2025-05-24",
+    },
+    8: {
+        "title": "Woche 8: Assoziationsregel-Extraktion",
+        "start_date": "2025-06-07",
+    },
+    9: {
+        "title": "Woche 9: Distanzmaße und Clustering",
+        "start_date": "2025-06-21",
+    },
+    10: {
+        "title": "Woche 10: Schema-Matching und Data Cleaning",
+        "start_date": "2025-07-05",
+    },
+}
+
 QUESTION_CONFIG = {
     "kmeans": {
         "class_path": "app.question_types.kmeans.KMeansQuestion",
@@ -273,7 +316,7 @@ QUESTION_CONFIG = {
         "class_path": "app.question_types.tukey_fences.TukeyFences",
         "metadata": {
             "title": "Outlier Detection2",
-            "week": 9,
+            "week": 10,
             "desc": "Identifiziere Ausreißer mit Tukey-Fences.",
             "tags": ["matching", "algorithms"],
             "settings": {

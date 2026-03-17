@@ -7,7 +7,7 @@ from .generator_loader import load_question_generators
 import os
 from zoneinfo import ZoneInfo
 from app.routes.auth import router as auth_router
-from .config import QUESTION_CONFIG
+from .config import QUESTION_CONFIG, WEEK_CONFIG
 import inspect
 from typing import Any, Dict
 
@@ -18,7 +18,6 @@ app.mount("/resources", StaticFiles(directory="app/resources"), name="resources"
 
 MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017/user_data")
 RELEASE_TIMEZONE = ZoneInfo("Europe/Berlin")
-COURSE_START_DATE = date(2025, 4, 1)
 
 connect(host=MONGO_URL)
 
@@ -41,24 +40,33 @@ app.add_middleware(
 question_generators = load_question_generators()
 
 
-def get_current_release_week() -> int:
-    today = datetime.now(RELEASE_TIMEZONE).date()
-    delta_days = (today - COURSE_START_DATE).days
-    if delta_days < 0:
-        return 0
-    return (delta_days // 7) + 1
+def get_current_date_in_release_timezone() -> date:
+    return datetime.now(RELEASE_TIMEZONE).date()
+
+
+def _get_release_date_for_week(week_number: int) -> date:
+    week_cfg = WEEK_CONFIG.get(week_number)
+    if not week_cfg:
+        raise HTTPException(status_code=404, detail="Question type not found")
+
+    start_date = week_cfg.get("start_date")
+    try:
+        return date.fromisoformat(str(start_date))
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Question type not found")
 
 
 def is_question_released(metadata: Dict[str, Any]) -> bool:
     try:
         release_week = int(metadata.get("week", 1))
     except (TypeError, ValueError):
-        release_week = 1
+        return False
 
     if release_week < 1:
-        release_week = 1
+        return False
 
-    return release_week <= get_current_release_week()
+    release_date = _get_release_date_for_week(release_week)
+    return get_current_date_in_release_timezone() >= release_date
 
 
 def ensure_question_is_released(type_name: str) -> None:
@@ -114,7 +122,12 @@ def serialize(obj):
 @app.get("/questions")
 def get_questions():
     return [
-        {"id": qid, **cfg["metadata"]}
+        {
+            "id": qid,
+            **cfg["metadata"],
+            "week_title": WEEK_CONFIG.get(int(cfg["metadata"].get("week", 1)), {}).get("title"),
+            "week_start_date": WEEK_CONFIG.get(int(cfg["metadata"].get("week", 1)), {}).get("start_date"),
+        }
         for qid, cfg in QUESTION_CONFIG.items()
         if is_question_released(cfg.get("metadata", {}))
     ]

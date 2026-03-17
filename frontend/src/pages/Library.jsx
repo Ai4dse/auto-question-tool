@@ -11,19 +11,6 @@ import {
   buildQueryFromSettings,
 } from "../components/settings/settingUtils";
 
-const WEEK_TITLES = {
-  1: "Woche 1: Reguläre Ausdrücke",
-  2: "Woche 2: Vektorraummodell",
-  3: "Woche 3: ER-Diagramm",
-  4: "Woche 4: Relationales Schema“",
-  5: "Woche 5: Relationale Algebra, SQL und XPath/XQuery",
-  6: "Woche 6: Funktionale Abhängigkeiten und Normalformen",
-  7: "Woche 7: Synthesealgorithmus und Star-/Snowflake-Schema",
-  8: "Woche 8: Assoziationsregel-Extraktion",
-  9: "Woche 9: Distanzmaße und Clustering",
-  10: "Woche 10: Schema-Matching und Data Cleaning  ",
-};
-
 export default function Library() {
   const [hoveredConfig, setHoveredConfig] = useState(null);
   const [questionSettings, setQuestionSettings] = useState({});
@@ -84,13 +71,20 @@ export default function Library() {
             title: q.title || q.id,
             desc: q.desc || "",
             week: Number.isFinite(Number(q.week)) ? Number(q.week) : 1,
+            weekTitle: q.week_title || null,
+            weekStartDate: q.week_start_date || null,
             mode: Array.isArray(q.mode) ? q.mode : ["steps", "exam"],
             tags: Array.isArray(q.tags) ? q.tags : [],
             settings,
           };
         });
 
-        normalized.sort((a, b) => (a.week - b.week) || a.title.localeCompare(b.title));
+        normalized.sort((a, b) => {
+          const startDateCompare = (a.weekStartDate || "").localeCompare(b.weekStartDate || "");
+          if (startDateCompare !== 0) return startDateCompare;
+          if (a.week !== b.week) return a.week - b.week;
+          return a.title.localeCompare(b.title);
+        });
         setQuestions(normalized);
       } catch (e) {
         setError(e?.message || "Failed to load questions");
@@ -121,7 +115,7 @@ export default function Library() {
         }, {})
       ).map(([week, weekQuestions]) => (
         <div key={week} className="mb-4">
-          <h4 className="mb-3">{WEEK_TITLES[Number(week)] || `Woche ${week}`}</h4>
+          <h4 className="mb-3">{weekQuestions[0]?.weekTitle || `Woche ${week}`}</h4>
           <div className="row">
             {weekQuestions.map((q) => {
               const schema = q.settings || {};
