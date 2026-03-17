@@ -76,7 +76,7 @@ class AprioriAlgorithmQuestion:
             if non_empty >= self.config["min_non_empty_levels"]:
                 break
 
-        if chosen is None:
+        if not chosen:
             raise ValueError("Failed to generate Apriori instance.")
         self.base_items, self.transactions, self.levels, self.minsup_count = chosen
 
@@ -358,16 +358,11 @@ class AprioriAlgorithmQuestion:
             rows.append((tuple(entry["itemset"]), support, format_probability(prob), support < self.minsup_count))
         return sorted(rows, key=lambda x: x[0])
 
-    def _grade_dynamic_level_rows(self, k, user_input, expected_level):
-        builder_key = f"apr_s{k}_builder"
-        allowed_itemsets = ", ".join(
-            format_itemset(entry["itemset"]) for entry in expected_level["candidates"]
-        )
-
-        solution_rows = []
-        for entry in expected_level["candidates"]:
+    def _solution_level(self, level):
+        rows = []
+        for entry in level["candidates"]:
             support = int(entry["count"])
-            solution_rows.append(
+            rows.append(
                 {
                     "itemset": format_itemset(entry["itemset"]),
                     "support": str(support),
@@ -376,49 +371,30 @@ class AprioriAlgorithmQuestion:
                 }
             )
 
-        solution_payload = {
-            "message": f"Referenzlösung für Schritt {k}",
-            "rows": solution_rows,
-            "terminate": str(bool(expected_level["terminate"])),
+        return {
+            "level": int(level["k"]),
+            "rows": rows,
+            "terminate": str(bool(level["terminate"])),
         }
 
-        raw = user_input.get(builder_key, "")
-        try:
-            parsed = json.loads(raw) if isinstance(raw, str) else raw
-        except json.JSONDecodeError:
-            return {
-                builder_key: {
-                    "correct": False,
-                    "expected": solution_payload,
-                },
-                f"{builder_key}_solution": {
-                    "correct": False,
-                    "expected": solution_payload,
-                }
-            }
+    def _solution_payload(self, message, levels=None):
+        source_levels = self.levels if levels is None else levels
+        return {
+            "message": message,
+            "levels": [self._solution_level(level) for level in source_levels],
+        }
 
-        rows = parsed.get("rows") if isinstance(parsed, dict) else []
-        rows = rows if isinstance(rows, list) else []
-
-        expected_map = {}
-        for entry in expected_level["candidates"]:
-            itemset = tuple(entry["itemset"])
-            support = int(entry["count"])
-            expected_map[itemset] = {
-                "support": support,
-                "probability": float(entry["probability"]),
-                "below": support < self.minsup_count,
-            }
-
-        def row_key(row_idx, suffix):
-            return f"{builder_key}_r{row_idx}_{suffix}"
+    def _grade_rows(self, rows_list, expected_rows, key_factory, level_label):
+        allowed_itemsets = ", ".join(format_itemset(row[0]) for row in expected_rows)
+        expected_map = {row[0]: row for row in expected_rows}
 
         results = {}
         seen_itemsets = set()
+        matched_expected_itemsets = set()
         duplicate = False
         actual_rows = []
 
-        for row_idx, row in enumerate(rows):
+        for row_idx, row in enumerate(rows_list):
             row = row or {}
             item_raw = str(row.get("itemset") or "").strip()
             support_raw = str(row.get("support") or "").strip()
@@ -428,71 +404,109 @@ class AprioriAlgorithmQuestion:
             itemset = parse_itemset_text(item_raw)
             row_has_content = bool(item_raw or support_raw or prob_raw or below_raw)
 
-            item_key = row_key(row_idx, "itemset")
-            support_key = row_key(row_idx, "support")
-            prob_key = row_key(row_idx, "probability")
-            below_key = row_key(row_idx, "belowMinsup")
+            item_key = key_factory(row_idx, "itemset")
+            support_key = key_factory(row_idx, "support")
+            prob_key = key_factory(row_idx, "probability")
+            below_key = key_factory(row_idx, "belowMinsup")
 
             if not itemset:
                 if row_has_content:
                     results[item_key] = {"correct": False, "expected": "Itemset erforderlich"}
                     results[support_key] = {"correct": False, "expected": "Support erforderlich"}
                     results[prob_key] = {"correct": False, "expected": "P erforderlich"}
-                    results[below_key] = {"correct": False, "expected": "Below minsup setzen"}
+                    results[below_key] = {"correct": False, "expected": "fällt unter minsup? setzen"}
                 continue
 
-            expected = expected_map.get(itemset)
+            expected_row = expected_map.get(itemset)
             is_duplicate = itemset in seen_itemsets
             seen_itemsets.add(itemset)
             duplicate = duplicate or is_duplicate
 
-            actual_support = self._int_value(row.get("support"))
-            actual_prob = parse_probability(row.get("probability"))
+            expected_support = expected_row[1] if expected_row else None
+            expected_prob = expected_row[2] if expected_row else None
+            expected_below = expected_row[3] if expected_row else None
 
-            expected_support = expected["support"] if expected is not None else None
-            expected_prob = expected["probability"] if expected is not None else None
-            expected_below = expected["below"] if expected is not None else None
+            support = self._int_value(row.get("support"))
+            prob = parse_probability(row.get("probability"))
 
-            item_ok = expected is not None and not is_duplicate
-            support_ok = item_ok and actual_support == expected_support
-            prob_ok = item_ok and expected_prob is not None and self._prob_matches(actual_prob, expected_prob)
+            item_ok = expected_row is not None and not is_duplicate
+            support_ok = item_ok and support == expected_support
+            prob_ok = item_ok and expected_prob is not None and self._prob_matches(prob, float(expected_prob))
             below_ok = item_ok and below_raw == expected_below
 
             results[item_key] = {
                 "correct": item_ok,
-                "expected": format_itemset(itemset) if expected is not None else f"Erlaubte Itemsets in C{k}: {allowed_itemsets}",
+                "expected": (
+                    "Duplikat: Itemset bereits eingetragen"
+                    if is_duplicate
+                    else (format_itemset(itemset) if expected_row else f"Erlaubte Itemsets in {level_label}: {allowed_itemsets}")
+                ),
             }
             results[support_key] = {
                 "correct": support_ok,
-                "expected": str(expected_support) if expected_support is not None else f"Support zu einem Itemset aus C{k}",
+                "expected": str(expected_support) if expected_support is not None else f"Support zu einem Itemset aus {level_label}",
             }
             results[prob_key] = {
                 "correct": prob_ok,
-                "expected": format_probability(expected_prob) if expected_prob is not None else f"P zu einem Itemset aus C{k}",
+                "expected": expected_prob if expected_prob is not None else f"P zu einem Itemset aus {level_label}",
             }
             results[below_key] = {
                 "correct": below_ok,
-                "expected": str(expected_below) if expected_below is not None else f"Below minsup zu einem Itemset aus C{k}",
+                "expected": str(expected_below) if expected_below is not None else f"Below minsup zu einem Itemset aus {level_label}",
             }
 
-            actual_rows.append(
-                (
-                    itemset,
-                    actual_support,
-                    None if actual_prob is None else format_probability(actual_prob),
-                    below_raw,
+            if item_ok:
+                matched_expected_itemsets.add(itemset)
+                actual_rows.append(
+                    (
+                        itemset,
+                        support,
+                        None if prob is None else format_probability(prob),
+                        below_raw,
+                    )
                 )
-            )
 
-        expected_rows = self._canonical_expected_rows(expected_level)
         actual_rows = sorted(actual_rows, key=lambda x: x[0])
         is_correct = (not duplicate) and (actual_rows == expected_rows)
+        missing_rows = [row for row in expected_rows if row[0] not in matched_expected_itemsets]
+
+        return {
+            "results": results,
+            "is_correct": is_correct,
+            "missing_rows": missing_rows,
+        }
+
+    def _grade_dynamic_level_rows(self, k, user_input, expected_level):
+        builder_key = f"apr_s{k}_builder"
+        solution_payload = self._solution_payload(f"Referenzlösung für Schritt {k}", [expected_level])
+
+        raw = user_input.get(builder_key, "")
+        try:
+            parsed = json.loads(raw) if isinstance(raw, str) else raw
+        except json.JSONDecodeError:
+            return {
+                builder_key: {
+                    "correct": False,
+                    "expected": solution_payload,
+                }
+            }
+
+        rows_list = parsed.get("rows") if isinstance(parsed, dict) else []
+        rows_list = rows_list if isinstance(rows_list, list) else []
+
+        def row_key(row_idx, suffix):
+            return f"{builder_key}_r{row_idx}_{suffix}"
+
+        graded = self._grade_rows(
+            rows_list,
+            self._canonical_expected_rows(expected_level),
+            row_key,
+            f"C{k}",
+        )
+        results = dict(graded["results"])
+        is_correct = graded["is_correct"]
 
         results[builder_key] = {
-            "correct": is_correct,
-            "expected": solution_payload,
-        }
-        results[f"{builder_key}_solution"] = {
             "correct": is_correct,
             "expected": solution_payload,
         }
@@ -516,9 +530,8 @@ class AprioriAlgorithmQuestion:
 
         return results
 
-    @staticmethod
-    def _fail(message):
-        return {"apriori_exam": {"correct": False, "expected": message}}
+    def _fail(self, message):
+        return {"apriori_exam": {"correct": False, "expected": self._solution_payload(message)}}
 
     def _canonical_expected_level(self, level):
         return {
@@ -553,90 +566,43 @@ class AprioriAlgorithmQuestion:
         for level_idx in range(shared_count):
             user_level = user_levels[level_idx] if isinstance(user_levels[level_idx], dict) else {}
             expected_level = expected_levels[level_idx]
-            expected_map = {row[0]: row for row in expected_level["rows"]}
-            allowed_itemsets = ", ".join(format_itemset(row[0]) for row in expected_level["rows"])
 
             rows = user_level.get("rows", [])
             rows_list = rows if isinstance(rows, list) else []
-            seen = set()
-            actual_rows = []
-
-            for row_idx, row in enumerate(rows_list):
-                row = row or {}
-                item_key = f"apriori_exam_l{level_idx}_r{row_idx}_itemset"
-                support_key = f"apriori_exam_l{level_idx}_r{row_idx}_support"
-                prob_key = f"apriori_exam_l{level_idx}_r{row_idx}_probability"
-                below_key = f"apriori_exam_l{level_idx}_r{row_idx}_belowMinsup"
-
-                itemset = parse_itemset_text(row.get("itemset"))
-                support = self._int_value(row.get("support"))
-                prob = parse_probability(row.get("probability"))
-                below = self._bool_value(row.get("belowMinsup"))
-
-                row_has_content = bool(
-                    str(row.get("itemset") or "").strip()
-                    or str(row.get("support") or "").strip()
-                    or str(row.get("probability") or "").strip()
-                    or below
-                )
-
-                if not itemset:
-                    if row_has_content:
-                        overall_correct = False
-                        results[item_key] = {"correct": False, "expected": "Itemset erforderlich"}
-                        results[support_key] = {"correct": False, "expected": "Support erforderlich"}
-                        results[prob_key] = {"correct": False, "expected": "P erforderlich"}
-                        results[below_key] = {"correct": False, "expected": "fällt unter minsup? setzen"}
-                    continue
-
-                expected_row = expected_map.get(itemset)
-                is_duplicate = itemset in seen
-                seen.add(itemset)
-
-                expected_support = expected_row[1] if expected_row else None
-                expected_prob = expected_row[2] if expected_row else None
-                expected_below = expected_row[3] if expected_row else None
-
-                item_ok = expected_row is not None and not is_duplicate
-                support_ok = item_ok and support == expected_support
-                prob_ok = item_ok and expected_prob is not None and self._prob_matches(prob, float(expected_prob))
-                below_ok = item_ok and below == expected_below
-
-                results[item_key] = {
-                    "correct": item_ok,
-                    "expected": format_itemset(itemset) if expected_row else f"Erlaubte Itemsets in Level {level_idx + 1}: {allowed_itemsets}",
-                }
-                results[support_key] = {
-                    "correct": support_ok,
-                    "expected": str(expected_support) if expected_support is not None else f"Support zu einem Itemset aus Level {level_idx + 1}",
-                }
-                results[prob_key] = {
-                    "correct": prob_ok,
-                    "expected": expected_prob if expected_prob is not None else f"P zu einem Itemset aus Level {level_idx + 1}",
-                }
-                results[below_key] = {
-                    "correct": below_ok,
-                    "expected": str(expected_below) if expected_below is not None else f"Below minsup zu einem Itemset aus Level {level_idx + 1}",
-                }
-
-                if not (item_ok and support_ok and prob_ok and below_ok):
-                    overall_correct = False
-
-                if item_ok:
-                    actual_rows.append(
-                        (
-                            itemset,
-                            support,
-                            None if prob is None else format_probability(prob),
-                            below,
-                        )
-                    )
-
             expected_rows = expected_level["rows"]
-            actual_rows = sorted(actual_rows, key=lambda x: x[0])
-            if actual_rows != expected_rows:
+
+            def row_key(row_idx, suffix):
+                return f"apriori_exam_l{level_idx}_r{row_idx}_{suffix}"
+
+            graded = self._grade_rows(
+                rows_list,
+                expected_rows,
+                row_key,
+                f"Level {level_idx + 1}",
+            )
+            results.update(graded["results"])
+
+            if not graded["is_correct"]:
                 overall_correct = False
                 messages.append(f"Level {level_idx + 1} hat falsche oder fehlende Zeilen.")
+
+            missing_rows = graded["missing_rows"]
+            if missing_rows:
+                missing_labels = ", ".join(format_itemset(row[0]) for row in missing_rows)
+                messages.append(f"Level {level_idx + 1} fehlt: {missing_labels}")
+
+                missing_offset = len(rows_list)
+                for miss_idx, miss_row in enumerate(missing_rows):
+                    row_idx = missing_offset + miss_idx
+                    item_key = f"apriori_exam_l{level_idx}_r{row_idx}_itemset"
+                    support_key = f"apriori_exam_l{level_idx}_r{row_idx}_support"
+                    prob_key = f"apriori_exam_l{level_idx}_r{row_idx}_probability"
+                    below_key = f"apriori_exam_l{level_idx}_r{row_idx}_belowMinsup"
+
+                    results[item_key] = {"correct": False, "expected": format_itemset(miss_row[0])}
+                    results[support_key] = {"correct": False, "expected": str(miss_row[1])}
+                    results[prob_key] = {"correct": False, "expected": miss_row[2]}
+                    results[below_key] = {"correct": False, "expected": str(miss_row[3])}
 
             term_key = f"apriori_exam_l{level_idx}_terminate"
             term_actual = self._bool_value(user_level.get("terminate"))
@@ -660,7 +626,7 @@ class AprioriAlgorithmQuestion:
         summary = "Alle Schritte inkl. Termination korrekt." if overall_correct else " | ".join(messages) if messages else "Nicht korrekt."
         results["apriori_exam"] = {
             "correct": overall_correct,
-            "expected": summary,
+            "expected": self._solution_payload(summary),
         }
         return results
 

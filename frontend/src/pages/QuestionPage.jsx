@@ -17,6 +17,7 @@ export default function QuestionPage() {
   const [reactiveTables, setReactiveTables] = useState({});
   const [resolvedSeed, setResolvedSeed] = useState(null);
   const [resolvedExerciseName, setResolvedExerciseName] = useState(null);
+  const [loadError, setLoadError] = useState("");
 
   const viewFieldIdsRef = useRef({}); // { [viewName]: Set<string> }
 
@@ -63,11 +64,26 @@ export default function QuestionPage() {
     setResolvedExerciseName(null);
 
     fetch(`${API_URL}/question/${type}${baseQueryString}`)
-      .then((res) => res.json())
+      .then(async (res) => {
+        if (!res.ok) {
+          let message = `HTTP ${res.status}`;
+          try {
+            const err = await res.json();
+            message = err?.detail || err?.error || message;
+          } catch {
+            // ignore JSON parse errors for error payloads
+          }
+          throw new Error(message);
+        }
+        return res.json();
+      })
       .then((data) => {
+        if (data?.error) throw new Error(data.error);
         setQuestion(data);
+        setLoadError("");
         setResolvedSeed(data?.seed ?? null);
         setResolvedExerciseName(data?.exercise_name ?? null);
+        viewFieldIdsRef.current = {};
         setFormData({});
         setVisibleViews(["view1"]);
         setViewResults({});
@@ -75,7 +91,11 @@ export default function QuestionPage() {
         setFinished(false);
         setReactiveTables({});
       })
-      .catch((err) => console.error("Error loading question:", err));
+      .catch((err) => {
+        console.error("Error loading question:", err);
+        setQuestion(null);
+        setLoadError(err?.message || "Question not available.");
+      });
   }, [type, baseQueryString]);
 
   useEffect(() => {
@@ -191,6 +211,7 @@ export default function QuestionPage() {
     } else setFinished(true);
   };
 
+  if (loadError) return <div className="alert alert-danger">{loadError}</div>;
   if (!question) return <div>Lade...</div>;
 
   const sp = new URLSearchParams(search);
@@ -207,7 +228,6 @@ export default function QuestionPage() {
         const results = viewResults[viewName] || {};
         const isLastVisible = index === visibleViews.length - 1;
         const nextExists = question.layout[`view${visibleViews.length + 1}`];
-        viewFieldIdsRef.current[viewName] = new Set();
         return (
           <div key={viewName} className="card mb-4 shadow-sm">
             <div className="card-body">

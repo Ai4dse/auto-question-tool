@@ -2,6 +2,7 @@ import csv
 import json
 import os
 import random
+import re
 
 from app.question_types.sql_query_helper import (
     execute_for_compare,
@@ -38,9 +39,16 @@ class SqlQueryQuestion:
         else:
             self.exercise = self.rng.choice(filtered)
 
-        self.expected_column_count, self.expected_rows = self._load_expected_result(self.exercise["result_path"])
+        self.requires_order_by = self._requires_order_by(self.exercise.get("answer", ""))
+        self.expected_column_count, self.expected_rows = self._load_expected_result(
+            self.exercise["result_path"],
+            keep_order=self.requires_order_by,
+        )
 
-    def _load_expected_result(self, result_path: str):
+    def _requires_order_by(self, answer_sql: str) -> bool:
+        return bool(re.search(r"\border\s+by\b", str(answer_sql), flags=re.IGNORECASE))
+
+    def _load_expected_result(self, result_path: str, keep_order: bool = False):
         csv_path = os.path.join(EXERCISE_RESULTS_DIR, result_path)
         with open(csv_path, "r", encoding="utf-8", newline="") as f:
             reader = csv.reader(f)
@@ -51,7 +59,8 @@ class SqlQueryQuestion:
 
         header = rows[0]
         data_rows = [tuple(row) for row in rows[1:]]
-        data_rows.sort()
+        if not keep_order:
+            data_rows.sort()
         return len(header), data_rows
 
     def generate(self):
@@ -104,7 +113,8 @@ class SqlQueryQuestion:
                 tuple("" if value is None else str(value) for value in row)
                 for row in user_rows
             ]
-            normalized_user_rows.sort()
+            if not self.requires_order_by:
+                normalized_user_rows.sort()
 
             correct = (
                 len(user_cols) == self.expected_column_count

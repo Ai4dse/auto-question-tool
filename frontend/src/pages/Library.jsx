@@ -70,13 +70,21 @@ export default function Library() {
             id: q.id,
             title: q.title || q.id,
             desc: q.desc || "",
+            week: Number.isFinite(Number(q.week)) ? Number(q.week) : 1,
+            weekTitle: q.week_title || null,
+            weekStartDate: q.week_start_date || null,
             mode: Array.isArray(q.mode) ? q.mode : ["steps", "exam"],
             tags: Array.isArray(q.tags) ? q.tags : [],
             settings,
           };
         });
 
-        normalized.sort((a, b) => a.title.localeCompare(b.title));
+        normalized.sort((a, b) => {
+          const startDateCompare = (a.weekStartDate || "").localeCompare(b.weekStartDate || "");
+          if (startDateCompare !== 0) return startDateCompare;
+          if (a.week !== b.week) return a.week - b.week;
+          return a.title.localeCompare(b.title);
+        });
         setQuestions(normalized);
       } catch (e) {
         setError(e?.message || "Failed to load questions");
@@ -98,52 +106,79 @@ export default function Library() {
       {loading && <div className="text-center text-muted">Loading…</div>}
       {error && <div className="alert alert-danger">Could not load: {error}</div>}
 
-      <div className="row">
-        {questions.map((q) => {
-          const schema = q.settings || {};
-          const defaults = getDefaultsFromSchema({
-            schema,
-            randomCache: randomDefaultsCache,
-            questionId: q.id,
-          });
-          const local = questionSettings[q.id] || {};
+      {Object.entries(
+        questions.reduce((acc, q) => {
+          const weekKey = String(q.week || 1);
+          if (!acc[weekKey]) acc[weekKey] = [];
+          acc[weekKey].push(q);
+          return acc;
+        }, {})
+      ).map(([week, weekQuestions]) => (
+        <div key={week} className="mb-4">
+          <h4 className="mb-3">{weekQuestions[0]?.weekTitle || `Woche ${week}`}</h4>
+          <div className="row">
+            {weekQuestions.map((q) => {
+              const schema = q.settings || {};
+              const defaults = getDefaultsFromSchema({
+                schema,
+                randomCache: randomDefaultsCache,
+                questionId: q.id,
+              });
+              const local = questionSettings[q.id] || {};
 
-          let effective = { ...defaults, ...local };
+              let effective = { ...defaults, ...local };
 
-          const params = buildQueryFromSettings(schema, effective);
-          const questionUrl = `/question/${q.id}?${params.toString()}`;
+              const params = buildQueryFromSettings(schema, effective);
+              const questionUrl = `/question/${q.id}?${params.toString()}`;
 
-          const openEntries = Object.entries(schema).filter(([, def]) => def?.visibility === "open");
-          const hiddenEntries = Object.entries(schema).filter(([, def]) => def?.visibility === "hidden");
+              const openEntries = Object.entries(schema).filter(([, def]) => def?.visibility === "open");
+              const hiddenEntries = Object.entries(schema).filter(([, def]) => def?.visibility === "hidden");
 
-          return (
-            <div key={q.id} className="col-md-4 mb-4">
-              <div className="card shadow-sm h-100 position-relative">
-                <div className="card-body">
-                  <div className="d-flex justify-content-between align-items-start">
-                    <div>
-                      <h5 className="card-title">{q.title}</h5>
-                      <p className="card-text text-muted">{q.desc}</p>
-                    </div>
+              return (
+                <div key={q.id} className="col-md-4 mb-4">
+                  <div className="card shadow-sm h-100 position-relative">
+                    <div className="card-body">
+                      <div className="d-flex justify-content-between align-items-start">
+                        <div>
+                          <h5 className="card-title">{q.title}</h5>
+                          <p className="card-text text-muted">{q.desc}</p>
+                        </div>
 
-                    {/* Hidden settings */}
-                    <div
-                      className="position-relative"
-                      onMouseEnter={() => handleEnter(q.id)}
-                      onMouseLeave={handleLeave}
-                    >
-                      <button className="btn btn-sm btn-outline-secondary">⚙️</button>
-
-                      {hoveredConfig === q.id && hiddenEntries.length > 0 && (
+                        {/* Hidden settings */}
                         <div
-                          className="position-absolute top-100 end-0 mt-2 z-3 bg-white border rounded p-3 shadow-sm"
-                          style={{ minWidth: 260 }}
+                          className="position-relative"
                           onMouseEnter={() => handleEnter(q.id)}
                           onMouseLeave={handleLeave}
                         >
-                          <div className="fw-semibold mb-2">Settings</div>
+                          <button className="btn btn-sm btn-outline-secondary">⚙️</button>
 
-                          {hiddenEntries.map(([name, def]) => (
+                          {hoveredConfig === q.id && hiddenEntries.length > 0 && (
+                            <div
+                              className="position-absolute top-100 end-0 mt-2 z-3 bg-white border rounded p-3 shadow-sm"
+                              style={{ minWidth: 260 }}
+                              onMouseEnter={() => handleEnter(q.id)}
+                              onMouseLeave={handleLeave}
+                            >
+                              <div className="fw-semibold mb-2">Settings</div>
+
+                              {hiddenEntries.map(([name, def]) => (
+                                <SettingField
+                                  key={name}
+                                  name={name}
+                                  def={def}
+                                  value={effective[name]}
+                                  onChange={(n, v) => updateSetting(q.id, n, v)}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Open settings */}
+                      {openEntries.length > 0 && (
+                        <div className="mt-3 mb-3">
+                          {openEntries.map(([name, def]) => (
                             <SettingField
                               key={name}
                               name={name}
@@ -154,33 +189,18 @@ export default function Library() {
                           ))}
                         </div>
                       )}
+
+                      <Link to={questionUrl} className="btn btn-primary w-100">
+                        Open
+                      </Link>
                     </div>
                   </div>
-
-                  {/* Open settings */}
-                  {openEntries.length > 0 && (
-                    <div className="mt-3 mb-3">
-                      {openEntries.map(([name, def]) => (
-                        <SettingField
-                          key={name}
-                          name={name}
-                          def={def}
-                          value={effective[name]}
-                          onChange={(n, v) => updateSetting(q.id, n, v)}
-                        />
-                      ))}
-                    </div>
-                  )}
-
-                  <Link to={questionUrl} className="btn btn-primary w-100">
-                    Open
-                  </Link>
                 </div>
-              </div>
-            </div>
-          );
-        })}
-      </div>
+              );
+            })}
+          </div>
+        </div>
+      ))}
     </div>
   );
 }

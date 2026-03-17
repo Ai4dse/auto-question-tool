@@ -1,11 +1,13 @@
+from datetime import date, datetime
 from fastapi import FastAPI, Request, Query, HTTPException
 from fastapi.staticfiles import StaticFiles
 from mongoengine import connect
 from fastapi.middleware.cors import CORSMiddleware
 from .generator_loader import load_question_generators
 import os
+from zoneinfo import ZoneInfo
 from app.routes.auth import router as auth_router
-from .config import QUESTION_CONFIG
+from .config import QUESTION_CONFIG, WEEK_CONFIG
 import inspect
 from typing import Any, Dict
 
@@ -15,6 +17,7 @@ app.include_router(auth_router)
 app.mount("/resources", StaticFiles(directory="app/resources"), name="resources")
 
 MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017/user_data")
+RELEASE_TIMEZONE = ZoneInfo("Europe/Berlin")
 
 connect(host=MONGO_URL)
 
@@ -35,6 +38,41 @@ app.add_middleware(
 )
 
 question_generators = load_question_generators()
+
+
+def get_current_date_in_release_timezone() -> date:
+    return datetime.now(RELEASE_TIMEZONE).date()
+
+
+def _get_release_date_for_week(week_number: int) -> date:
+    week_cfg = WEEK_CONFIG.get(week_number)
+    if not week_cfg:
+        raise HTTPException(status_code=404, detail="Question type not found")
+
+    start_date = week_cfg.get("start_date")
+    try:
+        return date.fromisoformat(str(start_date))
+    except ValueError:
+        raise HTTPException(status_code=404, detail="Question type not found")
+
+
+def is_question_released(metadata: Dict[str, Any]) -> bool:
+    try:
+        release_week = int(metadata.get("week", 1))
+    except (TypeError, ValueError):
+        return False
+
+    if release_week < 1:
+        return False
+
+    release_date = _get_release_date_for_week(release_week)
+    return get_current_date_in_release_timezone() >= release_date
+
+
+def ensure_question_is_released(type_name: str) -> None:
+    metadata = QUESTION_CONFIG.get(type_name, {}).get("metadata", {})
+    if not is_question_released(metadata):
+        raise HTTPException(status_code=404, detail="Question type not found")
 
 def query_params_to_kwargs(request: Request) -> Dict[str, Any]:
 
@@ -84,15 +122,23 @@ def serialize(obj):
 @app.get("/questions")
 def get_questions():
     return [
-        {"id": qid, **cfg["metadata"]}
+        {
+            "id": qid,
+            **cfg["metadata"],
+            "week_title": WEEK_CONFIG.get(int(cfg["metadata"].get("week", 1)), {}).get("title"),
+            "week_start_date": WEEK_CONFIG.get(int(cfg["metadata"].get("week", 1)), {}).get("start_date"),
+        }
         for qid, cfg in QUESTION_CONFIG.items()
+        if is_question_released(cfg.get("metadata", {}))
     ]
 
 
 @app.get("/question/{type_name}")
 def get_question_by_type(type_name: str, request: Request):
     if type_name not in question_generators:
-        return {"error": "Question type not found."}
+        raise HTTPException(status_code=404, detail="Question type not found")
+
+    ensure_question_is_released(type_name)
 
     base_config = question_generators[type_name]
     QuestionClass = base_config["class"]
@@ -124,7 +170,9 @@ def get_question_by_type(type_name: str, request: Request):
 @app.post("/question/{type_name}/evaluate")
 async def evaluate_question(type_name: str, request: Request):
     if type_name not in question_generators:
-        return {"error": "Question type not found."}
+        raise HTTPException(status_code=404, detail="Question type not found")
+
+    ensure_question_is_released(type_name)
 
     base_config = question_generators[type_name]
     QuestionClass = base_config["class"]
@@ -155,6 +203,8 @@ async def evaluate_question(type_name: str, request: Request):
 async def preview_question(type_name: str, request: Request):
     if type_name not in question_generators:
         raise HTTPException(status_code=404, detail="Question type not found")
+
+    ensure_question_is_released(type_name)
 
     base_config = question_generators[type_name]
     QuestionClass = base_config["class"]
