@@ -5,15 +5,6 @@ import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
-import {
-  ScatterChart,
-  Scatter,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-} from "recharts";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { API_URL } from "../api";
 
@@ -1922,8 +1913,6 @@ export default function LayoutRenderer({
         const listenId = el.listenTo;
         const data = reactiveTables?.[listenId] || {};
         const { tree, error, status } = data;
-
-        console.log("REACTIVE TREE DATA", listenId, data);
 
         return (
           <div key={idx} className="card mb-4 shadow-sm">
