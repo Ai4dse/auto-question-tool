@@ -24,6 +24,15 @@ import remarkMath from "remark-math";
 import '@xyflow/react/dist/style.css';
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
+import {
+  ScatterChart,
+  Scatter,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from "recharts";
 import "bootstrap/dist/css/bootstrap.min.css";
 import { API_URL } from "../api";
 
@@ -998,27 +1007,13 @@ function ERDiagramInput({ el, renderEvaluatedInput }) {
     </div>
   );
 }
+/* ---------------- NODE COMPONENTS ---------------- */
 
-function ERDiagramBuilder({ el, idx, onChange }) {
-  const id = el.id || `er_builder_${idx}`;
-  const cardType = el.card_type ?? "min_max";
-  const relationFieldId = `${id}:relations`;
-  const lastExport = useRef("");
-
-  const [nodes, setNodes, onNodesChange] = useNodesState([]);
-  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
-
-  const getNode = useCallback(
-    (id) => nodes.find((n) => n.id === id),
-    [nodes]
-  );
-
-  /* ---------------- ENTITY NODE ---------------- */
-
-  const EntityNode = ({ id: dataId, data }) => (
+function EntityNode({ id, data }) {
+  return (
     <div
       style={{
-        minWidth: 170,
+        minWidth: 190,
         border: "2px solid #333",
         borderRadius: 6,
         background: "#97c95c",
@@ -1029,179 +1024,270 @@ function ERDiagramBuilder({ el, idx, onChange }) {
         padding: "20px 12px",
       }}
     >
+      {/* relation targets: always visible, yellow */}
       <Handle
-        id="entity-target"
+        id="relation-left"
+        type="target"
+        position={Position.Left}
+        isConnectableStart={false}
+        isConnectableEnd={true}
+        style={{
+          width: 14,
+          height: 14,
+          borderRadius: "50%",
+          background: "#f6a623",
+          border: "1px solid #333",
+          left: -10,
+          top: "50%",
+          transform: "translateY(-50%)",
+          zIndex: 5,
+        }}
+      />
+
+      <Handle
+        id="relation-right"
+        type="target"
+        position={Position.Right}
+        isConnectableStart={false}
+        isConnectableEnd={true}
+        style={{
+          width: 14,
+          height: 14,
+          borderRadius: "50%",
+          background: "#f6a623",
+          border: "1px solid #333",
+          right: -10,
+          top: "50%",
+          transform: "translateY(-50%)",
+          zIndex: 5,
+        }}
+      />
+
+      {/* single attribute target on top, blue */}
+      <Handle
+        id="attribute-top"
         type="target"
         position={Position.Top}
         isConnectableStart={false}
         isConnectableEnd={true}
         style={{
-          position: "absolute",
-          inset: 0,
-          width: "100%",
-          height: "100%",
-          transform: "none",
-          opacity: 0,
-          border: "none",
-          background: "transparent",
-          zIndex: 1,
+          width: 14,
+          height: 14,
+          borderRadius: "50%",
+          background: "#cfe2ff",
+          border: "1px solid #333",
+          top: -10,
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: 5,
         }}
       />
 
       <input
         value={data.label}
-        onChange={(e) => {
-          setNodes((nds) =>
-            nds.map((n) =>
-              n.id === dataId
-                ? { ...n, data: { ...n.data, label: e.target.value } }
-                : n
-            )
-          );
-        }}
+        onChange={(e) => data.onLabelChange(id, e.target.value)}
+        onKeyDown={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
         style={{
           border: "none",
           background: "transparent",
           textAlign: "center",
           fontWeight: "bold",
-          position: "relative",
-          zIndex: 2,
           width: "100%",
           outline: "none",
         }}
       />
     </div>
   );
+}
 
-  /* ---------------- RELATION NODE ---------------- */
+function RelationNode({ id, data }) {
+  return (
+    <div
+      style={{
+        width: 140,
+        height: 120,
+        position: "relative",
+      }}
+    >
+      <Handle
+        id="left"
+        type="source"
+        position={Position.Left}
+        isConnectableStart={true}
+        isConnectableEnd={false}
+        style={{
+          width: 14,
+          height: 14,
+          borderRadius: "50%",
+          background: "#f6a623",
+          border: "1px solid #333",
+          left: -10,
+          top: 48,
+          transform: "none",
+          zIndex: 5,
+        }}
+      />
 
-  const RelationNode = ({ id: dataId, data }) => {
-    const connectedSides = edges
-      .filter((e) => e.source === dataId)
-      .map((e) => e.sourceHandle);
+      <Handle
+        id="right"
+        type="source"
+        position={Position.Right}
+        isConnectableStart={true}
+        isConnectableEnd={false}
+        style={{
+          width: 14,
+          height: 14,
+          borderRadius: "50%",
+          background: "#f6a623",
+          border: "1px solid #333",
+          right: -10,
+          top: 48,
+          transform: "none",
+          zIndex: 5,
+        }}
+      />
 
-    const leftUsed = connectedSides.includes("left");
-    const rightUsed = connectedSides.includes("right");
+      {/* attribute target on top */}
+      <Handle
+        id="attribute-top"
+        type="target"
+        position={Position.Top}
+        isConnectableStart={false}
+        isConnectableEnd={true}
+        style={{
+          width: 14,
+          height: 14,
+          borderRadius: "50%",
+          background: "#cfe2ff",
+          border: "1px solid #333",
+          top: -25,
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: 5,
+        }}
+      />
 
-    return (
       <div
         style={{
-          width: 140,
-          height: 120,
-          position: "relative",
+          width: 110,
+          height: 110,
+          margin: "0 auto",
+          transform: "rotate(45deg)",
+          background: "#f6a623",
+          border: "2px solid #333",
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
         }}
       >
-        {!leftUsed && (
-          <Handle
-            id="left"
-            type="source"
-            position={Position.Left}
-            isConnectableStart={true}
-            isConnectableEnd={false}
+        <div style={{ transform: "rotate(-45deg)" }}>
+          <input
+            value={data.label}
+            onChange={(e) => data.onLabelChange(id, e.target.value)}
+            onKeyDown={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
             style={{
-              width: 14,
-              height: 14,
-              borderRadius: "50%",
-              background: "#000",
-              border: "1px solid #000",
-              left: 8,
-              top: 48,
-              transform: "none",
-              zIndex: 5,
+              border: "none",
+              background: "transparent",
+              textAlign: "center",
+              fontWeight: "bold",
+              outline: "none",
             }}
           />
-        )}
-
-        {!rightUsed && (
-          <Handle
-            id="right"
-            type="source"
-            position={Position.Right}
-            isConnectableStart={true}
-            isConnectableEnd={false}
-            style={{
-              width: 14,
-              height: 14,
-              borderRadius: "50%",
-              background: "#000",
-              border: "1px solid #000",
-              right: 12,
-              top: 48,
-              transform: "none",
-              zIndex: 5,
-            }}
-          />
-        )}
-
-        <div
-          style={{
-            width: 110,
-            height: 110,
-            margin: "0 auto",
-            transform: "rotate(45deg)",
-            background: "#f6a623",
-            border: "2px solid #333",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-          }}
-        >
-          <div style={{ transform: "rotate(-45deg)" }}>
-            <input
-              value={data.label}
-              onChange={(e) => {
-                setNodes((nds) =>
-                  nds.map((n) =>
-                    n.id === dataId
-                      ? { ...n, data: { ...n.data, label: e.target.value } }
-                      : n
-                  )
-                );
-              }}
-              style={{
-                border: "none",
-                background: "transparent",
-                textAlign: "center",
-                fontWeight: "bold",
-                outline: "none",
-              }}
-            />
-          </div>
         </div>
       </div>
-    );
-  };
+    </div>
+  );
+}
 
-  /* ---------------- EDGE ---------------- */
+function AttributeNode({ id, data }) {
+  return (
+    <div
+      onDoubleClick={(e) => {
+        e.stopPropagation();
+        data.onToggleKey(id);
+      }}
+      style={{
+        minWidth: 150,
+        minHeight: 70,
+        border: "2px solid #333",
+        borderRadius: "50%",
+        background: "#cfe2ff",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        position: "relative",
+        padding: "14px 18px",
+        cursor: "default",
+        userSelect: "none",
+      }}
+    >
+      <Handle
+        id="attribute-source"
+        type="source"
+        position={Position.Bottom}
+        isConnectableStart={true}
+        isConnectableEnd={false}
+        style={{
+          width: 14,
+          height: 14,
+          borderRadius: "50%",
+          background: "#cfe2ff",
+          border: "1px solid #333",
+          bottom: -10,
+          left: "50%",
+          transform: "translateX(-50%)",
+          zIndex: 5,
+        }}
+      />
 
-  const ERCardEdge = (props) => {
-    const { id: edgeId, sourceX, sourceY, targetX, targetY, data } = props;
+      <input
+        value={data.label}
+        onChange={(e) => data.onLabelChange(id, e.target.value)}
+        onDoubleClick={(e) => {
+          e.stopPropagation();
+          data.onToggleKey(id);
+        }}
+        onKeyDown={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
+        style={{
+          border: "none",
+          background: "transparent",
+          textAlign: "center",
+          outline: "none",
+          width: "100%",
+          fontWeight: data.isKey ? "bold" : "normal",
+          textDecoration: data.isKey ? "underline" : "none",
+        }}
+      />
+    </div>
+  );
+}
 
-    const [path] = getStraightPath({ sourceX, sourceY, targetX, targetY });
+/* ---------------- EDGE COMPONENT ---------------- */
 
-    const dx = sourceX - targetX;
-    const dy = sourceY - targetY;
-    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+function ERValueEdge(props) {
+  const { id, sourceX, sourceY, targetX, targetY, data } = props;
+  const [path] = getStraightPath({ sourceX, sourceY, targetX, targetY });
 
-    const px = -dy / dist;
-    const py = dx / dist;
+  const dx = sourceX - targetX;
+  const dy = sourceY - targetY;
+  const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+  const px = -dy / dist;
+  const py = dx / dist;
 
-    // Move label closer to relation node (source)
-    const ratioFromTarget = 0.55;
-    const offset = 14;
+  const ratioFromTarget = 0.55;
+  const offset = 12;
 
-    const labelX = targetX + (sourceX - targetX) * ratioFromTarget + px * offset;
-    const labelY = targetY + (sourceY - targetY) * ratioFromTarget + py * offset;
+  const labelX = targetX + (sourceX - targetX) * ratioFromTarget + px * offset;
+  const labelY = targetY + (sourceY - targetY) * ratioFromTarget + py * offset;
 
-    const options =
-      cardType === "cardinality"
-        ? ["1", "n", "m"]
-        : ["0..1", "1..1", "0..*", "1..*"];
+  return (
+    <>
+      <BaseEdge path={path} style={{ stroke: "#555", strokeWidth: 2 }} />
 
-    return (
-      <>
-        <BaseEdge path={path} style={{ stroke: "#555", strokeWidth: 2 }} />
-
+      {data?.showLabel && (
         <EdgeLabelRenderer>
           <div
             style={{
@@ -1210,203 +1296,87 @@ function ERDiagramBuilder({ el, idx, onChange }) {
               pointerEvents: "all",
               zIndex: 1000,
               background: "#fff",
-              padding: 2,
+              padding: "2px 4px",
               border: "1px solid #ccc",
               borderRadius: 6,
+              minWidth: 0,
             }}
           >
-            <select
-              value={data.value || ""}
-              className="form-select form-select-sm"
-              onChange={(e) => {
-                setEdges((eds) =>
-                  eds.map((ed) =>
-                    ed.id === edgeId
-                      ? { ...ed, data: { ...ed.data, value: e.target.value } }
-                      : ed
-                  )
-                );
+            <input
+              type="text"
+              value={data.value ?? ""}
+              placeholder="1..n"
+              maxLength={10}
+              onChange={(e) => data.onValueChange(id, e.target.value)}
+              onKeyDown={(e) => e.stopPropagation()}
+              onPointerDown={(e) => e.stopPropagation()}
+              style={{
+                width: 56,
+                minWidth: 56,
+                height: 24,
+                border: "1px solid #ccc",
+                borderRadius: 4,
+                fontSize: 12,
+                padding: "1px 4px",
+                textAlign: "center",
+                outline: "none",
               }}
-            >
-              <option value="">Select</option>
-              {options.map((o) => (
-                <option key={o} value={o}>
-                  {o}
-                </option>
-              ))}
-            </select>
+            />
           </div>
         </EdgeLabelRenderer>
-      </>
+      )}
+    </>
+  );
+}
+
+/* ---------------- MAIN COMPONENT ---------------- */
+
+function ERDiagramBuilder({ el, idx, onChange }) {
+  const id = el.id || `er_builder_${idx}`;
+  const relationFieldId = `${id}:relations`;
+  const lastExport = useRef("");
+
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+
+  const getNode = useCallback(
+    (nodeId) => nodes.find((n) => n.id === nodeId),
+    [nodes]
+  );
+  const toggleAttributeKey = useCallback((nodeId) => {
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === nodeId && n.type === "attribute"
+          ? {
+              ...n,
+              data: {
+                ...n.data,
+                isKey: !n.data?.isKey,
+              },
+            }
+          : n
+      )
     );
-  };
+  }, [setNodes]);
+  const updateNodeLabel = useCallback((nodeId, value) => {
+    setNodes((nds) =>
+      nds.map((n) =>
+        n.id === nodeId ? { ...n, data: { ...n.data, label: value } } : n
+      )
+    );
+  }, [setNodes]);
 
-  /* ---------------- TYPES ---------------- */
+  const updateEdgeValue = useCallback((edgeId, value) => {
+    setEdges((eds) =>
+      eds.map((e) =>
+        e.id === edgeId
+          ? { ...e, data: { ...e.data, value } }
+          : e
+      )
+    );
+  }, [setEdges]);
 
-  const nodeTypes = {
-    entity: EntityNode,
-    relation: RelationNode,
-  };
-
-  const edgeTypes = {
-    erCardinality: ERCardEdge,
-  };
-
-  /* ---------------- VALIDATION ---------------- */
-
-  const validateConnection = useCallback(
-    (source, target, sourceHandle) => {
-      const s = getNode(source);
-      const t = getNode(target);
-
-      if (!s || !t) return false;
-      if (s.type !== "relation" || t.type !== "entity") return false;
-
-      const relationEdges = edges.filter((e) => e.source === source);
-
-      if (relationEdges.length >= 2) return false;
-      if (relationEdges.some((e) => e.sourceHandle === sourceHandle)) return false;
-      if (relationEdges.some((e) => e.target === target)) return false;
-
-      return true;
-    },
-    [edges, getNode]
-  );
-
-  /* ---------------- CONNECT ---------------- */
-
-  const onConnect = useCallback(
-    (connection) => {
-      if (
-        !validateConnection(
-          connection.source,
-          connection.target,
-          connection.sourceHandle
-        )
-      ) {
-        return;
-      }
-
-      setEdges((eds) =>
-        addEdge(
-          {
-            ...connection,
-            type: "erCardinality",
-            data: { value: "" },
-          },
-          eds
-        )
-      );
-    },
-    [validateConnection]
-  );
-
-  /* ---------------- RECONNECT ---------------- */
-
-  const onReconnect = useCallback(
-    (oldEdge, newConnection) => {
-      if (
-        !validateConnection(
-          newConnection.source,
-          newConnection.target,
-          newConnection.sourceHandle
-        )
-      ) {
-        return;
-      }
-
-      setEdges((eds) =>
-        reconnectEdge(
-          oldEdge,
-          {
-            ...newConnection,
-            type: oldEdge.type,
-            data: oldEdge.data,
-          },
-          eds
-        )
-      );
-    },
-    [validateConnection]
-  );
-
-  /* ---------------- EXPORT ---------------- */
-
-  useEffect(() => {
-    const relations = nodes
-      .filter((n) => n.type === "relation")
-      .map((rel) => {
-        const rEdges = edges.filter((e) => e.source === rel.id);
-
-        if (rEdges.length !== 2) return null;
-
-        const entities = rEdges.map((e) => {
-          const node = getNode(e.target);
-          return node?.data?.label || node?.id;
-        });
-
-        const cardinality = {};
-        const min_max = {};
-
-        rEdges.forEach((e) => {
-          const name = getNode(e.target)?.data?.label;
-          if (!name) return;
-
-          if (cardType === "cardinality") {
-            cardinality[name] = e.data?.value || "";
-          } else {
-            min_max[name] = e.data?.value || "";
-          }
-        });
-
-        return {
-          name: rel.data.label,
-          entities,
-          cardinality,
-          min_max,
-        };
-      })
-      .filter(Boolean);
-
-    const json = JSON.stringify(relations);
-
-    if (json === lastExport.current) return;
-
-    lastExport.current = json;
-    onChange(relationFieldId, json);
-  }, [nodes, edges, cardType, getNode, onChange, relationFieldId]);
-
-  /* ---------------- ACTIONS ---------------- */
-
-  const addEntity = () => {
-    const count = nodes.filter((n) => n.type === "entity").length + 1;
-
-    setNodes((nds) => [
-      ...nds,
-      {
-        id: `entity_${Date.now()}`,
-        type: "entity",
-        position: { x: 100 + count * 40, y: 80 + count * 30 },
-        data: { label: `ENTITY_${count}` },
-      },
-    ]);
-  };
-
-  const addRelation = () => {
-    const count = nodes.filter((n) => n.type === "relation").length + 1;
-
-    setNodes((nds) => [
-      ...nds,
-      {
-        id: `relation_${Date.now()}`,
-        type: "relation",
-        position: { x: 350 + count * 40, y: 220 + count * 30 },
-        data: { label: `relation_${count}` },
-      },
-    ]);
-  };
-
-  const removeSelected = () => {
+  const removeSelected = useCallback(() => {
     const selectedNodeIds = new Set(
       nodes.filter((n) => n.selected).map((n) => n.id)
     );
@@ -1424,9 +1394,261 @@ function ERDiagramBuilder({ el, idx, onChange }) {
     );
 
     setNodes((nds) => nds.filter((n) => !selectedNodeIds.has(n.id)));
-  };
+  }, [nodes, edges, setEdges, setNodes]);
 
-  /* ---------------- RENDER ---------------- */
+  useEffect(() => {
+    const isTypingElement = (target) => {
+      if (!target) return false;
+      const tag = target.tagName?.toLowerCase();
+      return (
+        tag === "input" ||
+        tag === "textarea" ||
+        tag === "select" ||
+        target.isContentEditable
+      );
+    };
+
+    const onKeyDown = (e) => {
+      if (e.key !== "Backspace" && e.key !== "Delete") return;
+      if (isTypingElement(document.activeElement)) return;
+      e.preventDefault();
+      removeSelected();
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [removeSelected]);
+
+  const validateConnection = useCallback(
+    (connection, ignoreEdgeId = null) => {
+      const { source, target, sourceHandle, targetHandle } = connection;
+      const s = getNode(source);
+      const t = getNode(target);
+
+      if (!s || !t) return false;
+      if (s.id === t.id) return false;
+
+      const relevantEdges = edges.filter((e) => e.id !== ignoreEdgeId);
+
+      // relation -> entity
+      if (s.type === "relation" && t.type === "entity") {
+        if (!["left", "right"].includes(sourceHandle)) return false;
+        if (!["relation-left", "relation-right"].includes(targetHandle)) {
+          return false;
+        }
+
+        const relationEdges = relevantEdges.filter((e) => e.source === source);
+
+        if (relationEdges.some((e) => e.sourceHandle === sourceHandle)) {
+          return false;
+        }
+
+        // intentionally allow both sides of one relation to connect
+        // to the same entity, as requested
+        return true;
+      }
+
+      // attribute -> entity or relation
+      if (s.type === "attribute" && (t.type === "entity" || t.type === "relation")) {
+        if (sourceHandle !== "attribute-source") return false;
+        if (targetHandle !== "attribute-top") return false;
+
+        const attributeEdges = relevantEdges.filter((e) => e.source === source);
+        if (attributeEdges.length >= 1) return false;
+
+        return true;
+      }
+
+      return false;
+    },
+    [edges, getNode]
+  );
+
+  const onConnect = useCallback(
+    (connection) => {
+      if (!validateConnection(connection)) return;
+
+      const sourceNode = getNode(connection.source);
+      const showLabel = sourceNode?.type === "relation";
+
+      setEdges((eds) =>
+        addEdge(
+          {
+            ...connection,
+            type: "erValueEdge",
+            data: {
+              value: "",
+              showLabel,
+              onValueChange: updateEdgeValue,
+            },
+          },
+          eds
+        )
+      );
+    },
+    [validateConnection, getNode, updateEdgeValue, setEdges]
+  );
+
+  const onReconnect = useCallback(
+    (oldEdge, newConnection) => {
+      if (!validateConnection(newConnection, oldEdge.id)) return;
+
+      setEdges((eds) =>
+        reconnectEdge(
+          oldEdge,
+          {
+            ...newConnection,
+            type: oldEdge.type,
+            data: oldEdge.data,
+          },
+          eds
+        )
+      );
+    },
+    [validateConnection, setEdges]
+  );
+
+  const addEntity = useCallback(() => {
+    setNodes((nds) => {
+      const count = nds.filter((n) => n.type === "entity").length + 1;
+      return [
+        ...nds,
+        {
+          id: `entity_${crypto.randomUUID()}`,
+          type: "entity",
+          position: { x: 100 + count * 40, y: 80 + count * 30 },
+          data: {
+            label: `ENTITY_${count}`,
+            onLabelChange: updateNodeLabel,
+          },
+        },
+      ];
+    });
+  }, [setNodes, updateNodeLabel]);
+
+  const addRelation = useCallback(() => {
+    setNodes((nds) => {
+      const count = nds.filter((n) => n.type === "relation").length + 1;
+      return [
+        ...nds,
+        {
+          id: `relation_${crypto.randomUUID()}`,
+          type: "relation",
+          position: { x: 350 + count * 40, y: 220 + count * 30 },
+          data: {
+            label: `relation_${count}`,
+            onLabelChange: updateNodeLabel,
+          },
+        },
+      ];
+    });
+  }, [setNodes, updateNodeLabel]);
+
+  const addAttribute = useCallback(() => {
+    setNodes((nds) => {
+      const count = nds.filter((n) => n.type === "attribute").length + 1;
+      return [
+        ...nds,
+        {
+          id: `attribute_${crypto.randomUUID()}`,
+          type: "attribute",
+          position: { x: 180 + count * 35, y: 420 + count * 25 },
+          data: {
+            label: `attribute_${count}`,
+            isKey: false,
+            onLabelChange: updateNodeLabel,
+            onToggleKey: toggleAttributeKey,
+          },
+        },
+      ];
+    });
+  }, [setNodes, updateNodeLabel, toggleAttributeKey]);
+
+  useEffect(() => {
+    setNodes((nds) =>
+      nds.map((n) => ({
+        ...n,
+        data: {
+          ...n.data,
+          onLabelChange: updateNodeLabel,
+          ...(n.type === "attribute" ? { onToggleKey: toggleAttributeKey } : {}),
+        },
+      }))
+    );
+
+    setEdges((eds) =>
+      eds.map((e) => ({
+        ...e,
+        data: {
+          ...e.data,
+          onValueChange: updateEdgeValue,
+        },
+      }))
+    );
+  }, [updateNodeLabel, updateEdgeValue, toggleAttributeKey, setNodes, setEdges]);
+
+  useEffect(() => {
+    const relations = nodes
+      .filter((n) => n.type === "relation")
+      .map((rel) => {
+        const rEdges = edges.filter((e) => e.source === rel.id);
+
+        return {
+          id: rel.id,
+          name: rel.data.label,
+          connections: rEdges.map((e) => {
+            const entity = getNode(e.target);
+            return {
+              entity_id: e.target,
+              entity_name: entity?.data?.label || e.target,
+              relation_handle: e.sourceHandle,
+              entity_handle: e.targetHandle,
+              value: e.data?.value ?? "",
+            };
+          }),
+        };
+      });
+
+    const attributes = nodes
+      .filter((n) => n.type === "attribute")
+      .map((attr) => {
+        const edge = edges.find((e) => e.source === attr.id);
+        const owner = edge ? getNode(edge.target) : null;
+
+        return {
+          id: attr.id,
+          name: attr.data.label,
+          is_key: !!attr.data.isKey,
+          owner_id: edge?.target ?? null,
+          owner_name: owner?.data?.label ?? null,
+          owner_type: owner?.type ?? null,
+        };
+      });
+    const json = JSON.stringify({
+      relations,
+      attributes,
+    });
+
+    if (json === lastExport.current) return;
+    lastExport.current = json;
+    onChange(relationFieldId, json);
+  }, [nodes, edges, getNode, onChange, relationFieldId]);
+
+  const nodeTypes = useMemo(
+    () => ({
+      entity: EntityNode,
+      relation: RelationNode,
+      attribute: AttributeNode,
+    }),
+    []
+  );
+
+  const edgeTypes = useMemo(
+    () => ({
+      erValueEdge: ERValueEdge,
+    }),
+    []
+  );
 
   return (
     <div className="card mb-4 shadow-sm">
@@ -1445,7 +1667,7 @@ function ERDiagramBuilder({ el, idx, onChange }) {
             onConnect={onConnect}
             onReconnect={onReconnect}
             fitView
-            deleteKeyCode={["Backspace", "Delete"]}
+            deleteKeyCode={null}
           >
             <Background />
             <Controls />
@@ -1459,6 +1681,10 @@ function ERDiagramBuilder({ el, idx, onChange }) {
 
                 <button className="btn btn-sm btn-warning" onClick={addRelation}>
                   Add Relation
+                </button>
+
+                <button className="btn btn-sm btn-info" onClick={addAttribute}>
+                  Add Attribute
                 </button>
 
                 <button
@@ -2070,29 +2296,16 @@ function AprioriBuilderCore({
   const [builder, setBuilder] = useState(() => parseStored(userInput?.[fieldId]));
 
   useEffect(() => {
-    setBuilder(parseStored(userInput?.[fieldId]));
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [fieldId, userInput?.[fieldId]]);
-
-  useEffect(() => {
-    if (userInput?.[fieldId] === undefined) {
-      onChange(fieldId, JSON.stringify(builder));
-    }
-  }, [builder, fieldId, onChange, userInput]);
+    onChange(fieldId, JSON.stringify(builder));
+  }, [builder, fieldId, onChange]);
 
   const levels = singleLevel ? [builder] : (builder.levels || []);
 
   const setLevels = (nextLevels) => {
     if (singleLevel) {
-      const nextBuilder = nextLevels[0] || makeLevel();
-      setBuilder(nextBuilder);
-      onChange(fieldId, JSON.stringify(nextBuilder));
+      setBuilder(nextLevels[0] || makeLevel());
     } else {
-      setBuilder((prev) => {
-        const nextBuilder = { ...prev, levels: nextLevels };
-        onChange(fieldId, JSON.stringify(nextBuilder));
-        return nextBuilder;
-      });
+      setBuilder((prev) => ({ ...prev, levels: nextLevels }));
     }
   };
 
@@ -2129,12 +2342,17 @@ function AprioriBuilderCore({
     level.terminate = checked;
   });
 
-  const evalResult = evaluationResults?.[fieldId];
+  const evalResult = evaluationResults?.[fieldId] ?? evaluationResults?.[`${fieldId}_solution`];
   const isCorrect = evalResult?.correct;
   const expected = evalResult?.expected;
   const feedbackClass = evalResult === undefined ? "" : isCorrect ? "alert alert-success" : "alert alert-danger";
   const solutionExpected =
-    expected && typeof expected === "object" && !Array.isArray(expected) ? expected : null;
+    expected && typeof expected === "object" && !Array.isArray(expected)
+      ? expected
+      : (() => {
+          const fallback = evaluationResults?.[`${fieldId}_solution`]?.expected;
+          return fallback && typeof fallback === "object" && !Array.isArray(fallback) ? fallback : null;
+        })();
   const hasStructuredExpected = !!solutionExpected;
 
   const rowFieldId = (levelIdx, rowIdx, key) =>
@@ -2145,6 +2363,7 @@ function AprioriBuilderCore({
   };
 
   registerLocalField(fieldId);
+  registerLocalField(`${fieldId}_solution`);
 
   const getCellEval = (id) => {
     registerLocalField(id);
@@ -2382,44 +2601,37 @@ function AprioriBuilderCore({
           <small className="text-muted fst-italic d-block mt-1">Correct: {expected}</small>
         )}
 
-        {showExpected && evalResult !== undefined && hasStructuredExpected && (
+        {showExpected && evalResult !== undefined && hasStructuredExpected && singleLevel && (
           <div className="mt-3">
             {solutionExpected?.message && <div className="mb-2 text-muted">{solutionExpected.message}</div>}
-            {Array.isArray(solutionExpected?.levels) && solutionExpected.levels.length > 0 && (
-              <div className="d-flex flex-column gap-3">
-                {solutionExpected.levels.map((lvl, levelIdx) => (
-                  <div key={`expected-level-${levelIdx}`}>
-                    <div className="fw-semibold mb-2">Level {Number(levelIdx) + 1}</div>
-                    <div className="table-responsive">
-                      <table className="table table-bordered table-sm align-middle mb-2">
-                        <thead className="table-light">
-                          <tr>
-                            <th>Itemset</th>
-                            <th>Support</th>
-                            <th>P</th>
-                            <th>fällt unter minsup?</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {(Array.isArray(lvl?.rows) && lvl.rows.length > 0 ? lvl.rows : [{ itemset: "-", support: "-", probability: "-", below: "-" }]).map((row, i) => (
-                            <tr key={`expected-level-${levelIdx}-row-${i}`}>
-                              <td>{row.itemset}</td>
-                              <td>{row.support}</td>
-                              <td>{row.probability}</td>
-                              <td>{row.below}</td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                    {lvl?.terminate !== undefined && (
-                      <small className="text-muted fst-italic d-block">
-                        Correct termination: {String(lvl.terminate)}
-                      </small>
-                    )}
-                  </div>
-                ))}
+            {Array.isArray(solutionExpected?.rows) && solutionExpected.rows.length > 0 && (
+              <div className="table-responsive">
+                <table className="table table-bordered table-sm align-middle mb-2">
+                  <thead className="table-light">
+                    <tr>
+                      <th>Itemset</th>
+                      <th>Support</th>
+                      <th>P</th>
+                      <th>fällt unter minsup?</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {solutionExpected.rows.map((row, i) => (
+                      <tr key={`expected-row-${i}`}>
+                        <td>{row.itemset}</td>
+                        <td>{row.support}</td>
+                        <td>{row.probability}</td>
+                        <td>{row.below}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
               </div>
+            )}
+            {solutionExpected?.terminate !== undefined && (
+              <small className="text-muted fst-italic d-block">
+                Correct termination: {String(solutionExpected.terminate)}
+              </small>
             )}
           </div>
         )}
@@ -2812,6 +3024,8 @@ export default function LayoutRenderer({
         const listenId = el.listenTo;
         const data = reactiveTables?.[listenId] || {};
         const { tree, error, status } = data;
+
+        console.log("REACTIVE TREE DATA", listenId, data);
 
         return (
           <div key={idx} className="card mb-4 shadow-sm">
