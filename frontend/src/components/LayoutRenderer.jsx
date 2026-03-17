@@ -1,8 +1,27 @@
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import {
+  ReactFlow,
+  Background,
+  Controls,
+  MiniMap,
+  Panel,
+  Handle,
+  Position,
+  BaseEdge,
+  EdgeLabelRenderer,
+  getStraightPath,
+  addEdge,
+  reconnectEdge,
+  useNodesState,
+  useEdgesState,
+} from "@xyflow/react";
+import "@xyflow/react/dist/style.css";
+
 import Plot from "react-plotly.js";
 import Tree from "react-d3-tree";
 import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
+import '@xyflow/react/dist/style.css';
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
 import {
@@ -426,6 +445,24 @@ function ERDiagram({ el }) {
     card_type = "min_max",
   } = el ?? {};
 
+  const entityNames = entities.map((e) => e.name);
+
+  const width = 1280;
+  const height = Math.max(620, Math.ceil(entityNames.length / 2) * 190 + 120);
+
+  const entityWidth = 190;
+  const entityHeight = 76;
+  const relationWidth = 132;
+  const relationHeight = 78;
+
+  const entityPositions = {};
+  entityNames.forEach((name, i) => {
+    entityPositions[name] = {
+      x: 90 + (i % 2) * 820,
+      y: 70 + Math.floor(i / 2) * 180,
+    };
+  });
+
   const getRelationValue = (relation, entityName) => {
     if (card_type === "cardinality") {
       return relation?.cardinality?.[entityName] ?? "";
@@ -433,65 +470,321 @@ function ERDiagram({ el }) {
     return relation?.min_max?.[entityName] ?? "";
   };
 
+  const wrapLabel = (text, maxCharsPerLine = 12, maxLines = 3) => {
+    const source = String(text ?? "").trim();
+    if (!source) return [""];
+
+    const words = source.split(/\s+/);
+    const lines = [];
+    let current = "";
+
+    for (const word of words) {
+      const next = current ? `${current} ${word}` : word;
+      if (next.length <= maxCharsPerLine) {
+        current = next;
+      } else {
+        if (current) lines.push(current);
+        if (word.length > maxCharsPerLine) {
+          lines.push(word.slice(0, maxCharsPerLine));
+          current = word.slice(maxCharsPerLine);
+        } else {
+          current = word;
+        }
+      }
+    }
+    if (current) lines.push(current);
+
+    if (lines.length > maxLines) {
+      const trimmed = lines.slice(0, maxLines);
+      const last = trimmed[maxLines - 1];
+      trimmed[maxLines - 1] =
+        last.length > maxCharsPerLine - 1
+          ? `${last.slice(0, maxCharsPerLine - 1)}…`
+          : `${last}…`;
+      return trimmed;
+    }
+
+    return lines;
+  };
+
+  const getLabelFontSize = (lines, base = 20, min = 12) => {
+    const longest = Math.max(...lines.map((l) => l.length), 1);
+    if (longest <= 10) return base;
+    if (longest <= 14) return Math.max(base - 2, min);
+    if (longest <= 18) return Math.max(base - 4, min);
+    return min;
+  };
+
+  const getEntityAnchor = (entityName, targetX, targetY) => {
+    const pos = entityPositions[entityName] ?? { x: 0, y: 0 };
+    const cx = pos.x + entityWidth / 2;
+    const cy = pos.y + entityHeight / 2;
+    const dx = targetX - cx;
+    const dy = targetY - cy;
+
+    if (Math.abs(dx) > Math.abs(dy)) {
+      return dx >= 0
+        ? { x: pos.x + entityWidth, y: cy }
+        : { x: pos.x, y: cy };
+    }
+
+    return dy >= 0
+      ? { x: cx, y: pos.y + entityHeight }
+      : { x: cx, y: pos.y };
+  };
+
+  let relationLayouts = relations.map((relation, idx) => {
+    const [leftEntity, rightEntity] = relation.entities ?? ["", ""];
+    const leftPos = entityPositions[leftEntity] ?? { x: 0, y: 0 };
+    const rightPos = entityPositions[rightEntity] ?? { x: 0, y: 0 };
+
+    const leftCenterX = leftPos.x + entityWidth / 2;
+    const leftCenterY = leftPos.y + entityHeight / 2;
+    const rightCenterX = rightPos.x + entityWidth / 2;
+    const rightCenterY = rightPos.y + entityHeight / 2;
+
+    return {
+      relation,
+      leftEntity,
+      rightEntity,
+      x:
+        (leftCenterX + rightCenterX) / 2 - relationWidth / 2 + ((idx % 3) - 1) * 10,
+      y:
+        (leftCenterY + rightCenterY) / 2 -
+        relationHeight / 2 +
+        ((idx % 4) - 1.5) * 10,
+      homeX: (leftCenterX + rightCenterX) / 2 - relationWidth / 2,
+      homeY: (leftCenterY + rightCenterY) / 2 - relationHeight / 2,
+    };
+  });
+
+  const intersects = (a, b, padding = 18) => {
+    return !(
+      a.x + relationWidth + padding < b.x ||
+      b.x + relationWidth + padding < a.x ||
+      a.y + relationHeight + padding < b.y ||
+      b.y + relationHeight + padding < a.y
+    );
+  };
+
+  for (let pass = 0; pass < 80; pass++) {
+    for (let i = 0; i < relationLayouts.length; i++) {
+      for (let j = i + 1; j < relationLayouts.length; j++) {
+        const a = relationLayouts[i];
+        const b = relationLayouts[j];
+
+        if (!intersects(a, b)) continue;
+
+        const ax = a.x + relationWidth / 2;
+        const ay = a.y + relationHeight / 2;
+        const bx = b.x + relationWidth / 2;
+        const by = b.y + relationHeight / 2;
+
+        let dx = ax - bx;
+        let dy = ay - by;
+
+        if (dx === 0 && dy === 0) {
+          dx = 1;
+          dy = 1;
+        }
+
+        const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+        const push = 8;
+
+        const px = (dx / dist) * push;
+        const py = (dy / dist) * push;
+
+        a.x += px;
+        a.y += py;
+        b.x -= px;
+        b.y -= py;
+      }
+    }
+
+    relationLayouts = relationLayouts.map((r) => {
+      const spring = 0.06;
+      const nx = r.x + (r.homeX - r.x) * spring;
+      const ny = r.y + (r.homeY - r.y) * spring;
+
+      return {
+        ...r,
+        x: Math.max(250, Math.min(width - 250, nx)),
+        y: Math.max(25, Math.min(height - 25 - relationHeight, ny)),
+      };
+    });
+  }
+
+  relationLayouts = relationLayouts.map((item) => {
+    const diamondCenter = {
+      x: item.x + relationWidth / 2,
+      y: item.y + relationHeight / 2,
+    };
+
+    const start = getEntityAnchor(
+      item.leftEntity,
+      diamondCenter.x,
+      diamondCenter.y
+    );
+    const end = getEntityAnchor(
+      item.rightEntity,
+      diamondCenter.x,
+      diamondCenter.y
+    );
+
+    return {
+      ...item,
+      start,
+      end,
+      diamondCenter,
+      leftCard: getRelationValue(item.relation, item.leftEntity),
+      rightCard: getRelationValue(item.relation, item.rightEntity),
+    };
+  });
+
   return (
-    <div className="mb-4">
-      {entities.length > 0 && (
-        <div className="mb-3">
-          <strong>Entities:</strong>
-          <div className="d-flex flex-wrap gap-2 mt-2">
-            {entities.map((entity, idx) => (
-              <span key={entity.name ?? idx} className="badge text-bg-secondary">
-                {entity.name}
-              </span>
-            ))}
-          </div>
-        </div>
-      )}
+    <div className="mb-4 border rounded p-2 bg-light overflow-auto">
+      <svg width={width} height={height} style={{ minWidth: width }}>
+        {relationLayouts.map((item, idx) => {
+          const {
+            relation,
+            start,
+            end,
+            diamondCenter,
+            x,
+            y,
+            leftCard,
+            rightCard,
+          } = item;
 
-      <div className="table-responsive">
-        <table className="table table-sm align-middle">
-          <thead>
-            <tr>
-              <th>Entity</th>
-              <th style={{ width: "120px" }}>
-                {card_type === "cardinality" ? "Card." : "Min-Max"}
-              </th>
-              <th>Relation</th>
-              <th style={{ width: "120px" }}>
-                {card_type === "cardinality" ? "Card." : "Min-Max"}
-              </th>
-              <th>Entity</th>
-            </tr>
-          </thead>
-          <tbody>
-            {relations.map((relation, idx) => {
-              const [leftEntity, rightEntity] = relation.entities ?? ["", ""];
-              const leftValue = getRelationValue(relation, leftEntity);
-              const rightValue = getRelationValue(relation, rightEntity);
+          const diamondPoints = [
+            `${x + relationWidth / 2},${y}`,
+            `${x + relationWidth},${y + relationHeight / 2}`,
+            `${x + relationWidth / 2},${y + relationHeight}`,
+            `${x},${y + relationHeight / 2}`,
+          ].join(" ");
 
-              return (
-                <tr key={`${relation.name}-${idx}`}>
-                  <td>
-                    <code>{leftEntity}</code>
-                  </td>
-                  <td className="text-center">
-                    {hidden_cardinalities ? "?" : <code>{leftValue}</code>}
-                  </td>
-                  <td className="text-center">
-                    <strong>{relation.name}</strong>
-                  </td>
-                  <td className="text-center">
-                    {hidden_cardinalities ? "?" : <code>{rightValue}</code>}
-                  </td>
-                  <td>
-                    <code>{rightEntity}</code>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
-      </div>
+          const relationLines = wrapLabel(relation.name, 12, 2);
+          const relationFontSize = getLabelFontSize(relationLines, 19, 12);
+
+          return (
+            <g key={`${relation.name}-${idx}`}>
+              <line
+                x1={start.x}
+                y1={start.y}
+                x2={diamondCenter.x}
+                y2={diamondCenter.y}
+                stroke="#5b4636"
+                strokeWidth="2"
+              />
+              <line
+                x1={diamondCenter.x}
+                y1={diamondCenter.y}
+                x2={end.x}
+                y2={end.y}
+                stroke="#5b4636"
+                strokeWidth="2"
+              />
+
+              {!hidden_cardinalities && (
+                <>
+                  <text
+                    x={start.x + (diamondCenter.x - start.x) * 0.34}
+                    y={start.y + (diamondCenter.y - start.y) * 0.34 - 6}
+                    textAnchor="middle"
+                    fill="#d9534f"
+                    fontWeight="bold"
+                    fontSize="18"
+                  >
+                    {leftCard}
+                  </text>
+                  <text
+                    x={end.x + (diamondCenter.x - end.x) * 0.34}
+                    y={end.y + (diamondCenter.y - end.y) * 0.34 - 6}
+                    textAnchor="middle"
+                    fill="#d9534f"
+                    fontWeight="bold"
+                    fontSize="18"
+                  >
+                    {rightCard}
+                  </text>
+                </>
+              )}
+
+              <polygon
+                points={diamondPoints}
+                fill="#f6a623"
+                stroke="#333"
+                strokeWidth="2"
+              />
+
+              <text
+                x={diamondCenter.x}
+                y={
+                  diamondCenter.y -
+                  ((relationLines.length - 1) * relationFontSize * 0.6)
+                }
+                textAnchor="middle"
+                fontWeight="bold"
+                fontSize={relationFontSize}
+              >
+                {relationLines.map((line, lineIdx) => (
+                  <tspan
+                    key={lineIdx}
+                    x={diamondCenter.x}
+                    dy={lineIdx === 0 ? 0 : relationFontSize + 1}
+                  >
+                    {line}
+                  </tspan>
+                ))}
+              </text>
+            </g>
+          );
+        })}
+
+        {entityNames.map((name, idx) => {
+          const pos = entityPositions[name];
+          const entityLines = wrapLabel(name, 14, 2);
+          const entityFontSize = getLabelFontSize(entityLines, 20, 12);
+
+          return (
+            <g key={`${name}-${idx}`}>
+              <rect
+                x={pos.x}
+                y={pos.y}
+                rx="4"
+                ry="4"
+                width={entityWidth}
+                height={entityHeight}
+                fill="#97c95c"
+                stroke="#333"
+                strokeWidth="2"
+              />
+              <text
+                x={pos.x + entityWidth / 2}
+                y={
+                  pos.y +
+                  entityHeight / 2 -
+                  ((entityLines.length - 1) * entityFontSize * 0.6)
+                }
+                textAnchor="middle"
+                fontStyle="italic"
+                fontWeight="bold"
+                fontSize={entityFontSize}
+              >
+                {entityLines.map((line, lineIdx) => (
+                  <tspan
+                    key={lineIdx}
+                    x={pos.x + entityWidth / 2}
+                    dy={lineIdx === 0 ? 0 : entityFontSize + 1}
+                  >
+                    {line}
+                  </tspan>
+                ))}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
     </div>
   );
 }
@@ -503,100 +796,695 @@ function ERDiagramInput({ el, renderEvaluatedInput }) {
     card_type = "min_max",
   } = el ?? {};
 
+  const entityNames = entities.map((e) => e.name);
+
+  const width = 1200;
+  const height = Math.max(500, entityNames.length * 90);
+
+  const entityWidth = 170;
+  const entityHeight = 70;
+  const relationWidth = 110;
+  const relationHeight = 70;
+
   const selectOptions =
     card_type === "cardinality"
       ? ["1", "n", "m"]
       : ["0..1", "1..1", "0..*", "1..*"];
 
+  const entityPositions = {};
+  entityNames.forEach((name, i) => {
+    entityPositions[name] = {
+      x: 80 + (i % 2) * 760,
+      y: 60 + Math.floor(i / 2) * 160,
+    };
+  });
+
   const makeFieldId = (relationName, leftEntity, rightEntity, entityName) =>
     `${relationName}__${leftEntity}__${rightEntity}__${entityName}`;
 
+  const getEntityAnchor = (entityName, sideHint = "right") => {
+    const pos = entityPositions[entityName] ?? { x: 0, y: 0 };
+    if (sideHint === "left") {
+      return {
+        x: pos.x,
+        y: pos.y + entityHeight / 2,
+      };
+    }
+    return {
+      x: pos.x + entityWidth,
+      y: pos.y + entityHeight / 2,
+    };
+  };
+
+  const relationLayouts = relations.map((relation, idx) => {
+    const [leftEntity, rightEntity] = relation.entities ?? ["", ""];
+    const leftPos = entityPositions[leftEntity] ?? { x: 0, y: 0 };
+    const rightPos = entityPositions[rightEntity] ?? { x: 0, y: 0 };
+
+    const leftCenterX = leftPos.x + entityWidth / 2;
+    const leftCenterY = leftPos.y + entityHeight / 2;
+    const rightCenterX = rightPos.x + entityWidth / 2;
+    const rightCenterY = rightPos.y + entityHeight / 2;
+
+    const relX = (leftCenterX + rightCenterX) / 2 - relationWidth / 2;
+    const relY = (leftCenterY + rightCenterY) / 2 - relationHeight / 2 + (idx % 2) * 12;
+
+    const leftSide = leftCenterX < rightCenterX ? "right" : "left";
+    const rightSide = leftCenterX < rightCenterX ? "left" : "right";
+
+    const start = getEntityAnchor(leftEntity, leftSide);
+    const end = getEntityAnchor(rightEntity, rightSide);
+
+    const diamondCenter = {
+      x: relX + relationWidth / 2,
+      y: relY + relationHeight / 2,
+    };
+
+    return {
+      relation,
+      leftEntity,
+      rightEntity,
+      relX,
+      relY,
+      start,
+      end,
+      diamondCenter,
+      leftFieldId: makeFieldId(relation.name, leftEntity, rightEntity, leftEntity),
+      rightFieldId: makeFieldId(relation.name, leftEntity, rightEntity, rightEntity),
+      leftInputX: (start.x + diamondCenter.x) / 2 - 55,
+      leftInputY: (start.y + diamondCenter.y) / 2 - 18,
+      rightInputX: (end.x + diamondCenter.x) / 2 - 55,
+      rightInputY: (end.y + diamondCenter.y) / 2 - 18,
+    };
+  });
+
   return (
-    <div className="mb-4">
-      {entities.length > 0 && (
-        <div className="mb-3">
-          <strong>Entities:</strong>
-          <div className="d-flex flex-wrap gap-2 mt-2">
-            {entities.map((entity, idx) => (
-              <span key={entity.name ?? idx} className="badge text-bg-light border">
-                {entity.name}
-              </span>
-            ))}
+    <div
+      className="mb-4 border rounded p-2 bg-light overflow-auto position-relative"
+      style={{ minHeight: height + 20 }}
+    >
+      <svg
+        width={width}
+        height={height}
+        style={{ minWidth: width, display: "block" }}
+      >
+        {relationLayouts.map((item, idx) => {
+          const {
+            relation,
+            start,
+            end,
+            diamondCenter,
+            relX,
+            relY,
+          } = item;
+
+          const diamondPoints = [
+            `${relX + relationWidth / 2},${relY}`,
+            `${relX + relationWidth},${relY + relationHeight / 2}`,
+            `${relX + relationWidth / 2},${relY + relationHeight}`,
+            `${relX},${relY + relationHeight / 2}`,
+          ].join(" ");
+
+          return (
+            <g key={`${relation.name}-${idx}`}>
+              <line
+                x1={start.x}
+                y1={start.y}
+                x2={diamondCenter.x}
+                y2={diamondCenter.y}
+                stroke="#5b4636"
+                strokeWidth="2"
+              />
+              <line
+                x1={diamondCenter.x}
+                y1={diamondCenter.y}
+                x2={end.x}
+                y2={end.y}
+                stroke="#5b4636"
+                strokeWidth="2"
+              />
+
+              <polygon
+                points={diamondPoints}
+                fill="#f6a623"
+                stroke="#333"
+                strokeWidth="2"
+              />
+              <text
+                x={diamondCenter.x}
+                y={diamondCenter.y + 6}
+                textAnchor="middle"
+                fontWeight="bold"
+                fontSize="20"
+              >
+                {relation.name}
+              </text>
+            </g>
+          );
+        })}
+
+        {entityNames.map((name, idx) => {
+          const pos = entityPositions[name];
+          return (
+            <g key={`${name}-${idx}`}>
+              <rect
+                x={pos.x}
+                y={pos.y}
+                width={entityWidth}
+                height={entityHeight}
+                fill="#97c95c"
+                stroke="#333"
+                strokeWidth="2"
+              />
+              <text
+                x={pos.x + entityWidth / 2}
+                y={pos.y + entityHeight / 2 + 7}
+                textAnchor="middle"
+                fontStyle="italic"
+                fontWeight="bold"
+                fontSize="20"
+              >
+                {name}
+              </text>
+            </g>
+          );
+        })}
+      </svg>
+
+      {relationLayouts.map((item, idx) => (
+        <div key={`inputs-${idx}`}>
+          <div
+            style={{
+              position: "absolute",
+              left: item.leftInputX,
+              top: item.leftInputY,
+              width: 110,
+            }}
+          >
+            {renderEvaluatedInput(item.leftFieldId, "", {
+              variant: "select",
+              selectOptions,
+              placeholder: card_type === "cardinality" ? "1/n/m" : "min-max",
+            })}
+          </div>
+
+          <div
+            style={{
+              position: "absolute",
+              left: item.rightInputX,
+              top: item.rightInputY,
+              width: 110,
+            }}
+          >
+            {renderEvaluatedInput(item.rightFieldId, "", {
+              variant: "select",
+              selectOptions,
+              placeholder: card_type === "cardinality" ? "1/n/m" : "min-max",
+            })}
           </div>
         </div>
-      )}
+      ))}
+    </div>
+  );
+}
 
-      <div className="table-responsive">
-        <table className="table table-sm align-middle">
-          <thead>
-            <tr>
-              <th>Entity</th>
-              <th style={{ width: "180px" }}>
-                {card_type === "cardinality" ? "Card." : "Min-Max"}
-              </th>
-              <th>Relation</th>
-              <th style={{ width: "180px" }}>
-                {card_type === "cardinality" ? "Card." : "Min-Max"}
-              </th>
-              <th>Entity</th>
-            </tr>
-          </thead>
-          <tbody>
-            {relations.map((relation, idx) => {
-              const [leftEntity, rightEntity] = relation.entities ?? ["", ""];
-              const leftFieldId = makeFieldId(
-                relation.name,
-                leftEntity,
-                rightEntity,
-                leftEntity
-              );
-              const rightFieldId = makeFieldId(
-                relation.name,
-                leftEntity,
-                rightEntity,
-                rightEntity
-              );
+function ERDiagramBuilder({ el, idx, onChange }) {
+  const id = el.id || `er_builder_${idx}`;
+  const cardType = el.card_type ?? "min_max";
+  const relationFieldId = `${id}:relations`;
+  const lastExport = useRef("");
 
-              return (
-                <tr key={`${relation.name}-${idx}`}>
-                  <td>
-                    <code>{leftEntity}</code>
-                  </td>
-                  <td>
-                    {renderEvaluatedInput(leftFieldId, "", {
-                      variant: "select",
-                      selectOptions,
-                      placeholder:
-                        card_type === "cardinality"
-                          ? "Choose 1 / n / m"
-                          : "Choose min-max",
-                    })}
-                  </td>
-                  <td className="text-center">
-                    <strong>{relation.name}</strong>
-                  </td>
-                  <td>
-                    {renderEvaluatedInput(rightFieldId, "", {
-                      variant: "select",
-                      selectOptions,
-                      placeholder:
-                        card_type === "cardinality"
-                          ? "Choose 1 / n / m"
-                          : "Choose min-max",
-                    })}
-                  </td>
-                  <td>
-                    <code>{rightEntity}</code>
-                  </td>
-                </tr>
-              );
-            })}
-          </tbody>
-        </table>
+  const [nodes, setNodes, onNodesChange] = useNodesState([]);
+  const [edges, setEdges, onEdgesChange] = useEdgesState([]);
+
+  const getNode = useCallback(
+    (id) => nodes.find((n) => n.id === id),
+    [nodes]
+  );
+
+  /* ---------------- ENTITY NODE ---------------- */
+
+  const EntityNode = ({ id: dataId, data }) => (
+    <div
+      style={{
+        minWidth: 170,
+        border: "2px solid #333",
+        borderRadius: 6,
+        background: "#97c95c",
+        display: "flex",
+        alignItems: "center",
+        justifyContent: "center",
+        position: "relative",
+        padding: "20px 12px",
+      }}
+    >
+      <Handle
+        id="entity-target"
+        type="target"
+        position={Position.Top}
+        isConnectableStart={false}
+        isConnectableEnd={true}
+        style={{
+          position: "absolute",
+          inset: 0,
+          width: "100%",
+          height: "100%",
+          transform: "none",
+          opacity: 0,
+          border: "none",
+          background: "transparent",
+          zIndex: 1,
+        }}
+      />
+
+      <input
+        value={data.label}
+        onChange={(e) => {
+          setNodes((nds) =>
+            nds.map((n) =>
+              n.id === dataId
+                ? { ...n, data: { ...n.data, label: e.target.value } }
+                : n
+            )
+          );
+        }}
+        style={{
+          border: "none",
+          background: "transparent",
+          textAlign: "center",
+          fontWeight: "bold",
+          position: "relative",
+          zIndex: 2,
+          width: "100%",
+          outline: "none",
+        }}
+      />
+    </div>
+  );
+
+  /* ---------------- RELATION NODE ---------------- */
+
+  const RelationNode = ({ id: dataId, data }) => {
+    const connectedSides = edges
+      .filter((e) => e.source === dataId)
+      .map((e) => e.sourceHandle);
+
+    const leftUsed = connectedSides.includes("left");
+    const rightUsed = connectedSides.includes("right");
+
+    return (
+      <div
+        style={{
+          width: 140,
+          height: 120,
+          position: "relative",
+        }}
+      >
+        {!leftUsed && (
+          <Handle
+            id="left"
+            type="source"
+            position={Position.Left}
+            isConnectableStart={true}
+            isConnectableEnd={false}
+            style={{
+              width: 14,
+              height: 14,
+              borderRadius: "50%",
+              background: "#000",
+              border: "1px solid #000",
+              left: 8,
+              top: 48,
+              transform: "none",
+              zIndex: 5,
+            }}
+          />
+        )}
+
+        {!rightUsed && (
+          <Handle
+            id="right"
+            type="source"
+            position={Position.Right}
+            isConnectableStart={true}
+            isConnectableEnd={false}
+            style={{
+              width: 14,
+              height: 14,
+              borderRadius: "50%",
+              background: "#000",
+              border: "1px solid #000",
+              right: 12,
+              top: 48,
+              transform: "none",
+              zIndex: 5,
+            }}
+          />
+        )}
+
+        <div
+          style={{
+            width: 110,
+            height: 110,
+            margin: "0 auto",
+            transform: "rotate(45deg)",
+            background: "#f6a623",
+            border: "2px solid #333",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+          }}
+        >
+          <div style={{ transform: "rotate(-45deg)" }}>
+            <input
+              value={data.label}
+              onChange={(e) => {
+                setNodes((nds) =>
+                  nds.map((n) =>
+                    n.id === dataId
+                      ? { ...n, data: { ...n.data, label: e.target.value } }
+                      : n
+                  )
+                );
+              }}
+              style={{
+                border: "none",
+                background: "transparent",
+                textAlign: "center",
+                fontWeight: "bold",
+                outline: "none",
+              }}
+            />
+          </div>
+        </div>
+      </div>
+    );
+  };
+
+  /* ---------------- EDGE ---------------- */
+
+  const ERCardEdge = (props) => {
+    const { id: edgeId, sourceX, sourceY, targetX, targetY, data } = props;
+
+    const [path] = getStraightPath({ sourceX, sourceY, targetX, targetY });
+
+    const dx = sourceX - targetX;
+    const dy = sourceY - targetY;
+    const dist = Math.sqrt(dx * dx + dy * dy) || 1;
+
+    const px = -dy / dist;
+    const py = dx / dist;
+
+    // Move label closer to relation node (source)
+    const ratioFromTarget = 0.55;
+    const offset = 14;
+
+    const labelX = targetX + (sourceX - targetX) * ratioFromTarget + px * offset;
+    const labelY = targetY + (sourceY - targetY) * ratioFromTarget + py * offset;
+
+    const options =
+      cardType === "cardinality"
+        ? ["1", "n", "m"]
+        : ["0..1", "1..1", "0..*", "1..*"];
+
+    return (
+      <>
+        <BaseEdge path={path} style={{ stroke: "#555", strokeWidth: 2 }} />
+
+        <EdgeLabelRenderer>
+          <div
+            style={{
+              position: "absolute",
+              transform: `translate(-50%, -50%) translate(${labelX}px, ${labelY}px)`,
+              pointerEvents: "all",
+              zIndex: 1000,
+              background: "#fff",
+              padding: 2,
+              border: "1px solid #ccc",
+              borderRadius: 6,
+            }}
+          >
+            <select
+              value={data.value || ""}
+              className="form-select form-select-sm"
+              onChange={(e) => {
+                setEdges((eds) =>
+                  eds.map((ed) =>
+                    ed.id === edgeId
+                      ? { ...ed, data: { ...ed.data, value: e.target.value } }
+                      : ed
+                  )
+                );
+              }}
+            >
+              <option value="">Select</option>
+              {options.map((o) => (
+                <option key={o} value={o}>
+                  {o}
+                </option>
+              ))}
+            </select>
+          </div>
+        </EdgeLabelRenderer>
+      </>
+    );
+  };
+
+  /* ---------------- TYPES ---------------- */
+
+  const nodeTypes = {
+    entity: EntityNode,
+    relation: RelationNode,
+  };
+
+  const edgeTypes = {
+    erCardinality: ERCardEdge,
+  };
+
+  /* ---------------- VALIDATION ---------------- */
+
+  const validateConnection = useCallback(
+    (source, target, sourceHandle) => {
+      const s = getNode(source);
+      const t = getNode(target);
+
+      if (!s || !t) return false;
+      if (s.type !== "relation" || t.type !== "entity") return false;
+
+      const relationEdges = edges.filter((e) => e.source === source);
+
+      if (relationEdges.length >= 2) return false;
+      if (relationEdges.some((e) => e.sourceHandle === sourceHandle)) return false;
+      if (relationEdges.some((e) => e.target === target)) return false;
+
+      return true;
+    },
+    [edges, getNode]
+  );
+
+  /* ---------------- CONNECT ---------------- */
+
+  const onConnect = useCallback(
+    (connection) => {
+      if (
+        !validateConnection(
+          connection.source,
+          connection.target,
+          connection.sourceHandle
+        )
+      ) {
+        return;
+      }
+
+      setEdges((eds) =>
+        addEdge(
+          {
+            ...connection,
+            type: "erCardinality",
+            data: { value: "" },
+          },
+          eds
+        )
+      );
+    },
+    [validateConnection]
+  );
+
+  /* ---------------- RECONNECT ---------------- */
+
+  const onReconnect = useCallback(
+    (oldEdge, newConnection) => {
+      if (
+        !validateConnection(
+          newConnection.source,
+          newConnection.target,
+          newConnection.sourceHandle
+        )
+      ) {
+        return;
+      }
+
+      setEdges((eds) =>
+        reconnectEdge(
+          oldEdge,
+          {
+            ...newConnection,
+            type: oldEdge.type,
+            data: oldEdge.data,
+          },
+          eds
+        )
+      );
+    },
+    [validateConnection]
+  );
+
+  /* ---------------- EXPORT ---------------- */
+
+  useEffect(() => {
+    const relations = nodes
+      .filter((n) => n.type === "relation")
+      .map((rel) => {
+        const rEdges = edges.filter((e) => e.source === rel.id);
+
+        if (rEdges.length !== 2) return null;
+
+        const entities = rEdges.map((e) => {
+          const node = getNode(e.target);
+          return node?.data?.label || node?.id;
+        });
+
+        const cardinality = {};
+        const min_max = {};
+
+        rEdges.forEach((e) => {
+          const name = getNode(e.target)?.data?.label;
+          if (!name) return;
+
+          if (cardType === "cardinality") {
+            cardinality[name] = e.data?.value || "";
+          } else {
+            min_max[name] = e.data?.value || "";
+          }
+        });
+
+        return {
+          name: rel.data.label,
+          entities,
+          cardinality,
+          min_max,
+        };
+      })
+      .filter(Boolean);
+
+    const json = JSON.stringify(relations);
+
+    if (json === lastExport.current) return;
+
+    lastExport.current = json;
+    onChange(relationFieldId, json);
+  }, [nodes, edges, cardType, getNode, onChange, relationFieldId]);
+
+  /* ---------------- ACTIONS ---------------- */
+
+  const addEntity = () => {
+    const count = nodes.filter((n) => n.type === "entity").length + 1;
+
+    setNodes((nds) => [
+      ...nds,
+      {
+        id: `entity_${Date.now()}`,
+        type: "entity",
+        position: { x: 100 + count * 40, y: 80 + count * 30 },
+        data: { label: `ENTITY_${count}` },
+      },
+    ]);
+  };
+
+  const addRelation = () => {
+    const count = nodes.filter((n) => n.type === "relation").length + 1;
+
+    setNodes((nds) => [
+      ...nds,
+      {
+        id: `relation_${Date.now()}`,
+        type: "relation",
+        position: { x: 350 + count * 40, y: 220 + count * 30 },
+        data: { label: `relation_${count}` },
+      },
+    ]);
+  };
+
+  const removeSelected = () => {
+    const selectedNodeIds = new Set(
+      nodes.filter((n) => n.selected).map((n) => n.id)
+    );
+    const selectedEdgeIds = new Set(
+      edges.filter((e) => e.selected).map((e) => e.id)
+    );
+
+    setEdges((eds) =>
+      eds.filter(
+        (e) =>
+          !selectedEdgeIds.has(e.id) &&
+          !selectedNodeIds.has(e.source) &&
+          !selectedNodeIds.has(e.target)
+      )
+    );
+
+    setNodes((nds) => nds.filter((n) => !selectedNodeIds.has(n.id)));
+  };
+
+  /* ---------------- RENDER ---------------- */
+
+  return (
+    <div className="card mb-4 shadow-sm">
+      <div className="card-body">
+        <div
+          className="border rounded"
+          style={{ width: "100%", height: 700, background: "#fafafa" }}
+        >
+          <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onConnect={onConnect}
+            onReconnect={onReconnect}
+            fitView
+            deleteKeyCode={["Backspace", "Delete"]}
+          >
+            <Background />
+            <Controls />
+            <MiniMap />
+
+            <Panel position="top-left">
+              <div className="d-flex flex-column gap-2">
+                <button className="btn btn-sm btn-primary" onClick={addEntity}>
+                  Add Entity
+                </button>
+
+                <button className="btn btn-sm btn-warning" onClick={addRelation}>
+                  Add Relation
+                </button>
+
+                <button
+                  className="btn btn-sm btn-outline-danger"
+                  onClick={removeSelected}
+                >
+                  Delete Selected
+                </button>
+              </div>
+            </Panel>
+          </ReactFlow>
+        </div>
       </div>
     </div>
   );
 }
+
 function DendrogramBuilder({ el, idx, userInput, onChange, renderEvaluatedInput }) {
 
   const id = el.id || `dendro_${idx}`;
@@ -1755,6 +2643,17 @@ export default function LayoutRenderer({
             key={el.id ?? idx}
             el={el}
             renderEvaluatedInput={renderEvaluatedInput}
+          />
+        );
+      case "ER_Diagram_Builder":
+      case "er_diagram_builder":
+        return (
+          <ERDiagramBuilder
+            key={el.id ?? idx}
+            el={el}
+            idx={idx}
+            userInput={userInput}
+            onChange={onChange}
           />
         );
       case "Text":

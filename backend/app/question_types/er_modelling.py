@@ -42,15 +42,13 @@ class ERModelling:
                 },
                 {
                     "type": "ER_Diagram",
-                    "entities": self.task["entities"],
-                    "relations": self.task["relations"],
-                    "hidden_cardinalities": True,
-                    "card_type": self.card_type,
                 },
                 {
-                    "type": "ER_Diagram_input",
-                    "entities": self.task["entities"],
-                    "relations": self.task["relations"],
+                    "type": "ER_Diagram_Builder",
+                    "id": "free_er_builder",
+                    "title": "Build your own ER diagram",
+                    "card_type": "min_max",   # or "cardinality"
+                    "height": 750,
                 },
         ]
         return base
@@ -67,6 +65,7 @@ class ERModelling:
 
     def _evaluate_steps(self, user_input):
         user_input = user_input or {}
+        print(user_input)
         results = {}
         return results
 
