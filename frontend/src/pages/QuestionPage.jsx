@@ -68,6 +68,7 @@ export default function QuestionPage() {
         setQuestion(data);
         setResolvedSeed(data?.seed ?? null);
         setResolvedExerciseName(data?.exercise_name ?? null);
+        viewFieldIdsRef.current = {};
         setFormData({});
         setVisibleViews(["view1"]);
         setViewResults({});
@@ -207,7 +208,6 @@ export default function QuestionPage() {
         const results = viewResults[viewName] || {};
         const isLastVisible = index === visibleViews.length - 1;
         const nextExists = question.layout[`view${visibleViews.length + 1}`];
-        viewFieldIdsRef.current[viewName] = new Set();
         return (
           <div key={viewName} className="card mb-4 shadow-sm">
             <div className="card-body">

@@ -1191,16 +1191,29 @@ function AprioriBuilderCore({
   const [builder, setBuilder] = useState(() => parseStored(userInput?.[fieldId]));
 
   useEffect(() => {
-    onChange(fieldId, JSON.stringify(builder));
-  }, [builder, fieldId, onChange]);
+    setBuilder(parseStored(userInput?.[fieldId]));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fieldId, userInput?.[fieldId]]);
+
+  useEffect(() => {
+    if (userInput?.[fieldId] === undefined) {
+      onChange(fieldId, JSON.stringify(builder));
+    }
+  }, [builder, fieldId, onChange, userInput]);
 
   const levels = singleLevel ? [builder] : (builder.levels || []);
 
   const setLevels = (nextLevels) => {
     if (singleLevel) {
-      setBuilder(nextLevels[0] || makeLevel());
+      const nextBuilder = nextLevels[0] || makeLevel();
+      setBuilder(nextBuilder);
+      onChange(fieldId, JSON.stringify(nextBuilder));
     } else {
-      setBuilder((prev) => ({ ...prev, levels: nextLevels }));
+      setBuilder((prev) => {
+        const nextBuilder = { ...prev, levels: nextLevels };
+        onChange(fieldId, JSON.stringify(nextBuilder));
+        return nextBuilder;
+      });
     }
   };
 
@@ -1237,17 +1250,12 @@ function AprioriBuilderCore({
     level.terminate = checked;
   });
 
-  const evalResult = evaluationResults?.[fieldId] ?? evaluationResults?.[`${fieldId}_solution`];
+  const evalResult = evaluationResults?.[fieldId];
   const isCorrect = evalResult?.correct;
   const expected = evalResult?.expected;
   const feedbackClass = evalResult === undefined ? "" : isCorrect ? "alert alert-success" : "alert alert-danger";
   const solutionExpected =
-    expected && typeof expected === "object" && !Array.isArray(expected)
-      ? expected
-      : (() => {
-          const fallback = evaluationResults?.[`${fieldId}_solution`]?.expected;
-          return fallback && typeof fallback === "object" && !Array.isArray(fallback) ? fallback : null;
-        })();
+    expected && typeof expected === "object" && !Array.isArray(expected) ? expected : null;
   const hasStructuredExpected = !!solutionExpected;
 
   const rowFieldId = (levelIdx, rowIdx, key) =>
@@ -1258,7 +1266,6 @@ function AprioriBuilderCore({
   };
 
   registerLocalField(fieldId);
-  registerLocalField(`${fieldId}_solution`);
 
   const getCellEval = (id) => {
     registerLocalField(id);
@@ -1496,37 +1503,44 @@ function AprioriBuilderCore({
           <small className="text-muted fst-italic d-block mt-1">Correct: {expected}</small>
         )}
 
-        {showExpected && evalResult !== undefined && hasStructuredExpected && singleLevel && (
+        {showExpected && evalResult !== undefined && hasStructuredExpected && (
           <div className="mt-3">
             {solutionExpected?.message && <div className="mb-2 text-muted">{solutionExpected.message}</div>}
-            {Array.isArray(solutionExpected?.rows) && solutionExpected.rows.length > 0 && (
-              <div className="table-responsive">
-                <table className="table table-bordered table-sm align-middle mb-2">
-                  <thead className="table-light">
-                    <tr>
-                      <th>Itemset</th>
-                      <th>Support</th>
-                      <th>P</th>
-                      <th>fällt unter minsup?</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {solutionExpected.rows.map((row, i) => (
-                      <tr key={`expected-row-${i}`}>
-                        <td>{row.itemset}</td>
-                        <td>{row.support}</td>
-                        <td>{row.probability}</td>
-                        <td>{row.below}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+            {Array.isArray(solutionExpected?.levels) && solutionExpected.levels.length > 0 && (
+              <div className="d-flex flex-column gap-3">
+                {solutionExpected.levels.map((lvl, levelIdx) => (
+                  <div key={`expected-level-${levelIdx}`}>
+                    <div className="fw-semibold mb-2">Level {Number(levelIdx) + 1}</div>
+                    <div className="table-responsive">
+                      <table className="table table-bordered table-sm align-middle mb-2">
+                        <thead className="table-light">
+                          <tr>
+                            <th>Itemset</th>
+                            <th>Support</th>
+                            <th>P</th>
+                            <th>fällt unter minsup?</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {(Array.isArray(lvl?.rows) && lvl.rows.length > 0 ? lvl.rows : [{ itemset: "-", support: "-", probability: "-", below: "-" }]).map((row, i) => (
+                            <tr key={`expected-level-${levelIdx}-row-${i}`}>
+                              <td>{row.itemset}</td>
+                              <td>{row.support}</td>
+                              <td>{row.probability}</td>
+                              <td>{row.below}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                    {lvl?.terminate !== undefined && (
+                      <small className="text-muted fst-italic d-block">
+                        Correct termination: {String(lvl.terminate)}
+                      </small>
+                    )}
+                  </div>
+                ))}
               </div>
-            )}
-            {solutionExpected?.terminate !== undefined && (
-              <small className="text-muted fst-italic d-block">
-                Correct termination: {String(solutionExpected.terminate)}
-              </small>
             )}
           </div>
         )}
