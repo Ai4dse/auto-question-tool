@@ -1,9 +1,11 @@
+from datetime import date, datetime
 from fastapi import FastAPI, Request, Query, HTTPException
 from fastapi.staticfiles import StaticFiles
 from mongoengine import connect
 from fastapi.middleware.cors import CORSMiddleware
 from .generator_loader import load_question_generators
 import os
+from zoneinfo import ZoneInfo
 from app.routes.auth import router as auth_router
 from .config import QUESTION_CONFIG
 import inspect
@@ -15,6 +17,8 @@ app.include_router(auth_router)
 app.mount("/resources", StaticFiles(directory="app/resources"), name="resources")
 
 MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017/user_data")
+RELEASE_TIMEZONE = ZoneInfo("Europe/Berlin")
+COURSE_START_DATE = date(2025, 4, 1)
 
 connect(host=MONGO_URL)
 
@@ -35,6 +39,32 @@ app.add_middleware(
 )
 
 question_generators = load_question_generators()
+
+
+def get_current_release_week() -> int:
+    today = datetime.now(RELEASE_TIMEZONE).date()
+    delta_days = (today - COURSE_START_DATE).days
+    if delta_days < 0:
+        return 0
+    return (delta_days // 7) + 1
+
+
+def is_question_released(metadata: Dict[str, Any]) -> bool:
+    try:
+        release_week = int(metadata.get("week", 1))
+    except (TypeError, ValueError):
+        release_week = 1
+
+    if release_week < 1:
+        release_week = 1
+
+    return release_week <= get_current_release_week()
+
+
+def ensure_question_is_released(type_name: str) -> None:
+    metadata = QUESTION_CONFIG.get(type_name, {}).get("metadata", {})
+    if not is_question_released(metadata):
+        raise HTTPException(status_code=404, detail="Question type not found")
 
 def query_params_to_kwargs(request: Request) -> Dict[str, Any]:
 
@@ -86,13 +116,16 @@ def get_questions():
     return [
         {"id": qid, **cfg["metadata"]}
         for qid, cfg in QUESTION_CONFIG.items()
+        if is_question_released(cfg.get("metadata", {}))
     ]
 
 
 @app.get("/question/{type_name}")
 def get_question_by_type(type_name: str, request: Request):
     if type_name not in question_generators:
-        return {"error": "Question type not found."}
+        raise HTTPException(status_code=404, detail="Question type not found")
+
+    ensure_question_is_released(type_name)
 
     base_config = question_generators[type_name]
     QuestionClass = base_config["class"]
@@ -124,7 +157,9 @@ def get_question_by_type(type_name: str, request: Request):
 @app.post("/question/{type_name}/evaluate")
 async def evaluate_question(type_name: str, request: Request):
     if type_name not in question_generators:
-        return {"error": "Question type not found."}
+        raise HTTPException(status_code=404, detail="Question type not found")
+
+    ensure_question_is_released(type_name)
 
     base_config = question_generators[type_name]
     QuestionClass = base_config["class"]
@@ -155,6 +190,8 @@ async def evaluate_question(type_name: str, request: Request):
 async def preview_question(type_name: str, request: Request):
     if type_name not in question_generators:
         raise HTTPException(status_code=404, detail="Question type not found")
+
+    ensure_question_is_released(type_name)
 
     base_config = question_generators[type_name]
     QuestionClass = base_config["class"]
