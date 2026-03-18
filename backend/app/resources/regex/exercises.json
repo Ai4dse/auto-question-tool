@@ -4,7 +4,7 @@
       "name": "regex_datumsangaben",
       "question": "Gegeben sei folgender Text. Schreiben Sie einen regulären Ausdruck, welcher alle Datumsangaben findet:",
       "solution": "\\b\\d{2}\\.\\d{2}\\.\\d{4}\\b",
-      "content": "Bitte senden Sie Ihre Anfrage bis zum 15.04.2025 an info@beispiel-tud.com oder kontaktieren Sie uns persönlich. Senden Sie zusätzlich eine Bestätigung bis zum 20.05.2025 an support@beispiel.de.",
+      "content": "Bitte senden Sie Ihre Anfrage bis zum 15.04.2025 an info@beispiel-tud.com oder kontaktieren Sie uns persönlich. \nSenden Sie zusätzlich eine Bestätigung bis zum 20.05.2025 an support@beispiel.de.",
       "link": "https://regex101.com/r/DyMZrc/2",
       "difficulty": "easy"
     },
@@ -12,7 +12,7 @@
       "name": "regex_email_domain",
       "question": "Gegeben sei folgender Text. Schreiben Sie einen regulären Ausdruck, welcher die Domain aller Email-Adressen findet:",
       "solution": "@[\\w-]+\\.[\\w]+",
-      "content": "Bitte senden Sie Ihre Anfrage bis zum 15.04.2025 an info@beispiel-tud.com oder kontaktieren Sie uns persönlich. Senden Sie zusätzlich eine Bestätigung bis zum 20.05.2025 an support@beispiel.de.",
+      "content": "Bitte senden Sie Ihre Anfrage bis zum 15.04.2025 an info@beispiel-tud.com oder kontaktieren Sie uns persönlich. \nSenden Sie zusätzlich eine Bestätigung bis zum 20.05.2025 an support@beispiel.de.",
       "link": "https://regex101.com/r/DyMZrc/2",
       "difficulty": "medium"
     },
@@ -20,7 +20,7 @@
       "name": "regex_wortgrenzen",
       "question": "Gegeben sei folgender Text. Schreiben Sie einen regulären Ausdruck, welcher ein beliebiges Wort (kein Datum oder Email) findet. Was fällt Ihnen auf?:",
       "solution": "\\b\\w+\\b",
-      "content": "Bitte senden Sie Ihre Anfrage bis zum 15.04.2025 an info@beispiel-tud.com oder kontaktieren Sie uns persönlich. Senden Sie zusätzlich eine Bestätigung bis zum 20.05.2025 an support@beispiel.de.",
+      "content": "Bitte senden Sie Ihre Anfrage bis zum 15.04.2025 an info@beispiel-tud.com oder kontaktieren Sie uns persönlich. \nSenden Sie zusätzlich eine Bestätigung bis zum 20.05.2025 an support@beispiel.de.",
       "link": "https://regex101.com/r/DyMZrc/2",
       "difficulty": "medium"
     },
@@ -31,7 +31,7 @@
         "find": "(\\d{2})[./-](\\d{2})[./-](\\d{4})",
         "replace": "\\1.\\2.\\3"
       },
-      "content": "{\"name\": \"jonas lieber\",\"date\":\"28.11.1999\"}, {\"name\": \"max schmeling\",\"date\":\"13-04-2001\"}, {\"name\": \"anna wenzel\",\"date\":\"18/04/2000\"}",
+      "content": "{\"name\": \"jonas lieber\",\"date\":\"28.11.1999\"}, \n{\"name\": \"max schmeling\",\"date\":\"13-04-2001\"}, \n{\"name\": \"anna wenzel\",\"date\":\"18/04/2000\"}",
       "link": "https://regex101.com/r/0on9cx/1",
       "difficulty": "hard"
     },
@@ -42,7 +42,7 @@
         "find": "\\\"name\\\":\\s*\\\"(\\w+)\\s+(\\w+)\\\"",
         "replace": "\"vorname\": \"\\1\", \"nachname\": \"\\2\""
       },
-      "content": "{\"name\": \"jonas lieber\",\"date\":\"28.11.1999\"}, {\"name\": \"max schmeling\",\"date\":\"13-04-2001\"}, {\"name\": \"anna wenzel\",\"date\":\"18/04/2000\"}",
+      "content": "{\"name\": \"jonas lieber\",\"date\":\"28.11.1999\"}, \n{\"name\": \"max schmeling\",\"date\":\"13-04-2001\"}, \n{\"name\": \"anna wenzel\",\"date\":\"18/04/2000\"}",
       "link": "https://regex101.com/r/0on9cx/1",
       "difficulty": "hard"
     },

@@ -1,0 +1,104 @@
+{
+  "exercises": [
+    {
+      "name": "xpath_books_by_genre",
+      "mode": "xpath",
+      "difficulty": "easy",
+      "question": "Gegeben ist das XML-Dokument unten. Formulieren Sie einen XPath-Ausdruck, der alle Titel von Büchern mit dem Genre 'fantasy' selektiert.",
+      "content": "<library>\n  <book id=\"b1\" genre=\"fantasy\">\n    <title>The Hobbit</title>\n    <author>Tolkien</author>\n  </book>\n  <book id=\"b2\" genre=\"science\">\n    <title>A Brief History of Time</title>\n    <author>Hawking</author>\n  </book>\n  <book id=\"b3\" genre=\"fantasy\">\n    <title>Earthsea</title>\n    <author>Le Guin</author>\n  </book>\n</library>\n",
+      "solution": "//book[@genre='fantasy']/title",
+      "link": "https://xpath.playground.fontoxml.com/?state=H4sIAJCzumkAA42QzWrDQAyEX0XoHHB%2FbmFraKHUh14KPvqy68ix8HoXtHIbE%2FLu3aRpKW1CcpNGIz5mtjjGFeHyZoHvVtg6TwmXuN3hAjejz6Px7MTKXDYBwLgYB%2BDVQ4PutkFYUxDKS2eD2jQ3eHBln7J6KuueoIrOsZriSzme7aR9lLKOfmAKpjjuB0SxZ%2Fyj3f2ipTY%2FtfSX9ghPwtRBxUmjzBA7qHmk0%2BjKfgwc1teg7y8HfbaifSJ7mvVK8DLxmZim%2BC54X%2FnbRDLn1vPcxqC00R9l9wleP1avrAEAAA%3D%3D"
+    },
+    {
+      "name": "xpath_students_above_23",
+      "mode": "xpath",
+      "difficulty": "medium",
+      "question": "Gegeben ist das XML-Dokument unten. Formulieren Sie einen XPath-Ausdruck, der die Namen aller Studierenden mit Alter größer als 23 zurückgibt.",
+      "content": "<students>\n  <student id=\"s1\">\n    <name>Anna</name>\n    <age>22</age>\n  </student>\n  <student id=\"s2\">\n    <name>Jonas</name>\n    <age>24</age>\n  </student>\n  <student id=\"s3\">\n    <name>Mira</name>\n    <age>25</age>\n  </student>\n</students>",
+      "solution": "//student[age > 23]/name",
+      "link": "https://xpath.playground.fontoxml.com/?state=H4sIAFW1umkAA42QsQrCMBCGXyXcXKhWXUoMuAoO7lmiOSTQXCBJpVL67qbWdigZOt13%2F8HH8fdgnUaodwW8lTfq0WCAGvoBCuhsk5CH2GqkGASTxNi8MqPPEsJewpSnCymL4kKkePnDOVcvFFXFy3FOjvIvySqrtfLqSIWc87jZeVg7b8Zn3zxllZIWDmJs5t6i%2F6RyEj8dRezikgxf1s5JGlMBAAA%3D"
+    },
+    {
+      "name": "xpath_latest_order",
+      "mode": "xpath",
+      "difficulty": "hard",
+      "question": "Gegeben ist das XML-Dokument unten. Formulieren Sie einen XPath-Ausdruck, der aus der Liste aller Bestellungen genau die mit der größten Order selektiert.",
+      "content": "<orders>\n  <order id=\"o1\">\n    <date>2025-03-11</date>\n    <total>120</total>\n  </order>\n  <order id=\"o2\">\n    <date>2025-05-04</date>\n    <total>95</total>\n  </order>\n  <order id=\"o3\">\n    <date>2025-05-04</date>\n    <total>130</total>\n  </order>\n</orders>",
+      "solution": "//order[total = max(//order/total)]",
+      "link": "https://xpath.playground.fontoxml.com/?state=H4sIAOW1umkAA5WQSwrCMBBAr1Jm3ZKfXVhi7uA%2Bm2hmUUgbSKJUSu9uTIsbKyjM4vEGHsPMMHiL0NEa7ib05uIwQgfzAjVMg8sofbAYotJjVa1c9fakwTMNRWZtTULFKW8bKhrGJCliWyafjFOMU0lWLCVSUp9VvlvNc9irHtufouKvKBNfTt0oqtdzzjcMj%2FyfzFc%2FJpzS2yxPyls5WFYBAAA%3D"
+    },
+    {
+      "name": "xpath_author",
+      "mode": "xpath",
+      "difficulty": "easy",
+      "question": "Gegeben ist das XML-Dokument unten. Formulieren Sie einen XPath-Ausdruck, der alle Autoren findet.",
+      "content": "<library>\n <book>\n  <title>The Great Gatsby</title>\n  <author>F. Scott Fitzgerald</author>\n  <year>1925</year>\n </book>\n <book>\n  <title>To Kill a Mockingbird</title>\n  <author>Harper Lee</author>\n  <year>1960</year>\n </book>\n <book>\n  <title>1984</title>\n  <author>George Orwell</author>\n  <year>1949</year>\n </book>\n <book>\n  <title>Go Set a Watchman</title>\n  <author>Harper Lee</author>\n  <year>2015</year>\n </book>\n</library>",
+      "solution": "/library/book/author",
+      "link": "https://xpath.playground.fontoxml.com/?state=H4sIAIO5umkAA52RwUrDQBCGX2XYc3GTUsWUJcdGUBGp4MXLbDokSzdZmU61sfTdXWPaUwqlt4%2BZYT5m%2Fr1qworUPJmoL2SH1tNGzdX%2BoCZq1%2FiIxjvLyF3%2B0QIYG8K6p8jixFP%2BVhMUTChQoGxsZ%2FR%2FfRjCrdSB88UNLMsgAgsnPxUx%2BpXRQ2%2BY7Ag5T7PprdE99j59Eo6pAzw67wHhOZRr11bWcVw75n9A%2FiSGJ6Iz2rvkYm2a3c%2FGLQUFrghe%2BJu8PyOaZReLigBLknjeO0pZN9hedds0SUdfavQx2b%2BsX7fEXYw7chlaoZ2cKodfL27%2FnCUCAAA%3D"
+    },
+    {
+      "name": "xpath_title",
+      "mode": "xpath",
+      "difficulty": "medium",
+      "question": "Gegeben ist das XML-Dokument unten. Formulieren Sie einen XPath-Ausdruck, der alle Buchtitel findet, die vor 1950 veröffentlicht wurden.",
+      "content": "<library>\n <book>\n  <title>The Great Gatsby</title>\n  <author>F. Scott Fitzgerald</author>\n  <year>1925</year>\n </book>\n <book>\n  <title>To Kill a Mockingbird</title>\n  <author>Harper Lee</author>\n  <year>1960</year>\n </book>\n <book>\n  <title>1984</title>\n  <author>George Orwell</author>\n  <year>1949</year>\n </book>\n <book>\n  <title>Go Set a Watchman</title>\n  <author>Harper Lee</author>\n  <year>2015</year>\n </book>\n</library>",
+      "solution": "/library/book[year < 1950]/title",
+      "link": "https://xpath.playground.fontoxml.com/?state=H4sIAIO5umkAA52RwUrDQBCGX2XYc3GTUsWUJcdGUBGp4MXLbDokSzdZmU61sfTdXWPaUwqlt4%2BZYT5m%2Fr1qworUPJmoL2SH1tNGzdX%2BoCZq1%2FiIxjvLyF3%2B0QIYG8K6p8jixFP%2BVhMUTChQoGxsZ%2FR%2FfRjCrdSB88UNLMsgAgsnPxUx%2BpXRQ2%2BY7Ag5T7PprdE99j59Eo6pAzw67wHhOZRr11bWcVw75n9A%2FiSGJ6Iz2rvkYm2a3c%2FGLQUFrghe%2BJu8PyOaZReLigBLknjeO0pZN9hedds0SUdfavQx2b%2BsX7fEXYw7chlaoZ2cKodfL27%2FnCUCAAA%3D"
+    },
+    {
+      "name": "xpath_first",
+      "mode": "xpath",
+      "difficulty": "hard",
+      "question": "Gegeben ist das XML-Dokument unten. Formulieren Sie einen XPath-Ausdruck, der alle Bücher findet, die nach dem ersten aufgeführten Buch veröffentlicht wurden.",
+      "content": "<library>\n <book>\n  <title>The Great Gatsby</title>\n  <author>F. Scott Fitzgerald</author>\n  <year>1925</year>\n </book>\n <book>\n  <title>To Kill a Mockingbird</title>\n  <author>Harper Lee</author>\n  <year>1960</year>\n </book>\n <book>\n  <title>1984</title>\n  <author>George Orwell</author>\n  <year>1949</year>\n </book>\n <book>\n  <title>Go Set a Watchman</title>\n  <author>Harper Lee</author>\n  <year>2015</year>\n </book>\n</library>",
+      "solution": "/library/book[year > /library/book[1]/year]",
+      "link": "https://xpath.playground.fontoxml.com/?state=H4sIAIO5umkAA52RwUrDQBCGX2XYc3GTUsWUJcdGUBGp4MXLbDokSzdZmU61sfTdXWPaUwqlt4%2BZYT5m%2Fr1qworUPJmoL2SH1tNGzdX%2BoCZq1%2FiIxjvLyF3%2B0QIYG8K6p8jixFP%2BVhMUTChQoGxsZ%2FR%2FfRjCrdSB88UNLMsgAgsnPxUx%2BpXRQ2%2BY7Ag5T7PprdE99j59Eo6pAzw67wHhOZRr11bWcVw75n9A%2FiSGJ6Iz2rvkYm2a3c%2FGLQUFrghe%2BJu8PyOaZReLigBLknjeO0pZN9hedds0SUdfavQx2b%2BsX7fEXYw7chlaoZ2cKodfL27%2FnCUCAAA%3D"
+    },
+
+    {
+      "name": "xquery_titles_by_author",
+      "mode": "xquery",
+      "difficulty": "easy",
+      "question": "Gegeben ist das XML-Dokument unten. Schreiben Sie eine XQuery, die alle Titel von Büchern zurückgibt, deren Autor 'Tolkien' ist.",
+      "content": "<library>\n  <book>\n    <title>The Hobbit</title>\n    <author>Tolkien</author>\n  </book>\n  <book>\n    <title>Dune</title>\n    <author>Herbert</author>\n  </book>\n  <book>\n    <title>The Silmarillion</title>\n    <author>Tolkien</author>\n  </book>\n</library>",
+      "solution": "for $b in /library/book\nwhere $b/author = 'Tolkien'\nreturn $b/title",
+      "link": "https://xpath.playground.fontoxml.com/?state=H4sIACK%2BumkAA5WQMQuDQAyF%2F4rcLBxd5XDq4Frq2OWuDRiMF0jPooj%2FvdFaJ4d2e3mBLy9vMh0%2FwBSn3Ly8oA8ET1OYaTa5GTpS6QiDeBnLW8wyF5jbValOmAjKuoGs4hAwOftxtrXvU8NS1kwtQnR2m1eM3TkHxHMf4ZhVgQQQPfQza0l3Rer0NyJkjfF3Rme%2FDSydXHqQUWtRfeeYYEi7M78B67VXoE0BAAA%3D"
+    },
+    {
+      "name": "xquery_student_summary",
+      "mode": "xquery",
+      "difficulty": "medium",
+      "question": "Gegeben ist das XML-Dokument unten. Schreiben Sie eine XQuery, die für jede Person ein Element <studentSummary> mit Name und Alter erzeugt.",
+      "content": "<students>\n  <student>\n    <name>Anna</name>\n    <age>22</age>\n  </student>\n  <student>\n    <name>Jonas</name>\n    <age>24</age>\n  </student>\n</students>",
+      "solution": "for $s in /students/student\nreturn <studentSummary>{ $s/name, $s/age }</studentSummary>",
+      "link": "https://xpath.playground.fontoxml.com/?state=H4sIAJO%2BumkAA6tWys1PSVWyMtRRKkssykxMykktVrJSqq5V0lGqyM0BMm2KS0pTUvNKiu1i8hQUYDwwB8jNS8xNtXPMy0u00QczocKJ6al2RkY2%2BiAarE0fWR9WQ7zy8xKLsZhigt0UOLvYDuTUwNLUokqga4Hs5Py8ktSKErhILQDb7BKw5AAAAA%3D%3D"
+    },
+    {
+      "name": "xquery_group_orders",
+      "mode": "xquery",
+      "difficulty": "hard",
+      "question": "Gegeben ist das XML-Dokument unten. Schreiben Sie eine XQuery, die alle Bestellungen nach Kunde gruppiert und je Kunde die Summe aller Beträge in einem Element <customerTotal> zurückgibt.",
+      "content": "<orders>\n <order>\n  <customer>A</customer>\n  <amount>10</amount>\n </order>\n <order>\n  <customer>B</customer>\n  <amount>20</amount>\n </order>\n <order>\n  <customer>A</customer>\n  <amount>30</amount>\n </order>\n</orders>",
+      "solution": "for $c in distinct-values(/orders/order/customer)\nlet $sum := sum(/orders/order[customer = $c]/amount)\nreturn <customerTotal customer=\"{$c}\">{$sum}</customerTotal>",
+      "link": "https://xpath.playground.fontoxml.com/?state=H4sIAA6%2FumkAA6tWys1PSVWyMtRRKkssykxMykktVrJSqq5V0lGqyM0BMm3yi1JSi4rtYvIUFCBsMBPISS4tLsnPBfIdbfThbKhcYm5%2BaV6JnaGBjT6UCdavjzAAh1lOOM0yItks3O4yxmUWlFVsB%2FJ%2FYGlqUSUwCIDs5Py8ktSKErhILQCZe6QyOQEAAA%3D%3D"
+    },
+    {
+      "name": "xquery_med",
+      "mode": "xquery",
+      "difficulty": "medium",
+      "question": "Gegeben ist das XML-Dokument unten. Schreiben Sie eine XQuery, die alle Buchtitel und Autoren geordnet nach dem Erscheinungsjahr auflistet.",
+      "content": "<library>\n <book>\n  <title>The Great Gatsby</title>\n  <author>F. Scott Fitzgerald</author>\n  <year>1925</year>\n </book>\n <book>\n  <title>To Kill a Mockingbird</title>\n  <author>Harper Lee</author>\n  <year>1960</year>\n </book>\n <book>\n  <title>1984</title>\n  <author>George Orwell</author>\n  <year>1949</year>\n </book>\n <book>\n  <title>Go Set a Watchman</title>\n  <author>Harper Lee</author>\n  <year>2015</year>\n </book>\n</library>",
+      "solution": "let $books := /library/book\nfor $book in $books\norder by $book/year\nreturn <book_info>\n<title>{$book/title/text()}</title>\n<author>{$book/author/text()}</author>\n</book_info>",
+      "link": "https://xpath.playground.fontoxml.com/?state=H4sIAE%2FAumkAA52RQUvDUAzHv0p452HXMcWOR4%2BroCIywYuXvC60j702kmW6OvbdfdYyLx0Mbz%2BSkB%2FJ%2F2AaXpNZpBPzgeLRBdqahTkczcTsmxDRBu8EpcvfWgDrmDc9RVavgfKXmqAQQoUCdes6m%2FzWhyHcac2SL69gVbIqLL1%2BVSQY1jYZesNkRyh5ms2ubdJj70tOwjE1w70PARAeudz4tnJe4tox%2Fx3KOwk8EJ3R3kwv1qbZ7XzcUhBLRfAknxTCGdE8u1hUMKxI43mvqGXdYPuv22bTdPSlNvlL9ift5x1JFwOPXHKrtNdT5fgN0IVXBycCAAA%3D"
+    },
+    {
+      "name": "xquery_hard",
+      "mode": "xquery",
+      "difficulty": "hard",
+      "question": "Gegeben ist das XML-Dokument unten. Gruppieren Sie alle Bücher nach ihren Autoren und zählen Sie, wie viele Bücher jeder Autor veröffentlicht hat. Geben Sie die Ergebnisse in einer strukturierten Form zurück, die den Namen des Autors, die Anzahl seiner Bücher und die Titel seiner Bücher enthält.",
+      "content": "<library>\n <book>\n  <title>The Great Gatsby</title>\n  <author>F. Scott Fitzgerald</author>\n  <year>1925</year>\n </book>\n <book>\n  <title>To Kill a Mockingbird</title>\n  <author>Harper Lee</author>\n  <year>1960</year>\n </book>\n <book>\n  <title>1984</title>\n  <author>George Orwell</author>\n  <year>1949</year>\n </book>\n <book>\n  <title>Go Set a Watchman</title>\n  <author>Harper Lee</author>\n  <year>2015</year>\n </book>\n</library>",
+      "solution": "let $authors := distinct-values(/library/book/author)\nfor $author in $authors\nlet $books := /library/book[author = $author]\nreturn\n<author>\n<name>{$author}</name>\n<number-of-books>{count($books)}</number-of-books>\n<titles>{$books/title}</titles>\n</author>",
+      "link": "https://xpath.playground.fontoxml.com/?state=H4sIAE%2FAumkAA52RQUvDUAzHv0p452HXMcWOR4%2BroCIywYuXvC60j702kmW6OvbdfdYyLx0Mbz%2BSkB%2FJ%2F2AaXpNZpBPzgeLRBdqahTkczcTsmxDRBu8EpcvfWgDrmDc9RVavgfKXmqAQQoUCdes6m%2FzWhyHcac2SL69gVbIqLL1%2BVSQY1jYZesNkRyh5ms2ubdJj70tOwjE1w70PARAeudz4tnJe4tox%2Fx3KOwk8EJ3R3kwv1qbZ7XzcUhBLRfAknxTCGdE8u1hUMKxI43mvqGXdYPuv22bTdPSlNvlL9ift5x1JFwOPXHKrtNdT5fgN0IVXBycCAAA%3D"
+    }
+  ]
+}
