@@ -1,0 +1,28 @@
+{
+  "easy": [
+    ["mint", "clam"],
+    ["frog", "gale"],
+    ["dust", "tape"],
+    ["ship", "pear"],
+    ["lamp", "mice"],
+    ["book", "dock"],
+    ["sand", "drum"]
+  ],
+  "medium": [
+    ["flame", "caper"],
+    ["piano", "vital"],
+    ["brick", "trail"],
+    ["vapor", "crown"],
+    ["ghost", "storm"],
+    ["track", "camel"],
+    ["bloom", "slope"]
+  ],
+  "hard": [
+    ["crane", "cared"],
+    ["trend", "tread"],
+    ["spore", "spear"],
+    ["flint", "final"],
+    ["crown", "clown"],
+    ["brine", "bring"]
+  ]
+}

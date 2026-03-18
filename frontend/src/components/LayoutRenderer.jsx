@@ -3169,6 +3169,96 @@ export default function LayoutRenderer({
             </div>
           </div>
         );
+      case "LevenshteinGrid":
+      case "levenshtein_grid": {
+        const wordA = String(el.wordA || "");
+        const wordB = String(el.wordB || "");
+        const charsA = Array.from(wordA);
+        const charsB = Array.from(wordB);
+        const topBorder = Array.isArray(el.topBorder) ? el.topBorder : [];
+        const leftBorder = Array.isArray(el.leftBorder) ? el.leftBorder : [];
+        const prefix = String(el.fieldPrefix || "lev");
+
+        const fieldId = (i, j, slot) => `${prefix}_${i}_${j}_${slot}`;
+
+        return (
+          <div key={idx} className="card mb-4 shadow-sm">
+            <div className="card-body">
+              <h5 className="card-title mb-3">{el.label || "Levenshtein grid"}</h5>
+
+              <div className="table-responsive">
+                <table className="table table-bordered table-sm align-middle text-center">
+                  <thead className="table-light">
+                    <tr>
+                      <th style={{ minWidth: 70 }}></th>
+                      <th style={{ minWidth: 70 }}>""</th>
+                      {charsB.map((ch, jIdx) => (
+                        <th key={`lev-head-${jIdx}`} colSpan={2} style={{ minWidth: 180 }}>
+                          {ch}
+                        </th>
+                      ))}
+                    </tr>
+                  </thead>
+
+                  <tbody>
+                    <tr>
+                      <th className="table-light">""</th>
+                      <td className="table-light fw-semibold">{String(topBorder[0] ?? 0)}</td>
+                      {charsB.map((_, jIdx) => {
+                        const val = String(topBorder[jIdx + 1] ?? "");
+                        return (
+                          <React.Fragment key={`lev-top-${jIdx}`}>
+                            <td className="table-light fw-semibold">{val}</td>
+                            <td className="table-light fw-semibold">{val}</td>
+                          </React.Fragment>
+                        );
+                      })}
+                    </tr>
+
+                    {charsA.map((chA, iIdx) => {
+                      const i = iIdx + 1;
+                      const leftVal = leftBorder[i] ?? i;
+
+                      return (
+                        <React.Fragment key={`lev-row-${i}`}>
+                          <tr>
+                            <th rowSpan={2} className="table-light align-middle">{chA}</th>
+                            <td className="table-light fw-semibold align-middle">{String(leftVal)}</td>
+                            {charsB.map((_, jIdx) => {
+                              const j = jIdx + 1;
+                              return (
+                                <React.Fragment key={`lev-diagdel-${i}-${j}`}>
+                                  <td>{renderEvaluatedInput(fieldId(i, j, 1), "")}</td>
+                                  <td>{renderEvaluatedInput(fieldId(i, j, 2), "")}</td>
+                                </React.Fragment>
+                              );
+                            })}
+                          </tr>
+
+                          <tr>
+                            <td className="table-light fw-semibold align-middle">{String(leftVal)}</td>
+                            {charsB.map((_, jIdx) => {
+                              const j = jIdx + 1;
+                              return (
+                                <React.Fragment key={`lev-insmin-${i}-${j}`}>
+                                  <td>{renderEvaluatedInput(fieldId(i, j, 3), "")}</td>
+                                  <td style={{ backgroundColor: "var(--bs-danger-bg-subtle)" }}>
+                                    {renderEvaluatedInput(fieldId(i, j, 4), "")}
+                                  </td>
+                                </React.Fragment>
+                              );
+                            })}
+                          </tr>
+                        </React.Fragment>
+                      );
+                    })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </div>
+        );
+      }
       case "LayoutTable":
       case "layout_table": {
         const rows = Number(el.rows ?? 0);

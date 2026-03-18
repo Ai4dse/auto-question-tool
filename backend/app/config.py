@@ -119,29 +119,6 @@ QUESTION_CONFIG = {
         },
     },
 
-    "addition": {
-        "class_path": "app.question_types.addition.AdditionQuestion",
-        "metadata": {
-            "title": "Simple Addition",
-            "week": 1,
-            "mode": ["steps", "exam"],
-            "desc": "Übe grundlegende Addition mit kleinen Rechenschritten.",
-            "tags": ["arithmetic"],
-            "settings": {
-                "difficulty": {
-                    "kind": "select",
-                    "visibility": "open",
-                    "options": ["easy", "medium", "hard"],
-                    "default": "easy",
-                },
-                "seed": {
-                    "kind": "number",
-                    "visibility": "hidden",
-                },
-            },
-        },
-    },
-
     "hungarian_method": {
         "class_path": "app.question_types.hungarian_method.HungarianMethodQuestion",
         "metadata": {
@@ -224,12 +201,6 @@ QUESTION_CONFIG = {
             "desc": "Erstelle reguläre Ausdrücke für typische Textmuster.",
             "tags": ["regex", "text-processing"],
             "settings": {
-                "mode": {
-                    "kind": "select",
-                    "visibility": "open",
-                    "options": ["steps", "exam"],
-                    "default": "steps",
-                },
                 "difficulty": {
                     "kind": "select",
                     "visibility": "open",
@@ -406,6 +377,27 @@ QUESTION_CONFIG = {
                 },
             },
         },
+    },
+    "levenshtein": {
+        "class_path": "app.question_types.levenshtein.LevenshteinQuestion",
+        "metadata": {
+            "title": "Levenshtein",
+            "week": 1,
+            "desc": "Berechne die Levenshtein-Distanz Schritt für Schritt.",
+            "tags": ["string", "distance", "algorithms"],
+            "settings": {
+                "difficulty": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["easy", "medium", "hard"],
+                    "default": "easy"
+                },
+                "seed": {
+                    "kind": "number",
+                    "visibility": "hidden"
+                }
+            }
+        }
     },
     "er_modelling": {
         "class_path": "app.question_types.er_modelling.ERModelling",
