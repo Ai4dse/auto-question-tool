@@ -7,6 +7,7 @@ import { API_URL } from "../api";
 export default function QuestionPage() {
   const { type } = useParams();
   const { search } = useLocation();
+  const isExternalExercise = type === "regex" || type === "xpath_xquery";
 
   const [question, setQuestion] = useState(null);
   const [formData, setFormData] = useState({});
@@ -180,7 +181,7 @@ export default function QuestionPage() {
   const handleSubmitView = (viewName) => {
     if (!question) return;
 
-    if (type === "regex") {
+    if (isExternalExercise) {
       setFinished(true);
       return;
     }
@@ -240,7 +241,7 @@ export default function QuestionPage() {
                 showExpected={status === "showingResults"}
                 reactiveTables={reactiveTables}
                 registerFieldId={(fieldId) => registerFieldIdForView(viewName, fieldId)}
-                openLinksInNewTab={type === "regex"}
+                openLinksInNewTab={isExternalExercise}
               />
 
               <button
@@ -287,7 +288,7 @@ export default function QuestionPage() {
                   evaluationResults={{}}
                   userInput={{}}
                   showExpected={true}
-                  openLinksInNewTab={type === "regex"}
+                  openLinksInNewTab={isExternalExercise}
                 />
               </div>
             </div>

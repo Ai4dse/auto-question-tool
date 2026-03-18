@@ -215,6 +215,34 @@ QUESTION_CONFIG = {
         },
     },
 
+    "xpath_xquery": {
+        "class_path": "app.question_types.xpath_xquery.XPathXQueryQuestion",
+        "metadata": {
+            "title": "XPath/XQuery",
+            "week": 5,
+            "desc": "Löse XPath- und XQuery-Aufgaben über externe Tools.",
+            "tags": ["xml", "xpath", "xquery"],
+            "settings": {
+                "mode": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["xpath", "xquery"],
+                    "default": "xpath",
+                },
+                "difficulty": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["easy", "medium", "hard"],
+                    "default": "easy",
+                },
+                "seed": {
+                    "kind": "number",
+                    "visibility": "hidden",
+                },
+            },
+        },
+    },
+
     "stable_marriage": {
         "class_path": "app.question_types.stable_marriage.StableMarriageQuestion",
         "metadata": {
