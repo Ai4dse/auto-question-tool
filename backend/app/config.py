@@ -447,6 +447,12 @@ QUESTION_CONFIG = {
                     "options": ["easy", "medium", "hard"],
                     "default": "easy",
                 },
+                "question": {
+                    "kind": "select",
+                    "visibility": "hidden",
+                    "options": ["random", "universitäts_schema","firmen_schema(weak_entity)"],
+                    "default": "random",
+                },
                 "seed": {
                     "kind": "number",
                     "visibility": "hidden",
@@ -455,6 +461,39 @@ QUESTION_CONFIG = {
                     "kind": "select",
                     "visibility": "hidden",
                     "options": ["min_max", "cardinality"],
+                },
+            },
+        },
+    },
+    "er_schema": {
+        "class_path": "app.question_types.er_schema.ERSchema",
+        "metadata": {
+            "title": "er_schema",
+            "week": 3,
+            "desc": "Jaccard similarity between query and documents",
+            "tags": ["matching", "algorithms"],
+            "settings": {
+                "mode": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["steps", "exam"],
+                    "default": "steps",
+                },
+                "difficulty": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["easy", "medium", "hard"],
+                    "default": "easy",
+                },
+                "question": {
+                    "kind": "select",
+                    "visibility": "hidden",
+                    "options": ["random", "universitäts_schema","firmen_schema(weak_entity)"],
+                    "default": "random",
+                },
+                "seed": {
+                    "kind": "number",
+                    "visibility": "hidden",
                 },
             },
         },

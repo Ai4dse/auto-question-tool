@@ -1575,7 +1575,7 @@ export default function LayoutRenderer({
         );
       case "ER_Diagram_Builder":
       case "er_diagram_builder":
-        return <ERDiagramBuilder el={el} idx={idx} onChange={onChange} />;
+        return <ERDiagramBuilder key={el.id} el={el} idx={idx} onChange={onChange} />;
       case "Text":
       case "text": {
         const rawMarkdown = el.value ?? el.content ?? "";

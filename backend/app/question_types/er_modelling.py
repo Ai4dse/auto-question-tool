@@ -18,20 +18,24 @@ with open(path, "r", encoding="utf-8") as f:
 
 class ERModelling:
 
-    def __init__(self, seed=None, difficulty="easy", mode="steps", card_type="min_max", **kwargs):
+    def __init__(self, seed=None, difficulty="easy", mode="steps", card_type="min_max", question="random", **kwargs):
         print(kwargs)
 
         self.difficulty = str(difficulty).lower()
         config = DIFFICULTY_SETTINGS.get(self.difficulty, DIFFICULTY_SETTINGS["easy"])
 
+        self.question = str(question).lower()
         self.mode = mode.lower()
         self.seed = int(seed) if seed is not None else random.randint(1, 999999)
         random.seed(self.seed)
 
-        self.card_type = card_type
-        self.task = random.choice(raw)
-        self.nodes = self.task["nodes"]
-        self.edges = self.task["edges"]
+        self.card_type = str(card_type).lower()
+        if self.question == "random":
+            self.task = random.choice(raw)
+        else:
+            self.task = next(t for t in raw if self.question == t["id"])
+        self.nodes = self.task[self.card_type]["nodes"]
+        self.edges = self.task[self.card_type]["edges"]
         self.nodes_altered = []
         self.edges_altered = []
         if self.difficulty == "easy":
@@ -187,6 +191,27 @@ class ERModelling:
 
     def _generate_steps_layout(self):
         base = {}
+        min_max =   (
+                    "### Schritt 4: Kardinalitäten (Min-Max-Notation)\n"
+                    "Bestimme für jede Beziehung die minimale und maximale Teilnahme jeder Entität:\n"
+                    "- Notation: $$min..max$$\n"
+                    "- Beispiel: $$0..1$$, $$1..1$$, $$0..*$$, $$1..*$$\n\n"
+                    "Die erste Zahl gibt an, wie oft eine Entität **mindestens** an der Beziehung teilnimmt,\n"
+                    "die zweite Zahl beschreibt die **maximale** Anzahl an Teilnahmen.\n\n"
+                    "Trage die entsprechenden $$min..max$$-Werte an beiden Seiten der Beziehung ein.\n\n"
+                    )
+        cardinality = (
+                    "### Schritt 4: Kardinalitäten\n"
+                    "Bestimme für jede Beziehung die Kardinalität:\n"
+                    "- $$1:1$$\n"
+                    "- $$1:N$$\n"
+                    "- $$M:N$$\n\n"
+                    "Trage die Kardinalitäten an beiden Seiten der Beziehung ein.\n\n"
+                    )
+        if self.card_type == "min_max":
+            text = min_max
+        else:
+            text = cardinality
         base["view1"] = [
                 {
                     "type": "Text",
@@ -210,12 +235,7 @@ class ERModelling:
                         "- Jede Entität kann an beliebig vielen unterschiedlichen Relationen Teilnehmen\n"
                         "- Eine Relation kann bis zu **zweimal** mit der selben entität verbunden werden\n"
                         "- Verwende sinnvolle **Beziehungsnamen (Verben)**\n\n"
-                        "### Schritt 4: Kardinalitäten\n"
-                        "Bestimme für jede Beziehung die Kardinalität:\n"
-                        "- $$1:1$$\n"
-                        "- $$1:N$$\n"
-                        "- $$M:N$$\n\n"
-                        "Trage die Kardinalitäten an beiden Seiten der Beziehung ein.\n\n"
+                        f"{text}"
                         "### Schritt 5: Beziehungsattribute\n"
                         "Beziehungen können ebenfalls eigene Attribute besitzen (z. B. Datum, Rolle).\n\n"
                         "### Hinweise\n"
@@ -238,14 +258,18 @@ class ERModelling:
                 },
 
         ]
-        base["view2"] = [
+        base["lastView"] = [
+                {
+                    "type": "Text",
+                    "content": "### Musterlösung:\n\n",
+                },
                 {
                     "type": "ER_Diagram_Builder",
                     "id": "free_er_builder",
                     "title": "Build your own ER diagram",
                     "initial_diagram": {
-                        "nodes": self.task["nodes"],
-                        "edges": self.task["edges"],
+                        "nodes": self.nodes,
+                        "edges": self.edges,
                     }
                 },
         ]

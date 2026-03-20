@@ -194,8 +194,15 @@ export default function QuestionPage() {
       .then((res) => res.json())
       .then((data) => {
         const filteredResults = filterResultsForView(data.results, viewName);
+        const isEmpty =
+          !filteredResults || Object.keys(filteredResults).length === 0;
+
         setViewResults((prev) => ({ ...prev, [viewName]: filteredResults }));
-        setViewStatus((prev) => ({ ...prev, [viewName]: "evaluated" }));
+
+        setViewStatus((prev) => ({
+          ...prev,
+          [viewName]: isEmpty ? "showingResults" : "evaluated",
+        }));
       })
       .catch((err) => console.error("Evaluation error:", err));
   };
