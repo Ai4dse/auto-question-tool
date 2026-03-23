@@ -25,15 +25,14 @@ class KMeansQuestion:
         self.num_centroids = config["num_centroids"]
         self.iterations = config["max_iter"]
 
-        self.seed = seed or random.randint(1, 999999)
-        random.seed(self.seed)
-        np.random.seed(self.seed)
+        self.seed = int(seed) if seed is not None else random.randint(1, 999999)
+        self.rng = random.Random(self.seed)
 
         all_coords = set()
         while len(all_coords) < self.num_points + self.num_centroids:
-            all_coords.add((random.randint(0, 10), random.randint(0, 10)))
+            all_coords.add((self.rng.randint(0, 10), self.rng.randint(0, 10)))
 
-        all_coords = list(all_coords)
+        all_coords = sorted(all_coords)
 
         p_coords = all_coords[:self.num_points]
         c_coords = all_coords[self.num_points:]
@@ -130,7 +129,7 @@ class KMeansQuestion:
             else:
                 # Rerun K-means with new random centroids
                 self.initial_centroids = [
-                    Point(f"C{j}", random.randint(0, 10), random.randint(0, 10))
+                    Point(f"C{j}", self.rng.randint(0, 10), self.rng.randint(0, 10))
                     for j in range(self.num_centroids)
                 ]
 

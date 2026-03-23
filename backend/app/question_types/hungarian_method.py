@@ -20,21 +20,21 @@ class HungarianMethodQuestion:
         self.difficulty = difficulty.lower()
         config = DIFFICULTY_SETTINGS.get(self.difficulty, DIFFICULTY_SETTINGS["easy"])
 
-        self.seed = seed or random.randint(1, 999999)
-        random.seed(self.seed)
-        self.matrix_size = random.choice(config["matrix_size"])
-        self.steps = random.choice(config["steps"])
-        self.discrete = random.choice(config["discrete"])
+        self.seed = int(seed) if seed is not None else random.randint(1, 999999)
+        self.rng = random.Random(self.seed)
+        self.matrix_size = self.rng.choice(config["matrix_size"])
+        self.steps = self.rng.choice(config["steps"])
+        self.discrete = self.rng.choice(config["discrete"])
 
         self.mode = (mode or "steps").lower()
         if self.mode not in {"steps", "exam"}:
             self.mode = "steps"
 
-        self.pairs = random.sample(synonym_pairs, self.matrix_size)
+        self.pairs = self.rng.sample(synonym_pairs, self.matrix_size)
         self.schema_a = [a for a, _ in self.pairs]
         self.schema_b = [b for _, b in self.pairs]
-        random.shuffle(self.schema_a)
-        random.shuffle(self.schema_b)
+        self.rng.shuffle(self.schema_a)
+        self.rng.shuffle(self.schema_b)
 
         self.numbers = []
         self.step1_matrix = tuple()

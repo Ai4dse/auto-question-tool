@@ -27,11 +27,11 @@ class ERModelling:
         self.question = str(question).lower()
         self.mode = mode.lower()
         self.seed = int(seed) if seed is not None else random.randint(1, 999999)
-        random.seed(self.seed)
+        self.rng = random.Random(self.seed)
 
         self.card_type = str(card_type).lower()
         if self.question == "random":
-            self.task = random.choice(raw)
+            self.task = self.rng.choice(raw)
         else:
             self.task = next(t for t in raw if self.question == t["id"])
         self.nodes = self.task[self.card_type]["nodes"]
@@ -121,7 +121,7 @@ class ERModelling:
             # If the original core graph has isolated nodes, they cannot be part of a
             # connected multi-node result. Prefer starting from a node with neighbors.
             possible_starts = [nid for nid in core_ids if adjacency[nid]]
-            start = random.choice(possible_starts if possible_starts else core_ids)
+            start = self.rng.choice(possible_starts if possible_starts else core_ids)
 
             target_count = max(
                 min_core_nodes,
@@ -133,7 +133,7 @@ class ERModelling:
             frontier = set(adjacency[start])
 
             while len(kept_core_ids) < target_count and frontier:
-                nxt = random.choice(list(frontier))
+                nxt = self.rng.choice(sorted(frontier))
                 kept_core_ids.add(nxt)
 
                 frontier.discard(nxt)
@@ -170,7 +170,7 @@ class ERModelling:
         # Randomly keep some of those attribute edges
         kept_attribute_edges = []
         for e in possible_attribute_edges:
-            if random.random() < keep_attribute_ratio:
+            if self.rng.random() < keep_attribute_ratio:
                 kept_attribute_edges.append(e)
 
         # Attribute nodes must only exist if their edge exists

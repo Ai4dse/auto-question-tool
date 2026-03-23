@@ -29,21 +29,21 @@ class DBSCANQuestion:
 
         self.num_points = config["num_points"]
 
-        self.seed = seed or random.randint(1, 999999)
-        random.seed(self.seed)
-        np.random.seed(self.seed)
+        self.seed = int(seed) if seed is not None else random.randint(1, 999999)
+        self.rng = random.Random(self.seed)
 
         coords = set()
         while len(coords) < self.num_points:
-            coords.add((random.randint(0, 10), random.randint(0, 10)))
-        self.points = [Point(f"P{i}", x, y) for i, (x, y) in enumerate(coords)]
+            coords.add((self.rng.randint(0, 10), self.rng.randint(0, 10)))
+        coords_list = sorted(coords)
+        self.points = [Point(f"P{i}", x, y) for i, (x, y) in enumerate(coords_list)]
 
-        self.min_pts = random.randint(2, int(self.num_points/2))
+        self.min_pts = self.rng.randint(2, int(self.num_points/2))
         self.average_kth_neighbor_distance()
         self._run_dbscan()
 
     def average_kth_neighbor_distance(self):
-        k = random.randint(2, self.num_points)
+        k = self.rng.randint(2, self.num_points)
         k=2
         points = self.points
         X = np.array([(p.x, p.y) for p in points], dtype=float)
