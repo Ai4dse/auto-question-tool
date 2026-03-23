@@ -12,7 +12,6 @@ DIFFICULTY_SETTINGS = {
 class SigmaRule:
 
     def __init__(self, seed=None, difficulty="easy", mode="steps", dimensions = "random", num_points = "random", **kwargs):
-        print(kwargs)
         self.difficulty = str(difficulty).lower()
         config = DIFFICULTY_SETTINGS.get(self.difficulty, DIFFICULTY_SETTINGS["easy"])
 

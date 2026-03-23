@@ -253,21 +253,13 @@ def parse_rename_attribute(statement):
     return statement
 
 def parse_statement(statement, relations):
-    print(statement)
     statement = parse_relations(statement, relations)
-    print('parse relations: ', statement)
     statement = parse_rename_relation(statement)
-    print('parse rename relation operation: ', statement)
     statement = parse_rename_attribute(statement)
-    print('parse rename attribute operation: ', statement)
     statement = parse_selection(statement)
-    print('parse select operation: ', statement)
     statement = parse_projection(statement)
-    print('parse project operation: ', statement)
     statement = parse_join(statement)
-    print('parse join operation: ', statement)
     statement = parse_diff(statement)
-    print('parse diff operation: ', statement)
     return statement
 
 RA_FUNCS = {

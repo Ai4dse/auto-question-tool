@@ -1,8 +1,9 @@
 import json
 import random
+from pathlib import Path
 
 
-EXERCISES_PATH = "./app/resources/regex/exercises.json"
+EXERCISES_PATH = Path(__file__).resolve().parents[1] / "resources" / "regex" / "exercises.json"
 
 
 class RegexQuestion:

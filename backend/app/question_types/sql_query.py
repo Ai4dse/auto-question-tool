@@ -1,8 +1,8 @@
 import csv
 import json
-import os
 import random
 import re
+from pathlib import Path
 
 from app.question_types.sql_query_helper import (
     execute_for_compare,
@@ -10,8 +10,9 @@ from app.question_types.sql_query_helper import (
 )
 
 
-EXERCISES_PATH = "./app/resources/sql/exercises.json"
-EXERCISE_RESULTS_DIR = "./app/resources/sql"
+RESOURCES_DIR = Path(__file__).resolve().parents[1] / "resources" / "sql"
+EXERCISES_PATH = RESOURCES_DIR / "exercises.json"
+EXERCISE_RESULTS_DIR = RESOURCES_DIR
 
 
 class SqlQueryQuestion:
@@ -49,7 +50,7 @@ class SqlQueryQuestion:
         return bool(re.search(r"\border\s+by\b", str(answer_sql), flags=re.IGNORECASE))
 
     def _load_expected_result(self, result_path: str, keep_order: bool = False):
-        csv_path = os.path.join(EXERCISE_RESULTS_DIR, result_path)
+        csv_path = EXERCISE_RESULTS_DIR / result_path
         with open(csv_path, "r", encoding="utf-8", newline="") as f:
             reader = csv.reader(f)
             rows = list(reader)

@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Query
+from mongoengine.errors import NotUniqueError
 from passlib.context import CryptContext
 from app.models.user_model import User
 
@@ -27,7 +28,10 @@ def create_user(
         display_name=display_name,
         must_change_password=True
     )
-    user.save()
+    try:
+        user.save()
+    except NotUniqueError:
+        raise HTTPException(status_code=409, detail="User already exists")
     return {"message": "User created", "username": username}
 
 

@@ -1,8 +1,9 @@
 import json
 import random
+from pathlib import Path
 
 
-EXERCISES_PATH = "./app/resources/xpath_xquery/exercises.json"
+EXERCISES_PATH = Path(__file__).resolve().parents[1] / "resources" / "xpath_xquery" / "exercises.json"
 
 
 class XPathXQueryQuestion:

@@ -1,8 +1,12 @@
 import random
+from pathlib import Path
 import numpy as np
 import pandas as pd
 import json
 from app.question_types.relational_algebra_helper import load_schema, execute_relational_algebra
+
+APP_DIR = Path(__file__).resolve().parents[1]
+RESOURCES_DIR = APP_DIR / "resources"
 
 DIFFICULTY_SETTINGS = {
     "easy": {"min": 1, "max": 10 },
@@ -12,17 +16,18 @@ DIFFICULTY_SETTINGS = {
 
 class RelationalAlgebra:
     def __init__(self, seed=None, difficulty="easy", exercise_name=None):
-        self.difficulty = difficulty.lower()
+        self.difficulty = str(difficulty).lower()
         config = DIFFICULTY_SETTINGS.get(self.difficulty, DIFFICULTY_SETTINGS["easy"])
 
-        self.seed = seed or random.randint(1, 999999)
+        self.seed = int(seed) if seed is not None else random.randint(1, 999999)
         self.exercise_name = str(exercise_name) if exercise_name is not None else None
         self.rng = random.Random(self.seed)
         self.np_rng = np.random.default_rng(self.seed)
 
         #Aufgabenauswahl
-        with open('./app/resources/relational_algebra_exercises/exercises.json', 'r') as f:
-            exercises = json.load(f)['exercises']
+        exercises_path = RESOURCES_DIR / "relational_algebra_exercises" / "exercises.json"
+        with open(exercises_path, "r", encoding="utf-8") as f:
+            exercises = json.load(f)["exercises"]
         
         filtered = [ex for ex in exercises if ex["difficulty"] == self.difficulty]
         if not filtered:
@@ -38,10 +43,11 @@ class RelationalAlgebra:
         else:
             self.exercise = self.rng.choice(filtered)
 
-        _, dfs = load_schema(f'./app/resources/schemas/{self.exercise["schema"]}/')
-        #_, dfs = load_schema(f'./app/resouces/schemas/university')
+        schema_path = RESOURCES_DIR / "schemas" / self.exercise["schema"]
+        _, dfs = load_schema(str(schema_path))
         self.dfs = dfs
-        df = pd.read_csv(f'./app/resources/relational_algebra_exercises/{self.exercise['result_path']}', index_col=0)
+        result_path = RESOURCES_DIR / "relational_algebra_exercises" / self.exercise["result_path"]
+        df = pd.read_csv(result_path, index_col=0)
         self.exercise_res = df
 
     def generate(self):
@@ -152,10 +158,7 @@ class RelationalAlgebra:
             }
 
         try:
-            print(f'Statement: {statement}')
             res_df, tree = execute_relational_algebra(self.dfs, statement)
-            print(tree)
-            # Assuming you change execute_relational_algebra to return 3 things
 
             preview_rows = res_df.head(10).values.tolist() if res_df is not None else []
 

@@ -1,10 +1,12 @@
 from datetime import date, datetime
-from fastapi import FastAPI, Request, Query, HTTPException
+from fastapi import FastAPI, Request, HTTPException
+from fastapi.concurrency import run_in_threadpool
 from fastapi.staticfiles import StaticFiles
 from mongoengine import connect
 from fastapi.middleware.cors import CORSMiddleware
 from .generator_loader import load_question_generators
 import os
+from pathlib import Path
 from zoneinfo import ZoneInfo
 from app.routes.auth import router as auth_router
 from .config import QUESTION_CONFIG, WEEK_CONFIG
@@ -12,9 +14,10 @@ import inspect
 from typing import Any, Dict
 
 app = FastAPI()
+APP_DIR = Path(__file__).resolve().parent
 
 app.include_router(auth_router)
-app.mount("/resources", StaticFiles(directory="app/resources"), name="resources")
+app.mount("/resources", StaticFiles(directory=str(APP_DIR / "resources")), name="resources")
 
 MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017/user_data")
 RELEASE_TIMEZONE = ZoneInfo("Europe/Berlin")
@@ -188,7 +191,7 @@ async def evaluate_question(type_name: str, request: Request):
         raise HTTPException(status_code=400, detail=str(e))
 
     try:
-        result = q.evaluate(user_input)
+        result = await run_in_threadpool(q.evaluate, user_input)
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -223,4 +226,4 @@ async def preview_question(type_name: str, request: Request):
     if not hasattr(q, "preview"):
         return {"columns": [], "rows": [], "error": "Preview not supported"}
 
-    return q.preview(statement)
+    return await run_in_threadpool(q.preview, statement)
