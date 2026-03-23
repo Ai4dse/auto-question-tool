@@ -8,7 +8,7 @@ export default function ChangePassword({ username, onPasswordChanged }) {
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:8000";
+  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:9533";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
