@@ -1,5 +1,6 @@
 import { useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { API_URL } from "../api";
 
 export default function ChangePassword({ username, onPasswordChanged }) {
   const [oldPassword, setOldPassword] = useState("");
@@ -7,8 +8,6 @@ export default function ChangePassword({ username, onPasswordChanged }) {
   const [message, setMessage] = useState("");
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
-
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:9533";
 
   const handleSubmit = async (e) => {
     e.preventDefault();

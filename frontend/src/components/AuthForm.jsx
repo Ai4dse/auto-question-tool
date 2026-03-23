@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
+import { API_URL } from "../api";
 
 export default function AuthForm({ onLogin }) {
   const [username, setUsername] = useState("");
@@ -8,8 +9,6 @@ export default function AuthForm({ onLogin }) {
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
-
-  const API_URL = import.meta.env.VITE_API_URL || "http://localhost:9533";
 
   const handleSubmit = async (e) => {
     e.preventDefault();
