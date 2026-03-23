@@ -23,7 +23,7 @@ class IRMeasuresJaccard:
         self.mode = str(mode).lower()
         self.measure = "jaccard"
         self.seed = int(seed) if seed is not None else random.randint(1, 999999)
-        random.seed(self.seed)
+        self.rng = random.Random(self.seed)
 
         settings = DIFFICULTY_SETTINGS[self.difficulty]
         self.docs_per_topic = settings["docs_per_topic"]
@@ -47,15 +47,15 @@ class IRMeasuresJaccard:
         for topic, docs in self.corpus.items():
             if len(docs) < self.docs_per_topic:
                 raise ValueError(f"Not enough docs in topic '{topic}' for docs_per_topic={self.docs_per_topic}")
-            self.selected_docs.extend(random.sample(docs, k=self.docs_per_topic))
-        random.shuffle(self.selected_docs)
+            self.selected_docs.extend(self.rng.sample(docs, k=self.docs_per_topic))
+        self.rng.shuffle(self.selected_docs)
 
         pool = [t for d in self.selected_docs for t in d["tokens"]]
         unique_pool = list(dict.fromkeys(pool))
         self.query = (
-            random.sample(unique_pool, k=self.query_terms)
+            self.rng.sample(unique_pool, k=self.query_terms)
             if len(unique_pool) >= self.query_terms
-            else random.choices(pool, k=self.query_terms)
+            else self.rng.choices(pool, k=self.query_terms)
         )
 
         self.selected_docs.sort(key=lambda d: int(re.search(r"\d+", d["nr"]).group(0)))

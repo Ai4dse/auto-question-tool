@@ -18,7 +18,7 @@ class DummyQ:
 
         self.mode = mode.lower()
         self.seed = int(seed) if seed is not None else random.randint(1, 999999)
-        random.seed(self.seed)
+        self.rng = random.Random(self.seed)
 
         self._dummy_solver()
 

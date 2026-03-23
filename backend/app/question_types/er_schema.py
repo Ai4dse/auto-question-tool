@@ -26,10 +26,10 @@ class ERSchema:
 
         self.mode = mode.lower()
         self.seed = int(seed) if seed is not None else random.randint(1, 999999)
-        random.seed(self.seed)
+        self.rng = random.Random(self.seed)
 
         if self.question == "random":
-            self.task = random.choice(raw)
+            self.task = self.rng.choice(raw)
         else:
             self.task = next(t for t in raw if self.question == t["id"])
         self.nodes = self.task["cardinality"]["nodes"]

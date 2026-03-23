@@ -18,7 +18,7 @@ class SigmaRule:
 
         self.mode = mode.lower()
         self.seed = int(seed) if seed is not None else random.randint(1, 999999)
-        random.seed(self.seed)
+        self.rng = random.Random(self.seed)
 
         self.dimensions = int(dimensions) if dimensions != "random" else DIFFICULTY_SETTINGS[self.difficulty]["dimensions"]
         self.num_points = int(num_points) if num_points != "random" else DIFFICULTY_SETTINGS[self.difficulty]["num_points"]
@@ -26,13 +26,13 @@ class SigmaRule:
         max_c = 2 * self.num_points
         coords = set()
         while len(coords) < self.num_points:
-            coords.add((random.randint(min_c, max_c), random.randint(min_c, max_c)))
+            coords.add((self.rng.randint(min_c, max_c), self.rng.randint(min_c, max_c)))
         coords_list = sorted(coords)  # e.g. sort by x then y
         self.points = [Point(f"P{i}", x, y) for i, (x, y) in enumerate(coords_list)]
 
         self.sorted_points_x = sorted(self.points, key=lambda p: p.x)
         self.sorted_points_y = sorted(self.points, key=lambda p: p.y)
-        self.alpha = round(random.uniform(0.2, 1.0), 1)
+        self.alpha = round(self.rng.uniform(0.2, 1.0), 1)
         self.results_x = {
         "mean_x" : 0,
         "stddev_x" : 0,
