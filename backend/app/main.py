@@ -177,7 +177,7 @@ async def evaluate_question(type_name: str, request: Request):
     base_config = question_generators[type_name]
     QuestionClass = base_config["class"]
 
-    user_input = await request.json()
+    user_input = await request.json() 
 
     raw_kwargs = query_params_to_kwargs(request)
     kwargs = filter_kwargs_for_class(QuestionClass, raw_kwargs)
