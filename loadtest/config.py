@@ -3,7 +3,7 @@ import os
 
 API_PREFIX = os.getenv("LOADTEST_API_PREFIX", "/api")
 
-DEFAULT_HOST = os.getenv("LOADTEST_HOST", "http://141.76.47.6:5173")
+DEFAULT_HOST = os.getenv("LOADTEST_HOST", "http://141.76.47.6:8440")
 
 DEFAULT_USERS = int(os.getenv("LOADTEST_USERS", "50"))
 DEFAULT_SPAWN_RATE = float(os.getenv("LOADTEST_SPAWN_RATE", "5"))

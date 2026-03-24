@@ -4,7 +4,7 @@ This directory contains a reusable Locust setup that simulates concurrent learne
 
 Default target host:
 
-- `http://141.76.47.6:5173`
+- `http://141.76.47.6:8440`
 - API prefix: `/api`
 - Login user: `alice`
 
@@ -65,7 +65,7 @@ python -m pip install -r loadtest/requirements.txt
 
 ```bash
 locust -f loadtest/locustfile.py \
-  --host http://141.76.47.6:5173 \
+  --host http://141.76.47.6:8440 \
   --users 50 \
   --spawn-rate 5 \
   --run-time 10m \
@@ -76,14 +76,14 @@ locust -f loadtest/locustfile.py \
 ## Optional web UI
 
 ```bash
-locust -f loadtest/locustfile.py --host http://141.76.47.6:5173
+locust -f loadtest/locustfile.py --host http://141.76.47.6:8440
 ```
 
 Then open `http://localhost:8089`.
 
 ## Environment overrides
 
-- `LOADTEST_HOST` (default `http://141.76.47.6:5173`)
+- `LOADTEST_HOST` (default `http://141.76.47.6:8440`)
 - `LOADTEST_API_PREFIX` (default `/api`)
 - `LOADTEST_USERNAME` (default `alice`)
 - `LOADTEST_PASSWORD` (default `test`)

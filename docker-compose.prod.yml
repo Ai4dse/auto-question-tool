@@ -22,13 +22,13 @@ services:
       target: prod
     command: ["nginx", "-g", "daemon off;"]
     ports:
-      - "5173:5173"
+      - "8440:8440"
     volumes: !reset []
     stdin_open: false
     tty: false
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5173"]
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:8440"]
       interval: 15s
       timeout: 5s
       retries: 10
