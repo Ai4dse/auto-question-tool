@@ -49,7 +49,7 @@ The test runtime chooses between 10 weighted paths, each path containing concret
    - `GET /api/question/xpath_xquery?...`
 
 9. `auth_login_success`
-   - `POST /api/auth/login?username=alice&password=test`
+   - `POST /api/auth/login` body: `{"username":"alice","password":"test"}`
 
 10. `negative_resilience`
    - `GET /api/question/not_a_real_type` (expected `404`)

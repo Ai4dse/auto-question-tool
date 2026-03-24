@@ -16,10 +16,17 @@ export default function ChangePassword({ username, onPasswordChanged }) {
     setLoading(true);
 
     try {
-      const res = await fetch(
-        `${API_URL}/auth/change_password?username=${username}&old_password=${oldPassword}&new_password=${newPassword}`,
-        { method: "POST" }
-      );
+      const res = await fetch(`${API_URL}/auth/change_password`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          username,
+          old_password: oldPassword,
+          new_password: newPassword,
+        }),
+      });
       const data = await res.json();
 
       if (res.ok) {

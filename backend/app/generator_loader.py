@@ -1,8 +1,15 @@
 from importlib import import_module
+import logging
+
 from .config import QUESTION_CONFIG
 
-def load_question_generators():
+
+logger = logging.getLogger(__name__)
+
+
+def load_question_generators(strict: bool = False):
     generators = {}
+    errors = []
 
     for type_name, config in QUESTION_CONFIG.items():
         try:
@@ -16,7 +23,11 @@ def load_question_generators():
             }
 
         except Exception as e:
-            print(f"❌ Failed to load generator '{type_name}': {e}")
+            errors.append((type_name, str(e)))
+            logger.exception("Failed to load generator", extra={"type_name": type_name})
+
+    if strict and errors:
+        failed = ", ".join(type_name for type_name, _ in errors)
+        raise RuntimeError(f"Failed to load question generators: {failed}")
 
     return generators
-

@@ -100,12 +100,10 @@ class DBSCANQuestion:
             cluster_label = 0
 
             if (not self.core_mask[idx]) or visited[idx]:
-                print("check")
                 continue
             visited[idx] = True
             neigh_mask = D[idx] <= self.cluster_range
             neigh_idx  = np.flatnonzero(neigh_mask)
-            print(neigh_idx)
             for k in neigh_idx:
                 if (self.core_mask[k] == True) and (self.cluster[k] != 0):
                     cluster_label =  self.cluster[k]
@@ -116,7 +114,6 @@ class DBSCANQuestion:
                  self.cluster[k] = cluster_label
 
             idx += 1
-        print(self.cluster)
 
 
     # ---------------------------------------------------------------------
@@ -201,14 +198,12 @@ class DBSCANQuestion:
         ]
 
         base["view1"] = view0 + base["view1"]
-        print(base)
         return base
 
     # ---------------------------------------------------------------------
     # Evaluation
     # ---------------------------------------------------------------------
     def evaluate(self, user_input):
-        print(user_input)
         results = {}
         for id in range(0,self.num_points):
             value = False
@@ -223,9 +218,7 @@ class DBSCANQuestion:
             elif self.border_mask[id]: expected = self.border_label
             elif self.noise_mask[id]: expected = self.noise_label
             else:
-                print(f"invalid input on field{id}: {user_input.get(id)}")
                 expected = "Undefined"
             results[id] = {"correct": bool(value),
                         "expected": expected}
-        print(results)
         return results

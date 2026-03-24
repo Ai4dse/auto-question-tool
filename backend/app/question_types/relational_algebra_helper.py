@@ -1,8 +1,9 @@
 import os
 import re
 import json
-import pandas as pd
 import ast
+
+import pandas as pd
 
 def load_schema(schema_folder: str, prefix_attributes: bool = True):
     schema_path = os.path.join(schema_folder, "schema.json")
@@ -73,7 +74,9 @@ def selection(df, predicate):
     predicate = parse_predicate(predicate)
     predicate = prepare_predicate(df, predicate)
     try:
-        mask = eval(predicate, {"df": df})
+        parsed = ast.parse(predicate, mode="eval")
+        _validate_predicate_ast(parsed)
+        mask = eval(compile(parsed, "<relalg-predicate>", "eval"), {"__builtins__": {}}, {"df": df})
     except Exception as e:
         raise ValueError(
             f'Ungültiges Selektionsprädikat: "{predicate}". Bitte prüfen Sie die Schreibweise und die verwendeten Attribute.'
@@ -400,6 +403,81 @@ def build_tree_from_statement(parsed_statement: str) -> dict:
     expr = ast.parse(parsed_statement, mode="eval").body
     return build_tree_from_ast(expr)
 
+
+def _validate_predicate_ast(node: ast.AST) -> None:
+    allowed_nodes = (
+        ast.Expression,
+        ast.BinOp,
+        ast.BitAnd,
+        ast.BitOr,
+        ast.UnaryOp,
+        ast.Invert,
+        ast.Compare,
+        ast.Name,
+        ast.Load,
+        ast.Subscript,
+        ast.Constant,
+        ast.Eq,
+        ast.NotEq,
+        ast.Lt,
+        ast.LtE,
+        ast.Gt,
+        ast.GtE,
+    )
+
+    for child in ast.walk(node):
+        if not isinstance(child, allowed_nodes):
+            raise ValueError("Ungültige Selektionsausdrücke sind nicht erlaubt.")
+
+        if isinstance(child, ast.Name) and child.id != "df":
+            raise ValueError("Ungültige Selektionsausdrücke sind nicht erlaubt.")
+
+        if isinstance(child, ast.Subscript):
+            if not (isinstance(child.value, ast.Name) and child.value.id == "df"):
+                raise ValueError("Ungültige Selektionsausdrücke sind nicht erlaubt.")
+            if not (isinstance(child.slice, ast.Constant) and isinstance(child.slice.value, str)):
+                raise ValueError("Ungültige Selektionsausdrücke sind nicht erlaubt.")
+
+
+def _validate_ra_ast(node: ast.AST, max_nodes: int = 800) -> None:
+    allowed_func_names = RA_FUNCS
+    allowed_name_nodes = set(allowed_func_names) | {"dfs"}
+    allowed_nodes = (
+        ast.Expression,
+        ast.Call,
+        ast.Name,
+        ast.Load,
+        ast.Constant,
+        ast.List,
+        ast.Tuple,
+        ast.Subscript,
+    )
+
+    node_count = 0
+    for child in ast.walk(node):
+        node_count += 1
+        if node_count > max_nodes:
+            raise ValueError("Der Ausdruck ist zu komplex.")
+
+        if not isinstance(child, allowed_nodes):
+            raise ValueError("Ungültiger Ausdruck.")
+
+        if isinstance(child, ast.Call):
+            if not isinstance(child.func, ast.Name) or child.func.id not in allowed_func_names:
+                raise ValueError("Ungültiger Operator im Ausdruck.")
+
+        if isinstance(child, ast.Name) and child.id not in allowed_name_nodes:
+            raise ValueError("Ungültiger Ausdruck.")
+
+        if isinstance(child, ast.Subscript):
+            if not (isinstance(child.value, ast.Name) and child.value.id == "dfs"):
+                raise ValueError("Ungültiger Ausdruck.")
+            if not (isinstance(child.slice, ast.Constant) and isinstance(child.slice.value, str)):
+                raise ValueError("Ungültiger Ausdruck.")
+
+        if isinstance(child, ast.Constant) and not isinstance(child.value, str):
+            raise ValueError("Ungültiger Ausdruck.")
+
 def normalize(s):
     s = restore_ops(s)
     s = disambiguate_rename(s)
@@ -445,8 +523,11 @@ def execute_relational_algebra(dfs, statement):
     try:
         statement = normalize(statement)
         statement = parse_statement(statement, relations)
+        expression_ast = ast.parse(statement, mode="eval")
+        _validate_ra_ast(expression_ast)
         tree = build_tree_from_statement(statement)
-        result = eval(statement, {"__builtins__": {}}, env)
+        compiled = compile(expression_ast, "<relalg-expression>", "eval")
+        result = eval(compiled, {"__builtins__": {}}, env)
     except ValueError:
         raise # schon "schöne" Fehler, einfach durchreichen
     except Exception as e:

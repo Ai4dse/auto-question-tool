@@ -4,9 +4,11 @@ import random
 import re
 from pathlib import Path
 
+from app.errors import DependencyUnavailableError
 from app.question_types.sql_query_helper import (
     execute_for_compare,
     execute_read_only_query,
+    SqlDependencyUnavailableError,
 )
 
 
@@ -121,7 +123,9 @@ class SqlQueryQuestion:
                 len(user_cols) == self.expected_column_count
                 and normalized_user_rows == self.expected_rows
             )
-        except Exception:
+        except SqlDependencyUnavailableError as e:
+            raise DependencyUnavailableError("SQL backend unavailable") from e
+        except ValueError:
             correct = False
 
         return {
@@ -148,6 +152,8 @@ class SqlQueryQuestion:
                 "total_rows": result.get("total_rows", len(result["rows"])),
                 "error": None,
             }
+        except SqlDependencyUnavailableError as e:
+            raise DependencyUnavailableError("SQL backend unavailable") from e
         except Exception as e:
             return {
                 "columns": [],

@@ -16,10 +16,13 @@ export default function AuthForm({ onLogin }) {
     setLoading(true);
 
     try {
-      const res = await fetch(
-        `${API_URL}/auth/login?username=${username}&password=${password}`,
-        { method: "POST" }
-      );
+      const res = await fetch(`${API_URL}/auth/login`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({ username, password }),
+      });
       const data = await res.json();
 
       if (res.ok) {

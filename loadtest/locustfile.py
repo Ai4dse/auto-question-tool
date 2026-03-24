@@ -156,8 +156,8 @@ class AppUser(HttpUser):
     def login(self, name: str | None = None) -> dict[str, Any] | list[Any] | None:
         return self.api_post(
             "/auth/login",
-            payload={},
-            params={"username": AUTH_USERNAME, "password": AUTH_PASSWORD},
+            payload={"username": AUTH_USERNAME, "password": AUTH_PASSWORD},
+            params=None,
             expected_statuses=(200,),
             name=name,
         )
