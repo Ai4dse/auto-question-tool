@@ -268,5 +268,4 @@ class KMeansQuestion:
                     "correct": user_input.get(cluster_field, "").replace(" ", "") == expected_cluster,
                     "expected": expected_cluster
                 }
-        print(results)
         return results

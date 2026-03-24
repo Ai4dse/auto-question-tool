@@ -1,32 +1,107 @@
-from datetime import date, datetime
-from fastapi import FastAPI, Request, HTTPException
-from fastapi.concurrency import run_in_threadpool
-from fastapi.staticfiles import StaticFiles
-from mongoengine import connect
-from fastapi.middleware.cors import CORSMiddleware
-from .generator_loader import load_question_generators
 import os
-from pathlib import Path
-from zoneinfo import ZoneInfo
-from app.routes.auth import router as auth_router
-from .config import QUESTION_CONFIG, WEEK_CONFIG
 import inspect
+import logging
+from contextlib import asynccontextmanager
+from datetime import date, datetime
+from json import JSONDecodeError
+from pathlib import Path
 from typing import Any, Dict
+from zoneinfo import ZoneInfo
 
-app = FastAPI()
+from fastapi import FastAPI, HTTPException, Request
+from fastapi.concurrency import run_in_threadpool
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+from mongoengine import connect, disconnect
+from mongoengine.connection import get_db
+
+from app.errors import DependencyUnavailableError
+from app.routes.auth import router as auth_router
+
+from .config import QUESTION_CONFIG, WEEK_CONFIG
+from .generator_loader import load_question_generators
+from .question_types.sql_query_helper import ping_sql_database
+
+
+def _setup_logging() -> None:
+    level_name = os.getenv("LOG_LEVEL", "INFO").upper()
+    level = getattr(logging, level_name, logging.INFO)
+    logging.basicConfig(
+        level=level,
+        format="%(asctime)s %(levelname)s %(name)s %(message)s",
+    )
+
+
+_setup_logging()
+logger = logging.getLogger(__name__)
+
 APP_DIR = Path(__file__).resolve().parent
+APP_ENV = os.getenv("APP_ENV", "development").lower()
+STRICT_GENERATOR_LOADING = os.getenv("STRICT_GENERATOR_LOADING", "false").lower() == "true"
+
+
+@asynccontextmanager
+async def lifespan(_: FastAPI):
+    global question_generators
+
+    try:
+        connect(host=MONGO_URL)
+    except Exception:
+        logger.exception("Failed to connect to MongoDB during startup")
+        if APP_ENV == "production":
+            raise
+
+    question_generators = load_question_generators(strict=STRICT_GENERATOR_LOADING)
+    yield
+
+    try:
+        disconnect()
+    except Exception:
+        logger.exception("Failed to disconnect MongoDB cleanly")
+
+
+app = FastAPI(lifespan=lifespan)
 
 app.include_router(auth_router)
 app.mount("/resources", StaticFiles(directory=str(APP_DIR / "resources")), name="resources")
 
 MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017/user_data")
 RELEASE_TIMEZONE = ZoneInfo("Europe/Berlin")
-
-connect(host=MONGO_URL)
+question_generators: Dict[str, Dict[str, Any]] = {}
 
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
+
+@app.get("/ready")
+def ready():
+    details = {
+        "mongo": _mongo_is_ready(),
+        "sql": _sql_is_ready(),
+        "generators_loaded": bool(question_generators),
+    }
+    if not all(details.values()):
+        raise HTTPException(status_code=503, detail={"status": "degraded", "details": details})
+    return {"status": "ok", "details": details}
+
+
+def _mongo_is_ready() -> bool:
+    try:
+        db = get_db()
+        db.command("ping")
+        return True
+    except Exception:
+        logger.warning("Mongo readiness check failed")
+        return False
+
+
+def _sql_is_ready() -> bool:
+    try:
+        return ping_sql_database()
+    except Exception:
+        logger.warning("SQL readiness check failed")
+        return False
 
 app.add_middleware(
     CORSMiddleware,
@@ -39,9 +114,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-question_generators = load_question_generators()
-
 
 def get_current_date_in_release_timezone() -> date:
     return datetime.now(RELEASE_TIMEZONE).date()
@@ -149,11 +221,7 @@ def get_question_by_type(type_name: str, request: Request):
     raw_kwargs = query_params_to_kwargs(request)
     kwargs = filter_kwargs_for_class(QuestionClass, raw_kwargs)
 
-    try:
-        question = QuestionClass(**kwargs)
-    except (TypeError, ValueError) as e:
-        # This is NOT "missing settings" handling; it’s just surfacing constructor errors.
-        raise HTTPException(status_code=400, detail=str(e))
+    question = _build_question_instance(QuestionClass, kwargs)
 
     layout = question.generate()
 
@@ -180,18 +248,21 @@ async def evaluate_question(type_name: str, request: Request):
     base_config = question_generators[type_name]
     QuestionClass = base_config["class"]
 
-    user_input = await request.json()
+    try:
+        user_input = await request.json()
+    except (JSONDecodeError, ValueError):
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
 
     raw_kwargs = query_params_to_kwargs(request)
     kwargs = filter_kwargs_for_class(QuestionClass, raw_kwargs)
 
-    try:
-        q = QuestionClass(**kwargs)
-    except (TypeError, ValueError) as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    q = await run_in_threadpool(_build_question_instance, QuestionClass, kwargs)
 
     try:
         result = await run_in_threadpool(q.evaluate, user_input)
+    except DependencyUnavailableError as e:
+        logger.exception("Dependency unavailable while evaluating question", extra={"type_name": type_name})
+        raise HTTPException(status_code=503, detail=str(e))
     except ValueError as e:
         raise HTTPException(status_code=400, detail=str(e))
 
@@ -212,18 +283,29 @@ async def preview_question(type_name: str, request: Request):
     base_config = question_generators[type_name]
     QuestionClass = base_config["class"]
 
-    payload = await request.json()
+    try:
+        payload = await request.json()
+    except (JSONDecodeError, ValueError):
+        raise HTTPException(status_code=400, detail="Invalid JSON body")
     statement = payload.get("statement", "")
 
     raw_kwargs = query_params_to_kwargs(request)
     kwargs = filter_kwargs_for_class(QuestionClass, raw_kwargs)
 
-    try:
-        q = QuestionClass(**kwargs)
-    except (TypeError, ValueError) as e:
-        raise HTTPException(status_code=400, detail=str(e))
+    q = await run_in_threadpool(_build_question_instance, QuestionClass, kwargs)
 
     if not hasattr(q, "preview"):
         return {"columns": [], "rows": [], "error": "Preview not supported"}
 
-    return await run_in_threadpool(q.preview, statement)
+    try:
+        return await run_in_threadpool(q.preview, statement)
+    except DependencyUnavailableError as e:
+        logger.exception("Dependency unavailable while previewing question", extra={"type_name": type_name})
+        raise HTTPException(status_code=503, detail=str(e))
+
+
+def _build_question_instance(cls, kwargs: Dict[str, Any]):
+    try:
+        return cls(**kwargs)
+    except (TypeError, ValueError) as e:
+        raise HTTPException(status_code=400, detail=str(e))

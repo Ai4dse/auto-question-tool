@@ -9,3 +9,6 @@ docker-data/
 AGENTS.md
 .DS_Store
 backend/app/test.ipynb
+
+# Load test artifacts
+loadtest/results/

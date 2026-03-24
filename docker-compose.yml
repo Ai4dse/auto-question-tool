@@ -2,47 +2,70 @@ services:
   mongo:
     image: mongo:7.0
     container_name: mongo
+    restart: unless-stopped
     ports:
       - "27017:27017"
     volumes:
       - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.runCommand({ ping: 1 }).ok"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   mysql:
     image: mysql:8.0
     container_name: mysql
+    restart: unless-stopped
     environment:
-      - MYSQL_ROOT_PASSWORD=root
+      - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-root}
       - MYSQL_DATABASE=exercise_db
     volumes:
       - mysql_data:/var/lib/mysql
       - ./backend/app/resources/sql/readonly_user.sql:/docker-entrypoint-initdb.d/00_readonly_user.sql
       - ./backend/app/resources/sql/schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
       - ./backend/app/resources/sql/data.sql:/docker-entrypoint-initdb.d/02_data.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-p${MYSQL_ROOT_PASSWORD:-root}"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
 
   backend:
     build: ./backend
     container_name: backend
+    restart: unless-stopped
     environment:
       - MONGO_URL=mongodb://mongo:27017/user_data
       - SQL_HOST=mysql
       - SQL_PORT=3306
       - SQL_DB=exercise_db
       - SQL_USER=sql_reader
-      - SQL_PASSWORD=sql_reader_pass
+      - SQL_PASSWORD=${SQL_PASSWORD:-sql_reader_pass}
+      - ALLOW_PUBLIC_USER_CREATION=true
     depends_on:
-      - mongo
-      - mysql
+      mongo:
+        condition: service_healthy
+      mysql:
+        condition: service_healthy
     volumes:
       - ./backend:/app
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
 
   frontend:
     build:
       context: ./frontend
       target: dev
     container_name: frontend
+    restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
       - "5173:5173"
     volumes:
@@ -51,6 +74,11 @@ services:
     stdin_open: true
     tty: true
     command: npm run dev -- --host
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://localhost:5173').then(() => process.exit(0)).catch(() => process.exit(1))"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
 
 volumes:
   mongo_data:

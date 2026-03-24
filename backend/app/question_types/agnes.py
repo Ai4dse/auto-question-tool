@@ -14,8 +14,6 @@ class AGNESQuestion:
 
     def __init__(self, seed=None, difficulty="easy", linkage_method = "single", **kwargs):
 
-        print(kwargs)
-
         self.linkage = linkage_method
 
         EUCLIDEAN = "euclidean"
@@ -97,8 +95,6 @@ class AGNESQuestion:
             del clusters[a]
             del clusters[b]
 
-        print(self.merges)
-        print(self.merge_dists)
     # ---------------------------------------------------------------------
     # Internal DBSCAN computation
     # ---------------------------------------------------------------------
@@ -206,7 +202,6 @@ class AGNESQuestion:
         ]
 
         base["view1"] = view0 + base["view1"]
-        print(base)
         return base
 
     # ---------------------------------------------------------------------
@@ -229,6 +224,4 @@ class AGNESQuestion:
                                 "expected": f"{self.merges[i]}"}
             results[id_dist] = { "correct": user_input.get(id_dist) == str(normalize_number(self.merge_dists[i])) and (user_input.get(id_merge) == str(normalize_number(self.merges[i])) or str(normalize_number(self.merges_inverse[i]))),
                                 "expected": f"{self.merge_dists[i]}, {str(self.merges[i])}"}
-        print(user_input)
-        print(results)
         return results

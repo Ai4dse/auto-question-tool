@@ -3,10 +3,19 @@ services:
     ports: !reset []
 
   backend:
+    restart: unless-stopped
     environment:
       - WEB_CONCURRENCY=${WEB_CONCURRENCY:-2}
+      - APP_ENV=production
+      - STRICT_GENERATOR_LOADING=true
+      - ALLOW_PUBLIC_USER_CREATION=false
     command: sh -c "uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${WEB_CONCURRENCY:-2}"
     volumes: !reset []
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready', timeout=2)"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
 
   frontend:
     build:
@@ -17,3 +26,9 @@ services:
     volumes: !reset []
     stdin_open: false
     tty: false
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "-q", "http://localhost:5173"]
+      interval: 15s
+      timeout: 5s
+      retries: 10

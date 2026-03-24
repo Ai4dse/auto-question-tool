@@ -19,8 +19,6 @@ with open(path, "r", encoding="utf-8") as f:
 class ERModelling:
 
     def __init__(self, seed=None, difficulty="easy", mode="steps", card_type="min_max", question="random", **kwargs):
-        print(kwargs)
-
         self.difficulty = str(difficulty).lower()
         config = DIFFICULTY_SETTINGS.get(self.difficulty, DIFFICULTY_SETTINGS["easy"])
 
@@ -287,7 +285,6 @@ class ERModelling:
 
     def _evaluate_steps(self, user_input):
         user_input = user_input or {}
-        print(user_input)
         results = {}
         return results
 
