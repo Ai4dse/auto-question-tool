@@ -72,6 +72,20 @@ class ERSchema:
                     "edges": self.edges,
                 }
             },
+            {
+                "type": "Text",
+                "content": (
+                    "#### Schwache Entität\n\n"
+                    "Eine schwache Entität ist eine Entität, die nicht eindeutig durch eigene Attribute identifiziert werden kann.\n\n"
+                    "Sie besitzt keinen vollständigen Primärschlüssel und ist daher von einer starken (besitzenden) Entität abhängig.\n\n"
+                    "Achte darauf:\n"
+                    "- Eine schwache Entität hat nur einen Teil-Schlüssel (Discriminator)\n"
+                    "- Der vollständige Primärschlüssel entsteht erst durch Kombination mit dem Primärschlüssel der starken Entität\n"
+                    "- Es besteht eine Existenzabhängigkeit zur starken Entität\n"
+                    "- Die Verbindung erfolgt über eine identifizierende Beziehung\n"
+                    "- Der Primärschlüssel ist immer zusammengesetzt aus: (Primärschlüssel der starken Entität + Teil-Schlüssel)\n"
+                ),
+            },
         ]
 
         entity_cells = [[
