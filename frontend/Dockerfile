@@ -1,16 +1,31 @@
-FROM node:20
+FROM node:20 AS dev
 
 WORKDIR /app
 
-# Copy dependency files
 COPY package*.json ./
-
-# Install dependencies
 RUN npm install
 
-# Copy all frontend files
 COPY . .
 
 EXPOSE 5173
 
-CMD ["sh", "-c", "npm run build && npm run preview -- --host 0.0.0.0 --port 5173"]
+CMD ["npm", "run", "dev", "--", "--host"]
+
+FROM node:20 AS build
+
+WORKDIR /app
+
+COPY package*.json ./
+RUN npm install
+
+COPY . .
+RUN npm run build
+
+FROM nginx:1.27-alpine AS prod
+
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /app/dist /usr/share/nginx/html
+
+EXPOSE 5173
+
+CMD ["nginx", "-g", "daemon off;"]

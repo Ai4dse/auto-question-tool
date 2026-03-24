@@ -1,0 +1,19 @@
+services:
+  mongo:
+    ports: !reset []
+
+  backend:
+    environment:
+      - WEB_CONCURRENCY=${WEB_CONCURRENCY:-2}
+    command: sh -c "uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${WEB_CONCURRENCY:-2}"
+    volumes: !reset []
+
+  frontend:
+    build:
+      target: prod
+    command: ["nginx", "-g", "daemon off;"]
+    ports:
+      - "5173:5173"
+    volumes: !reset []
+    stdin_open: false
+    tty: false
