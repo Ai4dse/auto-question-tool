@@ -8,12 +8,16 @@ from mysql.connector import Error
 from mysql.connector.pooling import MySQLConnectionPool
 
 SQL_MAX_RESULT_ROWS = int(os.getenv("SQL_MAX_RESULT_ROWS", "10000"))
-SQL_MAX_JOINS = int(os.getenv("SQL_MAX_JOINS", "5"))
+SQL_MAX_JOINS = int(os.getenv("SQL_MAX_JOINS", "3"))
 SQL_READ_TIMEOUT = int(os.getenv("SQL_READ_TIMEOUT_SECONDS", "8"))
 SQL_CONNECT_TIMEOUT = int(os.getenv("SQL_CONNECT_TIMEOUT_SECONDS", "5"))
 APP_ENV = os.getenv("APP_ENV", "development").lower()
 TOO_MANY_ROWS_MESSAGE = "The result set contains too many rows to preview."
 TOO_MANY_JOINS_MESSAGE = f"A maximum of {SQL_MAX_JOINS} joins is allowed."
+FROM_COMMA_NOT_ALLOWED_MESSAGE = (
+    "FROM with multiple comma-separated relations is not allowed due to computational effort. "
+    "Please use explicit JOIN syntax."
+)
 
 _sql_pool: MySQLConnectionPool | None = None
 _sql_pool_lock = threading.Lock()
@@ -36,6 +40,47 @@ def _validate_sql_limits(sql: str) -> None:
     join_count = len(re.findall(r"\bjoin\b", cleaned, flags=re.IGNORECASE))
     if join_count > SQL_MAX_JOINS:
         raise ValueError(TOO_MANY_JOINS_MESSAGE)
+    if _has_comma_separated_from_relations(cleaned):
+        raise ValueError(FROM_COMMA_NOT_ALLOWED_MESSAGE)
+
+
+def _has_comma_separated_from_relations(sql: str) -> bool:
+    lowered = sql.lower()
+    match = re.search(r"\bfrom\b", lowered)
+    if not match:
+        return False
+
+    i = match.end()
+    depth = 0
+    from_segment_chars = []
+
+    while i < len(lowered):
+        ch = lowered[i]
+        if ch == "(":
+            depth += 1
+        elif ch == ")" and depth > 0:
+            depth -= 1
+
+        if depth == 0 and re.match(
+            r"\b(where|group\s+by|order\s+by|limit|having|union|intersect|except)\b",
+            lowered[i:],
+        ):
+            break
+
+        from_segment_chars.append(ch)
+        i += 1
+
+    from_segment = "".join(from_segment_chars)
+    depth = 0
+    for ch in from_segment:
+        if ch == "(":
+            depth += 1
+        elif ch == ")" and depth > 0:
+            depth -= 1
+        elif ch == "," and depth == 0:
+            return True
+
+    return False
 
 
 def _sql_settings() -> Dict[str, Any]:

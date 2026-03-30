@@ -7,7 +7,7 @@ import pandas as pd
 
 
 RELALG_MAX_RESULT_ROWS = int(os.getenv("RELALG_MAX_RESULT_ROWS", "10000"))
-RELALG_MAX_JOINS = int(os.getenv("RELALG_MAX_JOINS", "5"))
+RELALG_MAX_JOINS = int(os.getenv("RELALG_MAX_JOINS", "3"))
 TOO_MANY_ROWS_MESSAGE = "The result set contains too many rows to preview."
 TOO_MANY_JOINS_MESSAGE = f"A maximum of {RELALG_MAX_JOINS} joins is allowed."
 
