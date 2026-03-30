@@ -1,4 +1,5 @@
 import os
+import re
 import threading
 from typing import Any, Dict, List, Tuple
 
@@ -6,11 +7,13 @@ import mysql.connector
 from mysql.connector import Error
 from mysql.connector.pooling import MySQLConnectionPool
 
-MAX_PREVIEW_ROWS = int(os.getenv("SQL_PREVIEW_MAX_ROWS", "200"))
-MAX_COMPARE_ROWS = int(os.getenv("SQL_COMPARE_MAX_ROWS", "5000"))
+SQL_MAX_RESULT_ROWS = int(os.getenv("SQL_MAX_RESULT_ROWS", "10000"))
+SQL_MAX_JOINS = int(os.getenv("SQL_MAX_JOINS", "5"))
 SQL_READ_TIMEOUT = int(os.getenv("SQL_READ_TIMEOUT_SECONDS", "8"))
 SQL_CONNECT_TIMEOUT = int(os.getenv("SQL_CONNECT_TIMEOUT_SECONDS", "5"))
 APP_ENV = os.getenv("APP_ENV", "development").lower()
+TOO_MANY_ROWS_MESSAGE = "The result set contains too many rows to preview."
+TOO_MANY_JOINS_MESSAGE = f"A maximum of {SQL_MAX_JOINS} joins is allowed."
 
 _sql_pool: MySQLConnectionPool | None = None
 _sql_pool_lock = threading.Lock()
@@ -18,6 +21,21 @@ _sql_pool_lock = threading.Lock()
 
 class SqlDependencyUnavailableError(RuntimeError):
     pass
+
+
+def _strip_sql_comments_and_strings(sql: str) -> str:
+    sql = re.sub(r"--.*?$", " ", sql, flags=re.MULTILINE)
+    sql = re.sub(r"/\*.*?\*/", " ", sql, flags=re.DOTALL)
+    sql = re.sub(r"'(?:''|[^'])*'", "''", sql)
+    sql = re.sub(r'"(?:""|[^"])*"', '""', sql)
+    return sql
+
+
+def _validate_sql_limits(sql: str) -> None:
+    cleaned = _strip_sql_comments_and_strings(sql)
+    join_count = len(re.findall(r"\bjoin\b", cleaned, flags=re.IGNORECASE))
+    if join_count > SQL_MAX_JOINS:
+        raise ValueError(TOO_MANY_JOINS_MESSAGE)
 
 
 def _sql_settings() -> Dict[str, Any]:
@@ -91,19 +109,22 @@ def execute_read_only_query(statement: str) -> Dict[str, Any]:
     if not sql:
         raise ValueError("Bitte SQL eingeben.")
 
+    _validate_sql_limits(sql)
+
     conn = _sql_connection()
     cursor = None
     try:
-        cursor = conn.cursor()
+        cursor = conn.cursor(buffered=True)
         cursor.execute(sql)
-        fetched = cursor.fetchmany(MAX_PREVIEW_ROWS + 1)
-        rows = fetched[:MAX_PREVIEW_ROWS]
+        fetched = cursor.fetchmany(SQL_MAX_RESULT_ROWS + 1)
+        if len(fetched) > SQL_MAX_RESULT_ROWS:
+            raise ValueError(TOO_MANY_ROWS_MESSAGE)
+        rows = fetched
         columns = [c[0] for c in cursor.description] if cursor.description else []
         return {
             "columns": columns,
             "rows": [list(row) for row in rows],
             "total_rows": len(rows),
-            "truncated": len(fetched) > MAX_PREVIEW_ROWS,
         }
     except Error as error:
         raise ValueError(_format_sql_error(error))
@@ -118,14 +139,16 @@ def execute_for_compare(statement: str) -> Tuple[List[str], List[Tuple[Any, ...]
     if not sql:
         raise ValueError("Bitte SQL eingeben.")
 
+    _validate_sql_limits(sql)
+
     conn = _sql_connection()
     cursor = None
     try:
-        cursor = conn.cursor()
+        cursor = conn.cursor(buffered=True)
         cursor.execute(sql)
-        fetched = cursor.fetchmany(MAX_COMPARE_ROWS + 1)
-        if len(fetched) > MAX_COMPARE_ROWS:
-            raise ValueError("Abfrageergebnis zu groß für Bewertung.")
+        fetched = cursor.fetchmany(SQL_MAX_RESULT_ROWS + 1)
+        if len(fetched) > SQL_MAX_RESULT_ROWS:
+            raise ValueError(TOO_MANY_ROWS_MESSAGE)
         rows = fetched
         columns = [c[0] for c in cursor.description] if cursor.description else []
         return columns, rows

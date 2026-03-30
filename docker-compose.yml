@@ -17,6 +17,7 @@ services:
     image: mysql:8.0
     container_name: mysql
     restart: unless-stopped
+    command: ["mysqld", "--lower_case_table_names=1"]
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-root}
       - MYSQL_DATABASE=exercise_db

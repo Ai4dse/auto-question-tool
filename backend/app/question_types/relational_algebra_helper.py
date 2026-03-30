@@ -5,6 +5,12 @@ import ast
 
 import pandas as pd
 
+
+RELALG_MAX_RESULT_ROWS = int(os.getenv("RELALG_MAX_RESULT_ROWS", "10000"))
+RELALG_MAX_JOINS = int(os.getenv("RELALG_MAX_JOINS", "5"))
+TOO_MANY_ROWS_MESSAGE = "The result set contains too many rows to preview."
+TOO_MANY_JOINS_MESSAGE = f"A maximum of {RELALG_MAX_JOINS} joins is allowed."
+
 def load_schema(schema_folder: str, prefix_attributes: bool = True):
     schema_path = os.path.join(schema_folder, "schema.json")
     with open(schema_path, encoding="utf-8") as f:
@@ -522,12 +528,17 @@ def execute_relational_algebra(dfs, statement):
     }
     try:
         statement = normalize(statement)
+        join_count = len(re.findall(r"\\join\{", statement, flags=re.IGNORECASE))
+        if join_count > RELALG_MAX_JOINS:
+            raise ValueError(TOO_MANY_JOINS_MESSAGE)
         statement = parse_statement(statement, relations)
         expression_ast = ast.parse(statement, mode="eval")
         _validate_ra_ast(expression_ast)
         tree = build_tree_from_statement(statement)
         compiled = compile(expression_ast, "<relalg-expression>", "eval")
         result = eval(compiled, {"__builtins__": {}}, env)
+        if len(result.index) > RELALG_MAX_RESULT_ROWS:
+            raise ValueError(TOO_MANY_ROWS_MESSAGE)
     except ValueError:
         raise # schon "schöne" Fehler, einfach durchreichen
     except Exception as e:

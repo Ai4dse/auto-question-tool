@@ -19,7 +19,7 @@
     {
       "name": "regex_wortgrenzen",
       "question": "Gegeben sei folgender Text. Schreiben Sie einen regulären Ausdruck, welcher ein beliebiges Wort (kein Datum oder Email) findet. Was fällt Ihnen auf?:",
-      "solution": "\\b\\w+\\b",
+      "solution": "\\b\\w+\\b \n\nDie einzelnen Teile einer Email werden weiterhin erkannt, da \\b auch Wortgrenzen wie - oder @ beachtet. \nAuch fortgeschrittenere Regex-Features wie Look-Aheads oder Look-Behinds helfen hier nicht. \nRegex ist folglich nur für simple Muster geeignet und stößt bei steigender Komplexität auf Limitationen.",
       "content": "Bitte senden Sie Ihre Anfrage bis zum 15.04.2025 an info@beispiel-tud.com oder kontaktieren Sie uns persönlich. \nSenden Sie zusätzlich eine Bestätigung bis zum 20.05.2025 an support@beispiel.de.",
       "link": "https://regex101.com/r/DyMZrc/2",
       "difficulty": "medium"
