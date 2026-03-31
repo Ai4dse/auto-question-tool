@@ -104,6 +104,14 @@ def _sql_settings() -> Dict[str, Any]:
 
 def _format_sql_error(error: Error) -> str:
     message = str(error).lower()
+    if error.errno in {3024, 1317}:
+        return "Die Abfrage hat zu lange gedauert. Bitte passen Sie die SQL-Abfrage an."
+    if (
+        "maximum statement execution time exceeded" in message
+        or "query execution was interrupted" in message
+        or "read timeout" in message
+    ):
+        return "Die Abfrage hat zu lange gedauert. Bitte passen Sie die SQL-Abfrage an."
     if error.errno in {1044, 1045, 1142}:
         return "Nur Leseoperationen sind erlaubt."
     if "command denied" in message or "access denied" in message:
