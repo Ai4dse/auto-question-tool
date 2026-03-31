@@ -8,7 +8,7 @@ from mysql.connector import Error
 from mysql.connector.pooling import MySQLConnectionPool
 
 SQL_MAX_RESULT_ROWS = int(os.getenv("SQL_MAX_RESULT_ROWS", "10000"))
-SQL_MAX_JOINS = int(os.getenv("SQL_MAX_JOINS", "3"))
+SQL_MAX_JOINS = int(os.getenv("SQL_MAX_JOINS", "5"))
 SQL_READ_TIMEOUT = int(os.getenv("SQL_READ_TIMEOUT_SECONDS", "8"))
 SQL_CONNECT_TIMEOUT = int(os.getenv("SQL_CONNECT_TIMEOUT_SECONDS", "5"))
 APP_ENV = os.getenv("APP_ENV", "development").lower()
