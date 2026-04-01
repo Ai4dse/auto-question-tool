@@ -18,12 +18,11 @@ with open(path, "r", encoding="utf-8") as f:
 
 class ERModelling:
 
-    def __init__(self, seed=None, difficulty="easy", mode="steps", card_type="min_max", question="random", **kwargs):
+    def __init__(self, seed=None, difficulty="easy", card_type="min_max", question="random", **kwargs):
         self.difficulty = str(difficulty).lower()
         config = DIFFICULTY_SETTINGS.get(self.difficulty, DIFFICULTY_SETTINGS["easy"])
 
         self.question = str(question).lower()
-        self.mode = mode.lower()
         self.seed = int(seed) if seed is not None else random.randint(1, 999999)
         self.rng = random.Random(self.seed)
 
@@ -77,9 +76,6 @@ class ERModelling:
             n for n in nodes if n.get("type") == "attribute"
         ]
 
-        # Split edges into:
-        # - core edges: relation -> entity
-        # - attribute edges: attribute -> entity/relation
         core_edges = []
         attribute_edges = []
 
@@ -97,7 +93,6 @@ class ERModelling:
             elif s_type == "attribute" and t_type in {"entity", "relation"}:
                 attribute_edges.append(e)
 
-        # Build undirected adjacency for the core graph
         adjacency = defaultdict(set)
         for e in core_edges:
             s = e["source"]
@@ -107,7 +102,6 @@ class ERModelling:
 
         core_ids = [n["id"] for n in entity_relation_nodes]
 
-        # Handle trivial cases
         if not core_ids:
             self.nodes_altered = []
             self.edges_altered = []
@@ -116,8 +110,6 @@ class ERModelling:
         if len(core_ids) == 1:
             kept_core_ids = {core_ids[0]}
         else:
-            # If the original core graph has isolated nodes, they cannot be part of a
-            # connected multi-node result. Prefer starting from a node with neighbors.
             possible_starts = [nid for nid in core_ids if adjacency[nid]]
             start = self.rng.choice(possible_starts if possible_starts else core_ids)
 
@@ -126,7 +118,6 @@ class ERModelling:
                 min(len(core_ids), round(len(core_ids) * keep_core_ratio))
             )
 
-            # Grow a connected random subset
             kept_core_ids = {start}
             frontier = set(adjacency[start])
 
@@ -139,19 +130,11 @@ class ERModelling:
                     if nb not in kept_core_ids:
                         frontier.add(nb)
 
-            # If we couldn't reach target_count because graph is sparse/disconnected,
-            # we keep the connected component we managed to build.
-            # This still satisfies the "remaining nodes are connected" requirement.
-
-        # Keep only core edges entirely inside kept_core_ids
         kept_core_edges = [
             e for e in core_edges
             if e["source"] in kept_core_ids and e["target"] in kept_core_ids
         ]
 
-        # Optional cleanup:
-        # remove isolated core nodes that may have slipped in
-        # (important if start node was isolated or if target_count == 1)
         if len(kept_core_ids) > 1:
             used_core_ids = set()
             for e in kept_core_edges:
@@ -159,22 +142,18 @@ class ERModelling:
                 used_core_ids.add(e["target"])
             kept_core_ids = used_core_ids
 
-        # Now keep attributes whose owner is still present
         possible_attribute_edges = [
             e for e in attribute_edges
             if e["target"] in kept_core_ids
         ]
 
-        # Randomly keep some of those attribute edges
         kept_attribute_edges = []
         for e in possible_attribute_edges:
             if self.rng.random() < keep_attribute_ratio:
                 kept_attribute_edges.append(e)
 
-        # Attribute nodes must only exist if their edge exists
         kept_attribute_ids = {e["source"] for e in kept_attribute_edges}
 
-        # Build final node list
         kept_node_ids = kept_core_ids | kept_attribute_ids
 
         nodes_altered = [
@@ -258,13 +237,9 @@ class ERModelling:
         ]
         base["lastView"] = [
                 {
-                    "type": "Text",
-                    "content": "### Musterlösung:\n\n",
-                },
-                {
                     "type": "ER_Diagram_Builder",
                     "id": "free_er_builder",
-                    "title": "Build your own ER diagram",
+                    "title": "Musterlösung:",
                     "initial_diagram": {
                         "nodes": self.nodes,
                         "edges": self.edges,
@@ -279,8 +254,6 @@ class ERModelling:
 
 
     def generate(self):
-        if self.mode == "exam":
-            return self._generate_exam_layout()
         return self._generate_steps_layout()
 
     def _evaluate_steps(self, user_input):
@@ -294,6 +267,4 @@ class ERModelling:
         return results
 
     def evaluate(self, user_input):
-        if self.mode == "exam":
-            return self._evaluate_exam(user_input)
         return self._evaluate_steps(user_input)

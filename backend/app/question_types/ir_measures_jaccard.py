@@ -10,9 +10,9 @@ with open(path, "r", encoding="utf-8") as f:
     raw = json.load(f)
 
 DIFFICULTY_SETTINGS = {
-    "easy":   {"docs_per_topic": 1, "query_terms": 4},
-    "medium": {"docs_per_topic": 2, "query_terms": 4},
-    "hard":   {"docs_per_topic": 3, "query_terms": 4},
+    "easy":   {"docs_per_topic": 1, "query_terms": 2},
+    "medium": {"docs_per_topic": 1, "query_terms": 3},
+    "hard":   {"docs_per_topic": 2, "query_terms": 4},
 }
 
 
@@ -82,7 +82,7 @@ class IRMeasuresJaccard:
         docs = self.selected_docs
         base = {}
 
-        base["view1"] = [
+        view1 = [
             {
                 "type": "Table",
                 "title": "Ausgewählte Dokumente (Korpus)",
@@ -109,7 +109,7 @@ class IRMeasuresJaccard:
         ]
 
         for d in docs:
-            base["view1"].append({
+            view1.append({
                 "type": "Table",
                 "title": f"Dokumentmenge {d['nr']}",
                 "columns": [f"Terme in {d['nr']}"],
@@ -150,8 +150,6 @@ class IRMeasuresJaccard:
                 },
             ]
 
-        base["view2"] = view2
-
         view3 = [
             {
                 "type": "Text",
@@ -188,8 +186,25 @@ class IRMeasuresJaccard:
             "cols": 4,
             "cells": cells,
         })
-
-        base["view3"] = view3
+        base["lastView"] = [{
+            "type": "Text",
+            "content": (
+                "### Hinweis zur Praxis:\n\n"
+                "Die Jaccard-Ähnlichkeit misst die Überschneidung zwischen zwei Mengen.\n\n"
+                "**Idee:**\n"
+                "Verglichen wird, wie viele gemeinsame Elemente zwei Mengen haben "
+                "im Verhältnis zur Gesamtanzahl unterschiedlicher Elemente.\n\n"
+                "**Vorteile:**\n"
+                "- Einfach zu berechnen und zu interpretieren\n"
+                "- Gut geeignet für Mengenvergleiche (z. B. Dokumente als Token-Mengen)\n"
+                "- Robust gegenüber unterschiedlicher Dokumentlänge\n\n"
+                "**Einschränkung:**\n"
+                "Berücksichtigt keine Gewichtung oder Häufigkeit von Begriffen, sondern nur deren Vorkommen."
+            ),
+        }]
+        base["view1"] = view1 + view2
+        base["view2"] = view3
+        #base["view3"] = view3
         return base
 
     def _generate_exam_layout(self):
@@ -222,7 +237,24 @@ class IRMeasuresJaccard:
                     "id": "answers_jaccard",
                     "rows": 10,
                 },
-            ]
+            ],
+            "lastView": [
+                {
+                    "type": "Text",
+                    "content": (
+                        "### Hinweis zur Praxis:\n\n"
+                        "Die Jaccard-Ähnlichkeit misst die Überschneidung zwischen zwei Mengen.\n\n"
+                        "**Idee:**\n"
+                        "Verglichen wird, wie viele gemeinsame Elemente zwei Mengen haben "
+                        "im Verhältnis zur Gesamtanzahl unterschiedlicher Elemente.\n\n"
+                        "**Vorteile:**\n"
+                        "- Einfach zu berechnen und zu interpretieren\n"
+                        "- Gut geeignet für Mengenvergleiche (z. B. Dokumente als Token-Mengen)\n"
+                        "- Robust gegenüber unterschiedlicher Dokumentlänge\n\n"
+                        "**Einschränkung:**\n"
+                        "Berücksichtigt keine Gewichtung oder Häufigkeit von Begriffen, sondern nur deren Vorkommen."
+                    ),
+                }]
         }
 
     def generate(self):

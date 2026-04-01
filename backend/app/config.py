@@ -378,13 +378,12 @@ QUESTION_CONFIG = {
             },
         },
     },
-
     "ir_measures_tfidf": {
         "class_path": "app.question_types.ir_measures_tfidf.IRMeasuresTFIDF",
         "metadata": {
-            "title": "TFIDF",
+            "title": "TF-IDF",
             "week": 2,
-            "desc": "lol",
+            "desc": "Berechne TF, DF und TF-IDF für Dokumente und Query.",
             "tags": ["matching", "algorithms"],
             "settings": {
                 "mode": {
@@ -409,9 +408,9 @@ QUESTION_CONFIG = {
     "incidence_matrix": {
         "class_path": "app.question_types.incidence_matrix.IncidenceMatrix",
         "metadata": {
-            "title": "incidence_matrix",
+            "title": "Incidence Matrix",
             "week": 2,
-            "desc": "lol",
+            "desc": "Erstelle eine 0/1 Term-Dokument-Matrix.",
             "tags": ["matching", "algorithms"],
             "settings": {
                 "difficulty": {
@@ -430,9 +429,9 @@ QUESTION_CONFIG = {
     "inverted_index": {
         "class_path": "app.question_types.inverted_index.InvertedIndex",
         "metadata": {
-            "title": "inverted_index",
+            "title": "Inverted Index",
             "week": 2,
-            "desc": "lol",
+            "desc": "Ordne jedem Term die passenden Dokumente zu.",
             "tags": ["matching", "algorithms"],
             "settings": {
                 "difficulty": {
@@ -451,9 +450,9 @@ QUESTION_CONFIG = {
     "boolean_retrieval": {
         "class_path": "app.question_types.boolean_retrieval.BooleanRetrieval",
         "metadata": {
-            "title": "boolean_retrival",
+            "title": "Boolean Retrieval",
             "week": 2,
-            "desc": "lol",
+            "desc": "Finde passende Dokumente für AND, OR und NOT.",
             "tags": ["matching", "algorithms"],
             "settings": {
                 "difficulty": {
@@ -472,9 +471,9 @@ QUESTION_CONFIG = {
     "positional_index": {
         "class_path": "app.question_types.positional_index.PositionalIndex",
         "metadata": {
-            "title": "positional_index",
+            "title": "Positional Index",
             "week": 2,
-            "desc": "lol",
+            "desc": "Bestimme Dokumente und Positionen von Termen.",
             "tags": ["matching", "algorithms"],
             "settings": {
                 "difficulty": {
@@ -495,7 +494,7 @@ QUESTION_CONFIG = {
         "metadata": {
             "title": "Levenshtein",
             "week": 1,
-            "desc": "Berechne die Levenshtein-Distanz Schritt für Schritt.",
+            "desc": "Berechne die Edit-Distanz zwischen zwei Strings.",
             "tags": ["string", "distance", "algorithms"],
             "settings": {
                 "difficulty": {
@@ -514,17 +513,11 @@ QUESTION_CONFIG = {
     "er_modelling": {
         "class_path": "app.question_types.er_modelling.ERModelling",
         "metadata": {
-            "title": "er_modelling",
+            "title": "ER-Modellierung",
             "week": 3,
-            "desc": "Jaccard similarity between query and documents",
+            "desc": "Erstelle ein ER-Diagramm aus einem Text.",
             "tags": ["matching", "algorithms"],
             "settings": {
-                "mode": {
-                    "kind": "select",
-                    "visibility": "open",
-                    "options": ["steps", "exam"],
-                    "default": "steps",
-                },
                 "difficulty": {
                     "kind": "select",
                     "visibility": "open",
@@ -552,9 +545,9 @@ QUESTION_CONFIG = {
     "er_schema": {
         "class_path": "app.question_types.er_schema.ERSchema",
         "metadata": {
-            "title": "er_schema",
+            "title": "Relationales Schema",
             "week": 3,
-            "desc": "Jaccard similarity between query and documents",
+            "desc": "Leite Tabellen aus einem ER-Diagramm ab.",
             "tags": ["matching", "algorithms"],
             "settings": {
                 "mode": {
@@ -563,11 +556,31 @@ QUESTION_CONFIG = {
                     "options": ["steps", "exam"],
                     "default": "steps",
                 },
-                "difficulty": {
+                "question": {
+                    "kind": "select",
+                    "visibility": "hidden",
+                    "options": ["random", "universitäts_schema","firmen_schema(weak_entity)"],
+                    "default": "random",
+                },
+                "seed": {
+                    "kind": "number",
+                    "visibility": "hidden",
+                },
+            },
+        },
+    },
+    "er_cardinality": {
+        "class_path": "app.question_types.er_cardinality.ERCardinality",
+        "metadata": {
+            "title": "Cardinalitäten im Relationalen Schema",
+            "week": 3,
+            "desc": "Ergänze ein ER Diagramm mit den richtigen Cardinalitäten.",
+            "tags": ["matching", "algorithms"],
+            "settings": {
+                "card_type": {
                     "kind": "select",
                     "visibility": "open",
-                    "options": ["easy", "medium", "hard"],
-                    "default": "easy",
+                    "options": ["min_max", "cardinality"],
                 },
                 "question": {
                     "kind": "select",
@@ -585,9 +598,9 @@ QUESTION_CONFIG = {
     "ir_measures_jaccard": {
         "class_path": "app.question_types.ir_measures_jaccard.IRMeasuresJaccard",
         "metadata": {
-            "title": "ir_measures_jaccard",
+            "title": "Jaccard",
             "week": 2,
-            "desc": "Jaccard similarity between query and documents",
+            "desc": "Berechne die Jaccard-Ähnlichkeit für Query und Dokumente.",
             "tags": ["matching", "algorithms"],
             "settings": {
                 "mode": {
@@ -610,3 +623,4 @@ QUESTION_CONFIG = {
         },
     }
 }
+

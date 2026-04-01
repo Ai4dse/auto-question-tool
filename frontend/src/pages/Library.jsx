@@ -137,7 +137,7 @@ export default function Library() {
               return (
                 <div key={q.id} className="col-md-4 mb-4">
                   <div className="card shadow-sm h-100 position-relative">
-                    <div className="card-body">
+                    <div className="card-body d-flex flex-column h-100">
                       <div className="d-flex justify-content-between align-items-start">
                         <div>
                           <h5 className="card-title">{q.title}</h5>
@@ -190,7 +190,7 @@ export default function Library() {
                         </div>
                       )}
 
-                      <Link to={questionUrl} className="btn btn-primary w-100">
+                      <Link to={questionUrl} className="btn btn-primary w-100 mt-auto">
                         Open
                       </Link>
                     </div>

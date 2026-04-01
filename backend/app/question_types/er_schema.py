@@ -6,11 +6,6 @@ from collections import defaultdict
 
 from app.common import *
 
-DIFFICULTY_SETTINGS = {
-    "easy": {},
-    "medium": {},
-    "hard": {},
-}
 
 path = Path(__file__).resolve().parent.parent / "resources" / "er_diagrams.json"
 with open(path, "r", encoding="utf-8") as f:
@@ -18,11 +13,9 @@ with open(path, "r", encoding="utf-8") as f:
 
 class ERSchema:
 
-    def __init__(self, seed=None, difficulty="easy", mode="steps", question="random", **kwargs):
+    def __init__(self, seed=None, mode="steps", question="random", **kwargs):
         print(kwargs)
         self.question = str(question).lower()
-        self.difficulty = str(difficulty).lower()
-        config = DIFFICULTY_SETTINGS.get(self.difficulty, DIFFICULTY_SETTINGS["easy"])
 
         self.mode = mode.lower()
         self.seed = int(seed) if seed is not None else random.randint(1, 999999)
@@ -261,6 +254,25 @@ class ERSchema:
         ]
 
         base["view4"] = view4
+        base["lastView"] = [
+            {
+                "type": "Text",
+                "content": (
+                    "### Hinweis zur Praxis:\n\n"
+                    "Die Überführung eines ER-Diagramms in ein relationales Schema ist ein zentraler Schritt im Datenbankdesign.\n\n"
+                    "**Idee:**\n"
+                    "Konzeptionelle Modelle (ER-Diagramme) werden in konkrete Tabellenstrukturen überführt, "
+                    "die direkt in relationalen Datenbanken umgesetzt werden können.\n\n"
+                    "**Vorteile:**\n"
+                    "- Klare Strukturierung der Daten in Tabellen\n"
+                    "- Grundlage für die Implementierung in SQL-Datenbanken\n"
+                    "- Unterstützt Datenintegrität durch Schlüssel und Fremdschlüssel\n\n"
+                    "**Einschränkung:**\n"
+                    "Komplexe Strukturen (z. B. schwache Entitäten oder mehrwertige Attribute) "
+                    "erfordern zusätzliche Transformationen und sorgfältige Modellierung."
+                ),
+            }
+        ]
 
         return base
 
@@ -324,6 +336,25 @@ class ERSchema:
             },
         ]
         base["view1"]= view1
+        base["lastView"] = [
+            {
+                "type": "Text",
+                "content": (
+                    "### Hinweis zur Praxis:\n\n"
+                    "Die Überführung eines ER-Diagramms in ein relationales Schema ist ein zentraler Schritt im Datenbankdesign.\n\n"
+                    "**Idee:**\n"
+                    "Konzeptionelle Modelle (ER-Diagramme) werden in konkrete Tabellenstrukturen überführt, "
+                    "die direkt in relationalen Datenbanken umgesetzt werden können.\n\n"
+                    "**Vorteile:**\n"
+                    "- Klare Strukturierung der Daten in Tabellen\n"
+                    "- Grundlage für die Implementierung in SQL-Datenbanken\n"
+                    "- Unterstützt Datenintegrität durch Schlüssel und Fremdschlüssel\n\n"
+                    "**Einschränkung:**\n"
+                    "Komplexe Strukturen (z. B. schwache Entitäten oder mehrwertige Attribute) "
+                    "erfordern zusätzliche Transformationen und sorgfältige Modellierung."
+                ),
+            }
+        ]
         return base
 
 

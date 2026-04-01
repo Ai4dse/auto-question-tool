@@ -8,9 +8,9 @@ with open(path, "r", encoding="utf-8") as f:
     raw = json.load(f)
 
 DIFFICULTY_SETTINGS = {
-    "easy":   {"docs_per_topic": 1, "query_terms": 4},
-    "medium": {"docs_per_topic": 2, "query_terms": 4},
-    "hard":   {"docs_per_topic": 3, "query_terms": 4},
+    "easy":   {"docs_per_topic": 1, "query_terms": 2},
+    "medium": {"docs_per_topic": 1, "query_terms": 3},
+    "hard":   {"docs_per_topic": 2, "query_terms": 4},
 }
 
 
@@ -166,7 +166,6 @@ class IRMeasuresTFIDF:
                 {"type": "Text", "content": f"#### {d['nr']}: TF & DF (nur Terme aus dem Dokument)"},
                 {"type": "layout_table", "rows": len(cells), "cols": 3, "cells": cells},
             ]
-        base["view1"] = view1
 
         view2 = [{
             "type": "Text",
@@ -209,7 +208,6 @@ class IRMeasuresTFIDF:
                 {"type": "Text", "content": f"#### {d['nr']}: TF-IDF (nur Terme aus dem Dokument)"},
                 {"type": "layout_table", "rows": len(cells), "cols": 2, "cells": cells},
             ]
-        base["view2"] = view2
 
         view3 = [{
             "type": "Text",
@@ -252,7 +250,26 @@ class IRMeasuresTFIDF:
             "cols": 2,
             "cells": score_cells,
         })
-
+        
+        base["lastView"] = [
+        {
+            "type": "Text",
+            "content": (
+                "### Hinweis zur Praxis:\n\n"
+                "TF-IDF ist ein wichtiges Verfahren zur Gewichtung von Begriffen in Dokumenten.\n\n"
+                "**Idee:**\n"
+                "Wörter werden danach bewertet, wie häufig sie in einem Dokument vorkommen (TF) "
+                "und wie selten sie im gesamten Korpus sind (IDF).\n\n"
+                "**Vorteile:**\n"
+                "- Hebt wichtige, charakteristische Begriffe hervor\n"
+                "- Reduziert den Einfluss sehr häufiger Wörter (z. B. \"und\", \"der\")\n"
+                "- Grundlage vieler Ranking-Verfahren (z. B. mit Cosine Similarity)\n\n"
+                "**Einschränkung:**\n"
+                "Berücksichtigt keine Bedeutung oder Reihenfolge von Wörtern, sondern nur deren Häufigkeit."
+            ),
+        }]
+        base["view1"] = view1
+        base["view2"] = view2
         base["view3"] = view3
         return base
 
@@ -285,7 +302,24 @@ class IRMeasuresTFIDF:
                     "id": "answers_tfidf",
                     "rows": 10,
                 },
-            ]
+            ],
+            "lastView": [
+                {
+                    "type": "Text",
+                    "content": (
+                        "### Hinweis zur Praxis:\n\n"
+                        "TF-IDF ist ein wichtiges Verfahren zur Gewichtung von Begriffen in Dokumenten.\n\n"
+                        "**Idee:**\n"
+                        "Wörter werden danach bewertet, wie häufig sie in einem Dokument vorkommen (TF) "
+                        "und wie selten sie im gesamten Korpus sind (IDF).\n\n"
+                        "**Vorteile:**\n"
+                        "- Hebt wichtige, charakteristische Begriffe hervor\n"
+                        "- Reduziert den Einfluss sehr häufiger Wörter (z. B. \"und\", \"der\")\n"
+                        "- Grundlage vieler Ranking-Verfahren (z. B. mit Cosine Similarity)\n\n"
+                        "**Einschränkung:**\n"
+                        "Berücksichtigt keine Bedeutung oder Reihenfolge von Wörtern, sondern nur deren Häufigkeit."
+                    ),
+                }]
         }
 
     def generate(self):
