@@ -406,6 +406,90 @@ QUESTION_CONFIG = {
             },
         },
     },
+    "incidence_matrix": {
+        "class_path": "app.question_types.incidence_matrix.IncidenceMatrix",
+        "metadata": {
+            "title": "incidence_matrix",
+            "week": 2,
+            "desc": "lol",
+            "tags": ["matching", "algorithms"],
+            "settings": {
+                "difficulty": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["easy", "medium", "hard"],
+                    "default": "easy",
+                },
+                "seed": {
+                    "kind": "number",
+                    "visibility": "hidden",
+                },
+            },
+        },
+    },
+    "inverted_index": {
+        "class_path": "app.question_types.inverted_index.InvertedIndex",
+        "metadata": {
+            "title": "inverted_index",
+            "week": 2,
+            "desc": "lol",
+            "tags": ["matching", "algorithms"],
+            "settings": {
+                "difficulty": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["easy", "medium", "hard"],
+                    "default": "easy",
+                },
+                "seed": {
+                    "kind": "number",
+                    "visibility": "hidden",
+                },
+            },
+        },
+    },
+    "boolean_retrieval": {
+        "class_path": "app.question_types.boolean_retrieval.BooleanRetrieval",
+        "metadata": {
+            "title": "boolean_retrival",
+            "week": 2,
+            "desc": "lol",
+            "tags": ["matching", "algorithms"],
+            "settings": {
+                "difficulty": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["easy", "medium", "hard"],
+                    "default": "easy",
+                },
+                "seed": {
+                    "kind": "number",
+                    "visibility": "hidden",
+                },
+            },
+        },
+    },
+    "positional_index": {
+        "class_path": "app.question_types.positional_index.PositionalIndex",
+        "metadata": {
+            "title": "positional_index",
+            "week": 2,
+            "desc": "lol",
+            "tags": ["matching", "algorithms"],
+            "settings": {
+                "difficulty": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["easy", "medium", "hard"],
+                    "default": "easy",
+                },
+                "seed": {
+                    "kind": "number",
+                    "visibility": "hidden",
+                },
+            },
+        },
+    },
     "levenshtein": {
         "class_path": "app.question_types.levenshtein.LevenshteinQuestion",
         "metadata": {
