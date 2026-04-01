@@ -9,6 +9,38 @@
       "difficulty": "easy"
     },
     {
+      "name": "regex_postleitzahlen",
+      "question": "Gegeben sei folgender Text. Schreiben Sie einen regulären Ausdruck, welcher alle deutschen Postleitzahlen (genau 5 Ziffern) findet:",
+      "solution": "\\b\\d{5}\\b",
+      "content": "Unsere Standorte befinden sich in 01069 Dresden, 04109 Leipzig und 80331 München. Die alte interne Nummer 1234 ist keine Postleitzahl.",
+      "link": "https://regex101.com/r/xf10pP/1",
+      "difficulty": "easy"
+    },
+    {
+      "name": "regex_hausnummern",
+      "question": "Gegeben sei folgender Text. Schreiben Sie einen regulären Ausdruck, welcher alle Hausnummern findet, die aus einer oder mehreren Ziffern und optional einem einzelnen Buchstaben bestehen:",
+      "solution": "\\b\\d+[a-zA-Z]?\\b",
+      "content": "Sie finden uns in der Hauptstraße 15, am Markt 22b und in der Gartenweg 103. Die Zimmernummer A12 soll nicht betrachtet werden.",
+      "link": "https://regex101.com/r/E1hHjm/1",
+      "difficulty": "easy"
+    },
+    {
+      "name": "regex_webseiten_protokoll",
+      "question": "Gegeben sei folgender Text. Schreiben Sie einen regulären Ausdruck, welcher alle URLs findet, die mit http:// oder https:// beginnen:",
+      "solution": "https?:\\/\\/[^\\s]+\\b",
+      "content": "Weitere Informationen finden Sie unter https://www.tu-dresden.de, http://beispiel.de/docs und auf unserem internen Portal ohne Protokoll: www.intern.de.",
+      "link": "https://regex101.com/r/jHX65s/1",
+      "difficulty": "medium"
+    },
+    {
+      "name": "regex_grossgeschriebene_woerter",
+      "question": "Gegeben sei folgender Text. Schreiben Sie einen regulären Ausdruck, welcher alle vollständig großgeschriebenen Wörter mit mindestens 2 Buchstaben findet:",
+      "solution": "\\b[A-ZÄÖÜ]{2,}\\b",
+      "content": "Die Abteilungen IT, HR und BWL arbeiten mit dem Team KI zusammen. Das Wort Uni soll nicht gefunden werden, TEST aber schon.",
+      "link": "https://regex101.com/r/rPaLOa/1",
+      "difficulty": "medium"
+    },
+    {
       "name": "regex_email_domain",
       "question": "Gegeben sei folgender Text. Schreiben Sie einen regulären Ausdruck, welcher die Domain aller Email-Adressen findet:",
       "solution": "@[\\w-]+\\.[\\w]+",

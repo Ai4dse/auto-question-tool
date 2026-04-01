@@ -17,7 +17,7 @@ services:
     image: mysql:8.0
     container_name: mysql
     restart: unless-stopped
-    command: ["mysqld", "--lower_case_table_names=1"]
+    command: ["mysqld", "--lower_case_table_names=1", "--max_execution_time=10000"]
     environment:
       - MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-root}
       - MYSQL_DATABASE=exercise_db
@@ -43,6 +43,7 @@ services:
       - SQL_DB=exercise_db
       - SQL_USER=sql_reader
       - SQL_PASSWORD=${SQL_PASSWORD:-sql_reader_pass}
+      - SQL_READ_TIMEOUT_SECONDS=12
       - ALLOW_PUBLIC_USER_CREATION=true
     depends_on:
       mongo:

@@ -8,7 +8,7 @@ from mysql.connector import Error
 from mysql.connector.pooling import MySQLConnectionPool
 
 SQL_MAX_RESULT_ROWS = int(os.getenv("SQL_MAX_RESULT_ROWS", "10000"))
-SQL_MAX_JOINS = int(os.getenv("SQL_MAX_JOINS", "3"))
+SQL_MAX_JOINS = int(os.getenv("SQL_MAX_JOINS", "5"))
 SQL_READ_TIMEOUT = int(os.getenv("SQL_READ_TIMEOUT_SECONDS", "8"))
 SQL_CONNECT_TIMEOUT = int(os.getenv("SQL_CONNECT_TIMEOUT_SECONDS", "5"))
 APP_ENV = os.getenv("APP_ENV", "development").lower()
@@ -104,6 +104,14 @@ def _sql_settings() -> Dict[str, Any]:
 
 def _format_sql_error(error: Error) -> str:
     message = str(error).lower()
+    if error.errno in {3024, 1317}:
+        return "Die Abfrage hat zu lange gedauert. Bitte passen Sie die SQL-Abfrage an."
+    if (
+        "maximum statement execution time exceeded" in message
+        or "query execution was interrupted" in message
+        or "read timeout" in message
+    ):
+        return "Die Abfrage hat zu lange gedauert. Bitte passen Sie die SQL-Abfrage an."
     if error.errno in {1044, 1045, 1142}:
         return "Nur Leseoperationen sind erlaubt."
     if "command denied" in message or "access denied" in message:
