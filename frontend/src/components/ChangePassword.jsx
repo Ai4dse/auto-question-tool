@@ -9,6 +9,45 @@ export default function ChangePassword({ username, onPasswordChanged }) {
   const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
 
+  function getFriendlyErrorMessage(data, res) {
+    if (res.status === 401) {
+      if (data?.detail === "Invalid credentials") {
+        return "The old password is incorrect.";
+      }
+      return "Your credentials are invalid.";
+    }
+
+    if (res.status === 422 && Array.isArray(data?.detail)) {
+      for (const err of data.detail) {
+        const field = err?.loc?.[1];
+        const msg = err?.msg || "";
+
+        if (field === "new_password") {
+          if (msg.toLowerCase().includes("at least")) {
+            return "The new password must be at least 8 characters long.";
+          }
+          return "Please enter a valid new password.";
+        }
+
+        if (field === "old_password") {
+          return "Please enter your old password.";
+        }
+
+        if (field === "username") {
+          return "Your session seems invalid. Please sign in again.";
+        }
+      }
+
+      return "Please check your input and try again.";
+    }
+
+    if (typeof data?.detail === "string") {
+      return data.detail;
+    }
+
+    return "Password change failed. Please try again.";
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
@@ -27,6 +66,7 @@ export default function ChangePassword({ username, onPasswordChanged }) {
           new_password: newPassword,
         }),
       });
+
       const data = await res.json();
 
       if (res.ok) {
@@ -36,7 +76,7 @@ export default function ChangePassword({ username, onPasswordChanged }) {
         setNewPassword("");
         setTimeout(() => onPasswordChanged(), 1500);
       } else {
-        setMessage("❌ Error: " + (data.detail || "Password change failed"));
+        setMessage("❌ " + getFriendlyErrorMessage(data, res));
       }
     } catch (err) {
       setMessage("⚠️ Network error: " + err.message);
