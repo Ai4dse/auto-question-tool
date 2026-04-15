@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any, Dict
 from zoneinfo import ZoneInfo
 
-from fastapi import FastAPI, HTTPException, Request
+from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.concurrency import run_in_threadpool
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -16,7 +16,7 @@ from mongoengine import connect, disconnect
 from mongoengine.connection import get_db
 
 from app.errors import DependencyUnavailableError
-from app.routes.auth import router as auth_router
+from app.routes.auth import require_password_changed, router as auth_router
 
 from .config import QUESTION_CONFIG, WEEK_CONFIG
 from .generator_loader import load_question_generators
@@ -195,7 +195,7 @@ def serialize(obj):
         return obj
 
 @app.get("/questions")
-def get_questions():
+def get_questions(_: Any = Depends(require_password_changed)):
     return [
         {
             "id": qid,
@@ -209,7 +209,7 @@ def get_questions():
 
 
 @app.get("/question/{type_name}")
-def get_question_by_type(type_name: str, request: Request):
+def get_question_by_type(type_name: str, request: Request, _: Any = Depends(require_password_changed)):
     if type_name not in question_generators:
         raise HTTPException(status_code=404, detail="Question type not found")
 
@@ -239,7 +239,7 @@ def get_question_by_type(type_name: str, request: Request):
 
 
 @app.post("/question/{type_name}/evaluate")
-async def evaluate_question(type_name: str, request: Request):
+async def evaluate_question(type_name: str, request: Request, _: Any = Depends(require_password_changed)):
     if type_name not in question_generators:
         raise HTTPException(status_code=404, detail="Question type not found")
 
@@ -274,7 +274,7 @@ async def evaluate_question(type_name: str, request: Request):
     }
 
 @app.post("/question/{type_name}/preview")
-async def preview_question(type_name: str, request: Request):
+async def preview_question(type_name: str, request: Request, _: Any = Depends(require_password_changed)):
     if type_name not in question_generators:
         raise HTTPException(status_code=404, detail="Question type not found")
 

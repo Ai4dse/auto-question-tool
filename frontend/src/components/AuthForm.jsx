@@ -18,6 +18,7 @@ export default function AuthForm({ onLogin }) {
     try {
       const res = await fetch(`${API_URL}/auth/login`, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
@@ -26,7 +27,6 @@ export default function AuthForm({ onLogin }) {
       const data = await res.json();
 
       if (res.ok) {
-        localStorage.setItem("username", data.username);
         if (data.must_change) {
           onLogin(data.username, true);
         } else {

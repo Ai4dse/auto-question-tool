@@ -64,7 +64,9 @@ export default function QuestionPage() {
     setResolvedSeed(null);
     setResolvedExerciseName(null);
 
-    fetch(`${API_URL}/question/${type}${baseQueryString}`)
+    fetch(`${API_URL}/question/${type}${baseQueryString}`, {
+      credentials: "include",
+    })
       .then(async (res) => {
         if (!res.ok) {
           let message = `HTTP ${res.status}`;
@@ -123,10 +125,17 @@ export default function QuestionPage() {
 
       fetch(`${API_URL}/question/${type}/preview${requestQueryString}`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ statement: stmt }),
       })
-        .then((res) => res.json())
+        .then(async (res) => {
+          if (!res.ok) {
+            const data = await res.json().catch(() => ({}));
+            throw new Error(data?.detail || `HTTP ${res.status}`);
+          }
+          return res.json();
+        })
         .then((data) => {
           if (cancelled) return;
 
@@ -188,10 +197,17 @@ export default function QuestionPage() {
 
     fetch(`${API_URL}/question/${type}/evaluate${requestQueryString}`, {
       method: "POST",
+      credentials: "include",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(formData),
     })
-      .then((res) => res.json())
+      .then(async (res) => {
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}));
+          throw new Error(data?.detail || `HTTP ${res.status}`);
+        }
+        return res.json();
+      })
       .then((data) => {
         const filteredResults = filterResultsForView(data.results, viewName);
         const isEmpty =

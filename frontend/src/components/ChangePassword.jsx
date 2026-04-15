@@ -48,6 +48,32 @@ export default function ChangePassword({ username, onPasswordChanged }) {
     return "Password change failed. Please try again.";
   }
 
+  async function reconcileAfterNetworkError() {
+    try {
+      const meRes = await fetch(`${API_URL}/auth/me`, {
+        credentials: "include",
+      });
+
+      if (!meRes.ok) {
+        return false;
+      }
+
+      const meData = await meRes.json();
+      if (meData?.must_change === false) {
+        setMessage("✅ Password seems updated. Connection was lost, but your account is now active.");
+        setSuccess(true);
+        setOldPassword("");
+        setNewPassword("");
+        setTimeout(() => onPasswordChanged(), 1500);
+        return true;
+      }
+    } catch {
+      return false;
+    }
+
+    return false;
+  }
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
@@ -57,11 +83,11 @@ export default function ChangePassword({ username, onPasswordChanged }) {
     try {
       const res = await fetch(`${API_URL}/auth/change_password`, {
         method: "POST",
+        credentials: "include",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          username,
           old_password: oldPassword,
           new_password: newPassword,
         }),
@@ -79,7 +105,12 @@ export default function ChangePassword({ username, onPasswordChanged }) {
         setMessage("❌ " + getFriendlyErrorMessage(data, res));
       }
     } catch (err) {
-      setMessage("⚠️ Network error: " + err.message);
+      const resolved = await reconcileAfterNetworkError();
+      if (!resolved) {
+        setMessage(
+          "⚠️ Network error: Could not confirm password status. Please retry, or try logging in with your new password."
+        );
+      }
     } finally {
       setLoading(false);
     }

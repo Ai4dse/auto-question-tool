@@ -47,8 +47,14 @@ export default function Library() {
         setLoading(true);
         setError("");
 
-        const res = await fetch(`${API_URL}/questions`);
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const res = await fetch(`${API_URL}/questions`, {
+          credentials: "include",
+        });
+        if (!res.ok) {
+          if (res.status === 401) throw new Error("Please sign in to view questions.");
+          if (res.status === 403) throw new Error("Please change your password to continue.");
+          throw new Error(`HTTP ${res.status}`);
+        }
 
         const data = await res.json();
         if (cancelled) return;
