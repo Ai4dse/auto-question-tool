@@ -11,7 +11,7 @@ import {
   buildQueryFromSettings,
 } from "../components/settings/settingUtils";
 
-export default function Library() {
+export default function Library({ onSessionExpired }) {
   const [hoveredConfig, setHoveredConfig] = useState(null);
   const [questionSettings, setQuestionSettings] = useState({});
   const hoverTimeout = useRef(null);
@@ -51,7 +51,10 @@ export default function Library() {
           credentials: "include",
         });
         if (!res.ok) {
-          if (res.status === 401) throw new Error("Please sign in to view questions.");
+          if (res.status === 401) {
+            onSessionExpired?.();
+            return;
+          }
           if (res.status === 403) throw new Error("Please change your password to continue.");
           throw new Error(`HTTP ${res.status}`);
         }

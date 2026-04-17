@@ -75,6 +75,11 @@ function App() {
     setMustChange(false);
   };
 
+  const handleSessionExpired = () => {
+    setUser(null);
+    setMustChange(false);
+  };
+
   if (authLoading) {
     return <div className="container py-4 text-center text-muted">Checking session...</div>;
   }
@@ -89,8 +94,8 @@ function App() {
         <>
           <Navbar user={user} onLogout={handleLogout} />
           <Routes>
-            <Route path="/" element={<Library />} />
-            <Route path="/question/:type" element={<QuestionPage />} />
+            <Route path="/" element={<Library onSessionExpired={handleSessionExpired} />} />
+            <Route path="/question/:type" element={<QuestionPage onSessionExpired={handleSessionExpired} />} />
           </Routes>
         </>
       )}

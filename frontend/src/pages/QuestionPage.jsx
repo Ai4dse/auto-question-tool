@@ -4,7 +4,7 @@ import { useLocation, useParams } from "react-router-dom";
 import LayoutRenderer from "../components/LayoutRenderer";
 import { API_URL } from "../api";
 
-export default function QuestionPage() {
+export default function QuestionPage({ onSessionExpired }) {
   const { type } = useParams();
   const { search } = useLocation();
   const isExternalExercise = type === "regex" || type === "xpath_xquery";
@@ -69,6 +69,10 @@ export default function QuestionPage() {
     })
       .then(async (res) => {
         if (!res.ok) {
+          if (res.status === 401) {
+            onSessionExpired?.();
+            throw new Error("Session expired. Please sign in again.");
+          }
           let message = `HTTP ${res.status}`;
           try {
             const err = await res.json();
@@ -131,6 +135,10 @@ export default function QuestionPage() {
       })
         .then(async (res) => {
           if (!res.ok) {
+            if (res.status === 401) {
+              onSessionExpired?.();
+              throw new Error("Session expired. Please sign in again.");
+            }
             const data = await res.json().catch(() => ({}));
             throw new Error(data?.detail || `HTTP ${res.status}`);
           }
@@ -203,6 +211,10 @@ export default function QuestionPage() {
     })
       .then(async (res) => {
         if (!res.ok) {
+          if (res.status === 401) {
+            onSessionExpired?.();
+            throw new Error("Session expired. Please sign in again.");
+          }
           const data = await res.json().catch(() => ({}));
           throw new Error(data?.detail || `HTTP ${res.status}`);
         }
