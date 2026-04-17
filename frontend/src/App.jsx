@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { Routes, Route } from "react-router-dom";
 import Library from "./pages/Library";
 import QuestionPage from "./pages/QuestionPage";
+import BugReportPage from "./pages/BugReportPage";
 import Navbar from "./components/Navbar";
 import AuthForm from "./components/AuthForm";
 import ChangePassword from "./components/ChangePassword";
@@ -96,6 +97,7 @@ function App() {
           <Routes>
             <Route path="/" element={<Library onSessionExpired={handleSessionExpired} />} />
             <Route path="/question/:type" element={<QuestionPage onSessionExpired={handleSessionExpired} />} />
+            <Route path="/bug-report" element={<BugReportPage onSessionExpired={handleSessionExpired} />} />
           </Routes>
         </>
       )}

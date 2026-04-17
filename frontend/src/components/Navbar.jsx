@@ -17,6 +17,10 @@ export default function Navbar({ user, onLogout }) {
             </Link>
           )}
 
+          <Link to="/bug-report" className="btn btn-outline-secondary me-2">
+            Problem melden
+          </Link>
+
           <span className="me-3 text-muted">
             <small>Signed in as: <strong>{user}</strong></small>
           </span>

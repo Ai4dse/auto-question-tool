@@ -10,7 +10,8 @@ services:
       - STRICT_GENERATOR_LOADING=true
       - ALLOW_PUBLIC_USER_CREATION=false
     command: sh -c "uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers ${WEB_CONCURRENCY:-4}"
-    volumes: !reset []
+    volumes: !override
+      - ./data/bug-reports:/var/bug-reports
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/ready', timeout=2)"]
       interval: 15s

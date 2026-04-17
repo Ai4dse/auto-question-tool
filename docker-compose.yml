@@ -45,6 +45,7 @@ services:
       - SQL_PASSWORD=${SQL_PASSWORD:-sql_reader_pass}
       - SQL_READ_TIMEOUT_SECONDS=12
       - ALLOW_PUBLIC_USER_CREATION=true
+      - BUG_REPORT_CSV_PATH=/var/bug-reports/bug_reports.csv
     depends_on:
       mongo:
         condition: service_healthy
@@ -52,6 +53,7 @@ services:
         condition: service_healthy
     volumes:
       - ./backend:/app
+      - ./data/bug-reports:/var/bug-reports
     command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
     healthcheck:
       test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2)"]
