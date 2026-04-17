@@ -1,9 +1,8 @@
 import os
 import inspect
 import logging
-import csv
 from contextlib import asynccontextmanager
-from datetime import date, datetime, timezone
+from datetime import date, datetime
 from json import JSONDecodeError
 from pathlib import Path
 from typing import Any, Dict
@@ -18,6 +17,7 @@ from mongoengine.connection import get_db
 from pydantic import BaseModel, Field
 
 from app.errors import DependencyUnavailableError
+from app.models.bug_report_model import BugReport
 from app.routes.auth import require_password_changed, router as auth_router
 
 from .config import QUESTION_CONFIG, WEEK_CONFIG
@@ -70,28 +70,16 @@ app.mount("/resources", StaticFiles(directory=str(APP_DIR / "resources")), name=
 MONGO_URL = os.getenv("MONGO_URL", "mongodb://localhost:27017/user_data")
 RELEASE_TIMEZONE = ZoneInfo("Europe/Berlin")
 question_generators: Dict[str, Dict[str, Any]] = {}
-BUG_REPORT_CSV_PATH = Path(os.getenv("BUG_REPORT_CSV_PATH", "app/resources/bug_reports.csv"))
 
 
 class BugReportRequest(BaseModel):
     text: str = Field(min_length=1, max_length=4000)
 
 
-def _append_bug_report(username: str, text: str) -> None:
-    csv_path = BUG_REPORT_CSV_PATH
-    csv_path.parent.mkdir(parents=True, exist_ok=True)
+def _save_bug_report(username: str, text: str) -> None:
+    report = BugReport(username=username, text=text)
+    report.save()
 
-    should_write_header = not csv_path.exists() or csv_path.stat().st_size == 0
-
-    with csv_path.open("a", encoding="utf-8", newline="") as f:
-        writer = csv.writer(f)
-        if should_write_header:
-            writer.writerow(["user", "date", "text"])
-        writer.writerow([
-            username,
-            datetime.now(timezone.utc).isoformat(),
-            text,
-        ])
 
 @app.get("/health")
 def health():
@@ -334,7 +322,7 @@ async def create_bug_report(payload: BugReportRequest, user: Any = Depends(requi
     if not text:
         raise HTTPException(status_code=400, detail="Text must not be empty")
 
-    await run_in_threadpool(_append_bug_report, user.username, text)
+    await run_in_threadpool(_save_bug_report, user.username, text)
     return {"message": "Feedback received"}
 
 
