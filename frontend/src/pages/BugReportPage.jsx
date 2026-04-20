@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { API_URL } from "../api";
+import { API_URL, getRateLimitMessage } from "../api";
 
 export default function BugReportPage({ onSessionExpired }) {
   const [text, setText] = useState("");
@@ -27,6 +27,9 @@ export default function BugReportPage({ onSessionExpired }) {
         if (res.status === 401) {
           onSessionExpired?.();
           return;
+        }
+        if (res.status === 429) {
+          throw new Error(getRateLimitMessage(res));
         }
 
         const data = await res.json().catch(() => ({}));

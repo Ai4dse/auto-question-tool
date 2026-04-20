@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useLocation, useParams } from "react-router-dom";
 import LayoutRenderer from "../components/LayoutRenderer";
-import { API_URL } from "../api";
+import { API_URL, getRateLimitMessage } from "../api";
 
 export default function QuestionPage({ onSessionExpired }) {
   const { type } = useParams();
@@ -19,6 +19,7 @@ export default function QuestionPage({ onSessionExpired }) {
   const [resolvedSeed, setResolvedSeed] = useState(null);
   const [resolvedExerciseName, setResolvedExerciseName] = useState(null);
   const [loadError, setLoadError] = useState("");
+  const [requestError, setRequestError] = useState("");
 
   const viewFieldIdsRef = useRef({}); // { [viewName]: Set<string> }
 
@@ -73,6 +74,9 @@ export default function QuestionPage({ onSessionExpired }) {
             onSessionExpired?.();
             throw new Error("Session expired. Please sign in again.");
           }
+          if (res.status === 429) {
+            throw new Error(getRateLimitMessage(res));
+          }
           let message = `HTTP ${res.status}`;
           try {
             const err = await res.json();
@@ -88,6 +92,7 @@ export default function QuestionPage({ onSessionExpired }) {
         if (data?.error) throw new Error(data.error);
         setQuestion(data);
         setLoadError("");
+        setRequestError("");
         setResolvedSeed(data?.seed ?? null);
         setResolvedExerciseName(data?.exercise_name ?? null);
         viewFieldIdsRef.current = {};
@@ -122,6 +127,7 @@ export default function QuestionPage({ onSessionExpired }) {
     let cancelled = false;
 
     const timeoutId = setTimeout(() => {
+      setRequestError("");
       setReactiveTables((prev) => ({
         ...prev,
         "0": { ...(prev["0"] || {}), status: "loading" },
@@ -139,6 +145,9 @@ export default function QuestionPage({ onSessionExpired }) {
               onSessionExpired?.();
               throw new Error("Session expired. Please sign in again.");
             }
+            if (res.status === 429) {
+              throw new Error(getRateLimitMessage(res));
+            }
             const data = await res.json().catch(() => ({}));
             throw new Error(data?.detail || `HTTP ${res.status}`);
           }
@@ -146,6 +155,7 @@ export default function QuestionPage({ onSessionExpired }) {
         })
         .then((data) => {
           if (cancelled) return;
+          setRequestError("");
 
           setReactiveTables((prev) => ({
             ...prev,
@@ -162,6 +172,7 @@ export default function QuestionPage({ onSessionExpired }) {
         .catch((err) => {
           if (cancelled) return;
           console.error("Preview error:", err);
+          setRequestError(err?.message || "Vorschau fehlgeschlagen.");
           setReactiveTables((prev) => ({
             ...prev,
             "0": {
@@ -182,7 +193,10 @@ export default function QuestionPage({ onSessionExpired }) {
     };
   }, [formData["0"], question, type, requestQueryString]);
 
-  const handleChange = (id, value) => setFormData((prev) => ({ ...prev, [id]: value }));
+  const handleChange = (id, value) => {
+    setRequestError("");
+    setFormData((prev) => ({ ...prev, [id]: value }));
+  };
 
   const filterResultsForView = (allResults, viewName) => {
     const ids = viewFieldIdsRef.current?.[viewName];
@@ -203,6 +217,8 @@ export default function QuestionPage({ onSessionExpired }) {
       return;
     }
 
+    setRequestError("");
+
     fetch(`${API_URL}/question/${type}/evaluate${requestQueryString}`, {
       method: "POST",
       credentials: "include",
@@ -215,12 +231,16 @@ export default function QuestionPage({ onSessionExpired }) {
             onSessionExpired?.();
             throw new Error("Session expired. Please sign in again.");
           }
+          if (res.status === 429) {
+            throw new Error(getRateLimitMessage(res));
+          }
           const data = await res.json().catch(() => ({}));
           throw new Error(data?.detail || `HTTP ${res.status}`);
         }
         return res.json();
       })
       .then((data) => {
+        setRequestError("");
         const filteredResults = filterResultsForView(data.results, viewName);
         const isEmpty =
           !filteredResults || Object.keys(filteredResults).length === 0;
@@ -232,7 +252,10 @@ export default function QuestionPage({ onSessionExpired }) {
           [viewName]: isEmpty ? "showingResults" : "evaluated",
         }));
       })
-      .catch((err) => console.error("Evaluation error:", err));
+      .catch((err) => {
+        console.error("Evaluation error:", err);
+        setRequestError(err?.message || "Abgabe fehlgeschlagen.");
+      });
   };
 
   const handleShowResults = (viewName) =>
@@ -258,6 +281,7 @@ export default function QuestionPage({ onSessionExpired }) {
   return (
     <div className="container py-4">
       <h2 className="mb-4 text-capitalize">{displayHeader}</h2>
+      {requestError && <div className="alert alert-warning">{requestError}</div>}
 
       {visibleViews.map((viewName, index) => {
         const status = viewStatus[viewName] || "idle";

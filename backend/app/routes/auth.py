@@ -5,8 +5,10 @@ from hashlib import sha256
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request, Response
 from mongoengine.errors import NotUniqueError
+from mongoengine.connection import get_db
 from passlib.context import CryptContext
 from pydantic import BaseModel, Field
+from pymongo import ReturnDocument
 
 from app.models.user_model import User
 
@@ -20,6 +22,9 @@ AUTH_SESSION_COOKIE_NAME = os.getenv("AUTH_SESSION_COOKIE_NAME", "auth_session")
 AUTH_SESSION_HOURS = int(os.getenv("AUTH_SESSION_HOURS", "12"))
 AUTH_COOKIE_SECURE = os.getenv("AUTH_COOKIE_SECURE", "false").lower() == "true"
 AUTH_COOKIE_SAMESITE = os.getenv("AUTH_COOKIE_SAMESITE", "lax")
+RATE_LIMIT_ENABLED = os.getenv("RATE_LIMIT_ENABLED", "true").lower() == "true"
+RATE_LIMIT_PER_MINUTE = max(1, int(os.getenv("RATE_LIMIT_PER_MINUTE", "30")))
+RATE_LIMIT_WINDOW_SECONDS = max(1, int(os.getenv("RATE_LIMIT_WINDOW_SECONDS", "60")))
 
 
 class CreateUserRequest(BaseModel):
@@ -42,6 +47,15 @@ class SessionInfoResponse(BaseModel):
     username: str
     display_name: str | None
     must_change: bool
+
+
+def ensure_rate_limit_indexes() -> None:
+    if not RATE_LIMIT_ENABLED:
+        return
+
+    db = get_db()
+    counters = db["rate_limit_counters"]
+    counters.create_index("expires_at", expireAfterSeconds=0)
 
 def hash_password(password: str) -> str:
     return pwd_context.hash(password)
@@ -117,10 +131,51 @@ def require_authenticated_user(request: Request) -> User:
 
 
 def require_password_changed(user: User = Depends(require_authenticated_user)) -> User:
+    _enforce_user_rate_limit(user.username)
     if user.must_change_password:
         raise HTTPException(status_code=403, detail="Password change required")
     return user
 
+def _enforce_user_rate_limit(username: str) -> None:
+    if not RATE_LIMIT_ENABLED:
+        return
+
+    now = datetime.now(timezone.utc)
+    epoch_seconds = int(now.timestamp())
+    bucket_start_epoch = epoch_seconds - (epoch_seconds % RATE_LIMIT_WINDOW_SECONDS)
+    window_start = datetime.fromtimestamp(bucket_start_epoch, tz=timezone.utc)
+    expires_at = datetime.fromtimestamp(
+        bucket_start_epoch + (2 * RATE_LIMIT_WINDOW_SECONDS),
+        tz=timezone.utc,
+    )
+    counter_id = f"{username}:{bucket_start_epoch}"
+
+    db = get_db()
+    counters = db["rate_limit_counters"]
+    result = counters.find_one_and_update(
+        {"_id": counter_id},
+        {
+            "$inc": {"count": 1},
+            "$setOnInsert": {
+                "username": username,
+                "window_start": window_start,
+                "expires_at": expires_at,
+            },
+        },
+        upsert=True,
+        return_document=ReturnDocument.AFTER,
+    )
+
+    request_count = int((result or {}).get("count", 0))
+    if request_count <= RATE_LIMIT_PER_MINUTE:
+        return
+
+    retry_after_seconds = max(1, RATE_LIMIT_WINDOW_SECONDS - (epoch_seconds - bucket_start_epoch))
+    raise HTTPException(
+        status_code=429,
+        detail=f"Rate limit exceeded: max {RATE_LIMIT_PER_MINUTE} requests per minute. Try again in {retry_after_seconds}s.",
+        headers={"Retry-After": str(retry_after_seconds)},
+    )
 
 def _require_admin_token(x_admin_token: str | None) -> None:
     if ALLOW_PUBLIC_USER_CREATION:

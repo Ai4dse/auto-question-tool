@@ -1,6 +1,6 @@
 import { useState } from "react";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { API_URL } from "../api";
+import { API_URL, getRateLimitMessage } from "../api";
 
 export default function ChangePassword({ username, onPasswordChanged }) {
   const [oldPassword, setOldPassword] = useState("");
@@ -54,6 +54,12 @@ export default function ChangePassword({ username, onPasswordChanged }) {
         credentials: "include",
       });
 
+      if (meRes.status === 429) {
+        setMessage(getRateLimitMessage(meRes));
+        setSuccess(false);
+        return false;
+      }
+
       if (!meRes.ok) {
         return false;
       }
@@ -92,6 +98,11 @@ export default function ChangePassword({ username, onPasswordChanged }) {
           new_password: newPassword,
         }),
       });
+
+      if (res.status === 429) {
+        setMessage(getRateLimitMessage(res));
+        return;
+      }
 
       const data = await res.json();
 

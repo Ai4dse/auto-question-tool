@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { API_URL } from "../api";
+import { API_URL, getRateLimitMessage } from "../api";
 
 export default function AuthForm({ onLogin }) {
   const [username, setUsername] = useState("");
@@ -24,6 +24,12 @@ export default function AuthForm({ onLogin }) {
         },
         body: JSON.stringify({ username, password }),
       });
+
+      if (res.status === 429) {
+        setMessage(getRateLimitMessage(res));
+        return;
+      }
+
       const data = await res.json();
 
       if (res.ok) {

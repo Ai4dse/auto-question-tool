@@ -6,12 +6,13 @@ import BugReportPage from "./pages/BugReportPage";
 import Navbar from "./components/Navbar";
 import AuthForm from "./components/AuthForm";
 import ChangePassword from "./components/ChangePassword";
-import { API_URL } from "./api";
+import { API_URL, getRateLimitMessage } from "./api";
 
 function App() {
   const [user, setUser] = useState(null);
   const [mustChange, setMustChange] = useState(false);
   const [authLoading, setAuthLoading] = useState(true);
+  const [globalMessage, setGlobalMessage] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -23,6 +24,9 @@ function App() {
         });
 
         if (!res.ok) {
+          if (res.status === 429) {
+            setGlobalMessage(getRateLimitMessage(res));
+          }
           if (!cancelled) {
             setUser(null);
             setMustChange(false);
@@ -32,6 +36,7 @@ function App() {
 
         const data = await res.json();
         if (!cancelled) {
+          setGlobalMessage("");
           setUser(data.username || null);
           setMustChange(Boolean(data.must_change));
         }
@@ -64,10 +69,13 @@ function App() {
 
   const handleLogout = async () => {
     try {
-      await fetch(`${API_URL}/auth/logout`, {
+      const res = await fetch(`${API_URL}/auth/logout`, {
         method: "POST",
         credentials: "include",
       });
+      if (res.status === 429) {
+        setGlobalMessage(getRateLimitMessage(res));
+      }
     } catch {
       // local state reset still logs user out from UI
     }
@@ -87,6 +95,7 @@ function App() {
 
   return (
     <div className="container py-4">
+      {globalMessage && <div className="alert alert-warning">{globalMessage}</div>}
       {!user ? (
         <AuthForm onLogin={handleLogin} />
       ) : mustChange ? (

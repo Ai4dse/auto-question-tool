@@ -2,7 +2,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Link } from "react-router-dom";
 import "bootstrap/dist/css/bootstrap.min.css";
-import { API_URL } from "../api";
+import { API_URL, getRateLimitMessage } from "../api";
 
 import SettingField from "../components/settings/SettingField";
 
@@ -54,6 +54,9 @@ export default function Library({ onSessionExpired }) {
           if (res.status === 401) {
             onSessionExpired?.();
             return;
+          }
+          if (res.status === 429) {
+            throw new Error(getRateLimitMessage(res));
           }
           if (res.status === 403) throw new Error("Please change your password to continue.");
           throw new Error(`HTTP ${res.status}`);

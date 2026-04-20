@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 
 from app.errors import DependencyUnavailableError
 from app.models.bug_report_model import BugReport
-from app.routes.auth import require_password_changed, router as auth_router
+from app.routes.auth import ensure_rate_limit_indexes, require_password_changed, router as auth_router
 
 from .config import QUESTION_CONFIG, WEEK_CONFIG
 from .generator_loader import load_question_generators
@@ -48,6 +48,7 @@ async def lifespan(_: FastAPI):
 
     try:
         connect(host=MONGO_URL)
+        ensure_rate_limit_indexes()
     except Exception:
         logger.exception("Failed to connect to MongoDB during startup")
         if APP_ENV == "production":
