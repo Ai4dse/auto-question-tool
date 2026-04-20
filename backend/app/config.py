@@ -1,43 +1,43 @@
 WEEK_CONFIG = {
     1: {
-        "title": "Woche 1: Reguläre Ausdrücke",
-        "start_date": "2025-03-01",
+        "title": "Einfache Modelle für Text",
+        "start_date": "2026-04-21",
     },
     2: {
         "title": "Woche 2: Vektorraummodell",
-        "start_date": "2025-03-15",
+        "start_date": "2026-04-28",
     },
     3: {
         "title": "Woche 3: ER-Diagramm",
-        "start_date": "2025-03-29",
+        "start_date": "2026-05-05",
     },
     4: {
         "title": "Woche 4: Relationales Schema",
-        "start_date": "2025-04-12",
+        "start_date": "2026-05-12",
     },
     5: {
         "title": "Woche 5: Relationale Algebra, SQL und XPath/XQuery",
-        "start_date": "2025-04-26",
+        "start_date": "2026-05-19",
     },
     6: {
         "title": "Woche 6: Funktionale Abhängigkeiten und Normalformen",
-        "start_date": "2025-05-10",
+        "start_date": "2026-05-26",
     },
     7: {
         "title": "Woche 7: Synthesealgorithmus und Star-/Snowflake-Schema",
-        "start_date": "2025-05-24",
+        "start_date": "2026-06-02",
     },
     8: {
         "title": "Woche 8: Assoziationsregel-Extraktion",
-        "start_date": "2025-06-07",
+        "start_date": "2026-06-09",
     },
     9: {
         "title": "Woche 9: Distanzmaße und Clustering",
-        "start_date": "2025-06-21",
+        "start_date": "2026-06-16",
     },
     10: {
         "title": "Woche 10: Schema-Matching und Data Cleaning",
-        "start_date": "2025-07-05",
+        "start_date": "2026-06-23",
     },
 }
 
@@ -494,7 +494,7 @@ QUESTION_CONFIG = {
         "metadata": {
             "title": "Levenshtein",
             "week": 1,
-            "desc": "Berechne die Edit-Distanz zwischen zwei Strings.",
+            "desc": "Berechne die Levenshtein-Distanz zwischen zwei Strings.",
             "tags": ["string", "distance", "algorithms"],
             "settings": {
                 "difficulty": {
