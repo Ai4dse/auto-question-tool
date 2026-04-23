@@ -80,10 +80,6 @@ class IncidenceMatrix:
                     + "\n\n"
                     "### Aufgabe\n\n"
                     "Fülle die bereitgestellte Tabelle (Term-Document-Incidence-Matrix) aus.\n\n"
-                    "Für jeden Term und jedes Dokument gilt:\n"
-                    "- Trage **1** ein, wenn der Term im Dokument vorkommt\n"
-                    "- Trage **0** ein, wenn der Term **nicht** im Dokument vorkommt\n\n"
-                    "Jede Zeile entspricht einem Term und jede Spalte einem Dokument."
                 ),
             },
             {"type": "layout_table", "rows": len(self.terms)+1, "cols": len(self.docs)+1, "cells": cells}

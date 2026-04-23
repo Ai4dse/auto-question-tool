@@ -81,11 +81,6 @@ class InvertedIndex:
                     "### Aufgabe\n\n"
                     "Erstelle einen **Inverted Index** für die gegebenen Dokumente.\n\n"
                     "Für jeden Term soll angegeben werden, in welchen Dokumenten er vorkommt.\n\n"
-                    "**Vorgehen:**\n"
-                    "- Jede Zeile entspricht einem Term\n"
-                    "- Trage alle passenden Dokumente ein, z. B. `Doc1, Doc3`\n"
-                    "- Verwende nur die Bezeichnungen `Doc1`, `Doc2`, ...\n"
-                    "- Gib die Dokumente in **aufsteigender Reihenfolge** an\n\n"
                     "**Hinweis:**\n"
                     "Wenn ein Term nur in einem Dokument vorkommt, trage nur dieses Dokument ein."
                 ),

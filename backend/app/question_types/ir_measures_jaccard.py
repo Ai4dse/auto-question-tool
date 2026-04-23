@@ -93,11 +93,12 @@ class IRMeasuresJaccard:
                 "type": "Text",
                 "content": (
                     "### Aufgabe (Steps): Jaccard Similarity\n\n"
-                    f"Query (4 Wörter): **{' '.join(self.query)}**\n\n"
+                    f"Query: **{' '.join(self.query)}**\n\n"
                     "#### Teil 1: Mengen betrachten\n"
                     "Für Jaccard arbeiten wir mit **Mengen**, also nur mit **einzigartigen Termen**.\n\n"
                     "Doppelte Wörter zählen nicht mehrfach.\n"
                     "Unten sind die Mengen für Query und Dokumente bereits angegeben."
+                    "**Hinweis:** Runde alle berechneten Werte auf **2 Nachkommastellen**.\n"
                 ),
             },
             {
@@ -220,7 +221,7 @@ class IRMeasuresJaccard:
                     "type": "Text",
                     "content": (
                         "### Prüfungsaufgabe: Dokument-Ähnlichkeit (Jaccard)\n\n"
-                        f"Query (4 Wörter): **{' '.join(self.query)}**\n\n"
+                        f"Query: **{' '.join(self.query)}**\n\n"
                         "Berechne die Jaccard Similarity der Query zu **jedem** Dokument.\n\n"
                         "Verwende Mengen, also **nur einzigartige Terme**:\n"
                         "$$J(Q,D) = \\frac{|Q \\cap D|}{|Q \\cup D|}$$\n\n"

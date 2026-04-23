@@ -118,34 +118,30 @@ class IRMeasuresTFIDF:
                 "type": "Text",
                 "content": (
                     "### Aufgabe (Steps): TF-IDF (Cosine)\n\n"
-                    f"Query (4 Wörter): **{' '.join(self.query)}**\n\n"
+                    f"Query: **{' '.join(self.query)}**\n\n"
                     "#### Teil 1: TF und DF\n"
                     "**Korpus = nur die ausgewählten Dokumente**.\n\n"
                     "**TF(t,d)** = Anzahl, wie oft Term *t* im Dokument *d* vorkommt.\n"
                     "**DF(t)** = Anzahl der ausgewählten Dokumente, die Term *t* enthalten.\n\n"
                     f"N = {len(docs)}\n\n"
-                    "Du sollst hier **nur Terme eintragen, die tatsächlich vorkommen**:\n"
-                    "- In der Query-Tabelle: nur Query-Terme\n"
-                    "- In Dokument-Tabellen: nur Terme, die im jeweiligen Dokument vorkommen\n"
+                    "**Hinweis:** Runde alle berechneten Werte auf **2 Nachkommastellen**.\n"
                 ),
-            }
+            },
         ]
 
         q_cells = [[
             {"type": "text", "value": "**Term**"},
             {"type": "text", "value": "**tf (Query)**"},
-            {"type": "text", "value": "**df**"},
         ]]
         for term in self.query_terms_unique:
             tid = term.lower()
             q_cells.append([
                 {"type": "text", "value": term},
                 {"type": "TextInput", "id": f"tf_Q_{tid}"},
-                {"type": "TextInput", "id": f"df_Q_{tid}"},
             ])
         view1 += [
-            {"type": "Text", "content": "#### Query: TF & DF (nur Query-Terme)"},
-            {"type": "layout_table", "rows": len(q_cells), "cols": 3, "cells": q_cells},
+            {"type": "Text", "content": "#### Query: TF "},
+            {"type": "layout_table", "rows": len(q_cells), "cols": 2, "cells": q_cells},
         ]
 
         for d in docs:
@@ -153,19 +149,32 @@ class IRMeasuresTFIDF:
             cells = [[
                 {"type": "text", "value": "**Term**"},
                 {"type": "text", "value": f"**tf ({d['nr']})**"},
-                {"type": "text", "value": "**df**"},
             ]]
             for term in doc_terms:
                 tid = term.lower()
                 cells.append([
                     {"type": "text", "value": term},
                     {"type": "TextInput", "id": f"tf_{d['nr']}_{tid}"},
-                    {"type": "TextInput", "id": f"df_{d['nr']}_{tid}"},
                 ])
             view1 += [
-                {"type": "Text", "content": f"#### {d['nr']}: TF & DF (nur Terme aus dem Dokument)"},
-                {"type": "layout_table", "rows": len(cells), "cols": 3, "cells": cells},
+                {"type": "Text", "content": f"#### {d['nr']}: TF"},
+                {"type": "layout_table", "rows": len(cells), "cols": 2, "cells": cells},
             ]
+
+        df_cells = [[
+            {"type": "text", "value": "**Term**"},
+            {"type": "text", "value": "**df**"},
+        ]]
+        for term in self.vocab:
+            tid = term.lower()
+            df_cells.append([
+                {"type": "text", "value": term},
+                {"type": "TextInput", "id": f"df_{tid}"},
+            ])
+        view1 += [
+            {"type": "Text", "content": "#### DF-Tabelle"},
+            {"type": "layout_table", "rows": len(df_cells), "cols": 2, "cells": df_cells},
+        ]
 
         view2 = [{
             "type": "Text",
@@ -250,7 +259,7 @@ class IRMeasuresTFIDF:
             "cols": 2,
             "cells": score_cells,
         })
-        
+
         base["lastView"] = [
         {
             "type": "Text",
@@ -286,7 +295,7 @@ class IRMeasuresTFIDF:
                     "type": "Text",
                     "content": (
                         "### Prüfungsaufgabe: Dokument-Ähnlichkeit (TF-IDF Cosine)\n\n"
-                        f"Query (4 Wörter): **{' '.join(self.query)}**\n\n"
+                        f"Query: **{' '.join(self.query)}**\n\n"
                         "Berechne die Cosine Similarity der Query zu **jedem** Dokument\n"
                         "mit **TF-IDF**.\n\n"
                         "#### Abgabeformat\n"
@@ -335,16 +344,13 @@ class IRMeasuresTFIDF:
 
         for term in self.query_terms_unique:
             tid = term.lower()
-            for key, exp in [
-                (f"tf_Q_{tid}", self.expected_tf_q.get(term, 0)),
-                (f"df_Q_{tid}", self.expected_df.get(term, 0)),
-            ]:
-                ok = str(normalize_number(user_input.get(key))) == str(normalize_number(exp))
-                results[key] = {"correct": ok, "expected": str(normalize_number(exp))}
-                tfdf_ok &= ok
+            key = f"tf_Q_{tid}"
+            exp = self.expected_tf_q.get(term, 0)
+            ok = str(normalize_number(user_input.get(key))) == str(normalize_number(exp))
+            results[key] = {"correct": ok, "expected": str(normalize_number(exp))}
+            tfdf_ok &= ok
             tfdf_expected_lines.append(
-                f"Q {term} -> tf: {normalize_number(self.expected_tf_q.get(term, 0))}, "
-                f"df: {normalize_number(self.expected_df.get(term, 0))}"
+                f"Q {term} -> tf: {normalize_number(self.expected_tf_q.get(term, 0))}"
             )
 
             key = f"tfidf_Q_{tid}"
@@ -354,21 +360,29 @@ class IRMeasuresTFIDF:
             tfidf_ok &= ok
             tfidf_expected_lines.append(f"Q {term}: {normalize_number(exp)}")
 
+        for term in self.vocab:
+            tid = term.lower()
+            key = f"df_{tid}"
+            exp = self.expected_df.get(term, 0)
+            ok = str(normalize_number(user_input.get(key))) == str(normalize_number(exp))
+            results[key] = {"correct": ok, "expected": str(normalize_number(exp))}
+            tfdf_ok &= ok
+            tfdf_expected_lines.append(
+                f"{term} -> df: {normalize_number(self.expected_df.get(term, 0))}"
+            )
+
         for d in self.selected_docs:
             nr = d["nr"]
             for term in dict.fromkeys(d["tokens"]):
                 tid = term.lower()
 
-                for key, exp in [
-                    (f"tf_{nr}_{tid}", self.expected_tf[nr].get(term, 0)),
-                    (f"df_{nr}_{tid}", self.expected_df.get(term, 0)),
-                ]:
-                    ok = str(normalize_number(user_input.get(key))) == str(normalize_number(exp))
-                    results[key] = {"correct": ok, "expected": str(normalize_number(exp))}
-                    tfdf_ok &= ok
+                key = f"tf_{nr}_{tid}"
+                exp = self.expected_tf[nr].get(term, 0)
+                ok = str(normalize_number(user_input.get(key))) == str(normalize_number(exp))
+                results[key] = {"correct": ok, "expected": str(normalize_number(exp))}
+                tfdf_ok &= ok
                 tfdf_expected_lines.append(
-                    f"{nr} {term} -> tf: {normalize_number(self.expected_tf[nr].get(term, 0))}, "
-                    f"df: {normalize_number(self.expected_df.get(term, 0))}"
+                    f"{nr} {term} -> tf: {normalize_number(self.expected_tf[nr].get(term, 0))}"
                 )
 
                 key = f"tfidf_{nr}_{tid}"

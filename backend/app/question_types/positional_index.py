@@ -44,10 +44,7 @@ class PositionalIndex:
         self._generate_queries()
 
     def _has_proximity_match(self, a, b, n):
-        """
-        Prüft, ob es in mindestens einem Dokument ein Match für 'a /n b' gibt.
-        Bedeutet: b darf höchstens n Tokens nach a kommen.
-        """
+
         matching_docs = []
 
         for doc in self.docs:
@@ -57,7 +54,7 @@ class PositionalIndex:
             found = False
             for pa in pos_a:
                 for pb in pos_b:
-                    if pb > pa and (pb - pa - 1) <= n:
+                    if pb > pa and (pb - pa) <= n:
                         found = True
                         break
                 if found:
@@ -188,11 +185,13 @@ class PositionalIndex:
                     "### Aufgabe\n\n"
                     "Gib für jede Anfrage alle Dokumente an, in denen die Anfrage ein Match hat.\n\n"
                     "**Bedeutung:**\n"
-                    "- `a /n b` bedeutet: **b darf höchstens n Tokens nach a kommen**\n"
+                    "- `a /n b` bedeutet: Zwischen `a` und `b` liegen **höchstens n-1 Wörter**\n"
+                    "- `/1` bedeutet also: `a` und `b` stehen **direkt hintereinander**\n"
                     "- Die Reihenfolge ist wichtig: zuerst `a`, danach `b`\n\n"
                     "**Beispiel:**\n"
-                    "- `home /1 sales`\n"
-                    "- `sales /2 july`\n\n"
+                    "- `home /1 sales` matcht nur `home sales`\n"
+                    "- `sales /2 july` matcht neben `sales july` auch `sales x july`\n\n"
+                    "sales /2 july ≠ july /2 sales"
                     "**Antwortformat:**\n"
                     "- Trage die passenden Dokumente als Liste ein, z. B. `Doc1, Doc3`\n"
                     "- Wenn keine Übereinstimmung existiert, trage `-` ein"
