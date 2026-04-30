@@ -45,12 +45,14 @@ class ERCardinality:
     def _generate_steps_layout(self):
         base = {}
 
-        min_max = (
+        min_max_text = (
             "### Aufgabe: Kardinalitäten ergänzen (Min-Max-Notation)\n"
             "Im gegebenen ER-Diagramm fehlen die Kardinalitäten an den Beziehungen.\n"
             "Ergänze für jede Beziehung die minimale und maximale Teilnahme der beteiligten Entitäten.\n\n"
             "### Min-Max-Notation\n"
             "Verwende pro Seite einer Beziehung genau einen Wert der Form $$min..max$$.\n"
+        )
+        min_max_Hinweis = (
             "Typische Werte sind zum Beispiel:\n"
             "- $$0..1$$\n"
             "- $$1..1$$\n"
@@ -58,24 +60,23 @@ class ERCardinality:
             "- $$1..*$$\n\n"
             "Die erste Zahl gibt an, wie oft eine Entität **mindestens** an der Beziehung teilnimmt.\n"
             "Die zweite Zahl beschreibt, wie oft sie **höchstens** an der Beziehung teilnehmen kann.\n\n"
-            "### Deine Aufgabe\n"
-            "Trage für **jede Seite jeder Beziehung** den passenden $$min..max$$-Wert ein.\n\n"
             "### Hinweise\n"
             "- Betrachte jede Seite einer Beziehung separat\n"
             "- Orientiere dich an der Bedeutung der Beziehung im Text\n"
             "- Jede Beziehung muss an **allen beteiligten Seiten** eine vollständige Min-Max-Angabe erhalten\n"
         )
 
-        cardinality = (
+        cardinality_text = (
             "### Aufgabe: Kardinalitäten ergänzen\n"
             "Im gegebenen ER-Diagramm fehlen die Kardinalitäten an den Beziehungen.\n"
             "Ergänze für jede Beziehung die passende Kardinalität.\n\n"
+
+        )
+        cardinality_Hinweis = (
             "### Mögliche Kardinalitäten\n"
             "- $$1:1$$\n"
             "- $$1:N$$\n"
             "- $$M:N$$\n\n"
-            "### Deine Aufgabe\n"
-            "Trage die passende Kardinalität an den Beziehungen ein.\n\n"
             "### Hinweise\n"
             "- Orientiere dich an der Bedeutung der Beziehung im Text\n"
             "- Prüfe für jede Beziehung, wie viele Objekte einer Entität mit Objekten der anderen Entität verbunden sein können\n"
@@ -83,14 +84,27 @@ class ERCardinality:
         )
 
         if self.card_type == "min_max":
-            text = min_max
+            text = min_max_text
+            text_Hinweis = min_max_Hinweis
         else:
-            text = cardinality
+            text = cardinality_text
+            text_Hinweis = cardinality_Hinweis
 
         base["view1"] = [
             {
                 "type": "Text",
                 "content": text
+            },
+            {
+                "type": "Dropdown",
+                "title": "Hinweise zur Aufgabe",
+                "defaultOpen": False,
+                "children": [
+                                {
+                                    "type": "Text",
+                                    "content": text_Hinweis,
+                                },
+                            ]
             },
             {
                 "type": "Text",

@@ -42,18 +42,6 @@ class ERSchema:
                     "### Aufgabe (Steps): ER-Diagramm in relationales Schema überführen\n\n"
                     "Gegeben ist ein vollständiges ER-Diagramm. "
                     "Überführe es **schrittweise** in ein relationales Schema.\n\n"
-                    "#### Teil 1: Entitäten in Relationen überführen\n\n"
-                    "Erzeuge zunächst für jede **Entität** aus dem ER-Diagramm genau **eine Relation**.\n"
-                    "Trage pro Entität den **Relationsnamen** und alle zugehörigen **Attribute** ein.\n\n"
-                    "Achte darauf:\n"
-                    "- Beziehungen werden in diesem Schritt **noch nicht** übertragen\n"
-                    "- Verwende die Namen aus dem ER-Diagramm\n"
-                    "- Attribute sollen **atomar** notiert werden\n"
-                    "- Primärschlüssel und Fremdschlüssel werden in **eigenen Feldern** eingetragen\n\n"
-                    "### Hinweise\n"
-                    "- Falls Attributnamen mehrfach vorkommen und dadurch mehrdeutig werden, benenne sie eindeutig um,\n"
-                    "  z. B. als $$Entitaet.Attribut$$ oder $$Beziehung.Attribut$$\n"
-                    "- Achte auf eine konsistente Benennung über alle Schritte hinweg\n"
                 ),
             },
             {
@@ -66,18 +54,48 @@ class ERSchema:
                 }
             },
             {
-                "type": "Text",
-                "content": (
-                    "#### Schwache Entität\n\n"
-                    "Eine schwache Entität ist eine Entität, die nicht eindeutig durch eigene Attribute identifiziert werden kann.\n\n"
-                    "Sie besitzt keinen vollständigen Primärschlüssel und ist daher von einer starken (besitzenden) Entität abhängig.\n\n"
+                "type": "Dropdown",
+                "title": "Hinweise zur Aufgabe",
+                "defaultOpen": False,
+                "children": [
+                    {
+                    "type": "Text",
+                    "content": (
+                    "#### Teil 1: Entitäten in Relationen überführen\n\n"
+                    "Erzeuge zunächst für jede **Entität** aus dem ER-Diagramm genau **eine Relation**.\n"
+                    "Trage pro Entität den **Relationsnamen** und alle zugehörigen **Attribute** ein.\n\n"
                     "Achte darauf:\n"
-                    "- Eine schwache Entität hat nur einen Teil-Schlüssel (Discriminator)\n"
-                    "- Der vollständige Primärschlüssel entsteht erst durch Kombination mit dem Primärschlüssel der starken Entität\n"
-                    "- Es besteht eine Existenzabhängigkeit zur starken Entität\n"
-                    "- Die Verbindung erfolgt über eine identifizierende Beziehung\n"
-                    "- Der Primärschlüssel ist immer zusammengesetzt aus: (Primärschlüssel der starken Entität + Teil-Schlüssel)\n"
-                ),
+                    "- Beziehungen werden in diesem Schritt **noch nicht** übertragen\n"
+                    "- Verwende die Namen aus dem ER-Diagramm\n"
+                    "- Attribute sollen **atomar** notiert werden\n"
+                    "- Primärschlüssel und Fremdschlüssel werden in **eigenen Feldern** eingetragen\n\n"
+                    "### Hinweise\n"
+                    "- Falls Attributnamen mehrfach vorkommen und dadurch mehrdeutig werden, benenne sie eindeutig um,\n"
+                    "  z. B. als $$Entitaet.Attribut$$ oder $$Beziehung.Attribut$$\n"
+                    "- Achte auf eine konsistente Benennung über alle Schritte hinweg\n"
+                        ),
+                    },
+                ]
+            },
+            {
+                "type": "Dropdown",
+                "title": "Schwache Entität",
+                "defaultOpen": False,
+                "children": [
+                    {
+                        "type": "Text",
+                        "content": (
+                            "#### Schwache Entität\n\n"
+                            "Eine schwache Entität ist eine Entität, die nicht eindeutig durch eigene Attribute identifiziert werden kann.\n\n"
+                            "Sie besitzt keinen vollständigen Primärschlüssel und ist daher von einer starken (besitzenden) Entität abhängig.\n\n"
+                            "Achte darauf:\n"
+                            "- Eine schwache Entität hat nur einen Teil-Schlüssel (Discriminator)\n"
+                            "- Der vollständige Primärschlüssel entsteht erst durch Kombination mit dem Primärschlüssel der starken Entität\n"
+                            "- Es besteht eine Existenzabhängigkeit zur starken Entität\n"
+                            "- Die Verbindung erfolgt über eine identifizierende Beziehung\n"
+                            "- Der Primärschlüssel ist immer zusammengesetzt aus: (Primärschlüssel der starken Entität + Teil-Schlüssel)\n"
+                        ),
+                    },]
             },
         ]
 
@@ -114,19 +132,26 @@ class ERSchema:
 
 
         view2 = [
-            {
-                "type": "Text",
-                "content": (
-                    "#### Teil 2: Beziehungen zunächst als eigene Relationen überführen\n\n"
-                    "Überführe nun **alle Beziehungen** aus dem ER-Diagramm zunächst in **eigene Relationen**.\n"
-                    "Gehe also in diesem Schritt noch **nicht optimierend** vor.\n\n"
-                    "Achte darauf:\n"
-                    "- Jede Beziehung wird zuerst als eigene Relation notiert\n"
-                    "- Übernimm die Schlüssel der beteiligten Entitäten als Attribute in diese Relation\n"
-                    "- Vorhandene Beziehungsattribute gehören ebenfalls in diese Relation\n"
-                    "- Trage Primärschlüssel und Fremdschlüssel wieder in die vorgesehenen Felder ein\n"
-                ),
-            },
+                        {
+                "type": "Dropdown",
+                "title": "Hinweise zur Aufgabe",
+                "defaultOpen": False,
+                "children": [
+                                {
+                                    "type": "Text",
+                                    "content": (
+                                        "#### Teil 2: Beziehungen zunächst als eigene Relationen überführen\n\n"
+                                        "Überführe nun **alle Beziehungen** aus dem ER-Diagramm zunächst in **eigene Relationen**.\n"
+                                        "Gehe also in diesem Schritt noch **nicht optimierend** vor.\n\n"
+                                        "Achte darauf:\n"
+                                        "- Jede Beziehung wird zuerst als eigene Relation notiert\n"
+                                        "- Übernimm die Schlüssel der beteiligten Entitäten als Attribute in diese Relation\n"
+                                        "- Vorhandene Beziehungsattribute gehören ebenfalls in diese Relation\n"
+                                        "- Trage Primärschlüssel und Fremdschlüssel wieder in die vorgesehenen Felder ein\n"
+                                    ),
+                                },
+                            ]
+                        },
         ]
 
         relationship_cells = [[
@@ -164,20 +189,27 @@ class ERSchema:
 
 
         view3 = [
-            {
-                "type": "Text",
-                "content": (
-                    "#### Teil 3: 1..1- und 1..*-Beziehungen optimieren\n\n"
-                    "Prüfe nun, welche der in Teil 2 erzeugten Beziehungsrelationen bei $$1..1$$- oder $$1..*$$-Beziehungen "
-                    "nicht als eigene Relation bestehen bleiben müssen.\n"
-                    "Integriere diese stattdessen, wo möglich, über geeignete **Fremdschlüssel** in die passenden Entitätsrelationen.\n\n"
-                    "Achte darauf:\n"
-                    "- $$M..N$$-Beziehungen bleiben in der Regel als eigene Relation bestehen\n"
-                    "- $$1..1$$- und $$1..*$$-Beziehungen können oft in Entitätsrelationen integriert werden\n"
-                    "- Trage pro Entitätsrelation nur die **neu hinzukommenden Fremdschlüssel** ein\n"
-                    "- Entferne in Gedanken die entsprechenden Beziehungsrelationen, wenn sie vollständig ersetzt wurden\n"
-                ),
-            },
+                        {
+                "type": "Dropdown",
+                "title": "Hinweise zur Aufgabe",
+                "defaultOpen": False,
+                "children": [
+                                {
+                                    "type": "Text",
+                                    "content": (
+                                        "#### Teil 3: 1..1- und 1..*-Beziehungen optimieren\n\n"
+                                        "Prüfe nun, welche der in Teil 2 erzeugten Beziehungsrelationen bei $$1..1$$- oder $$1..*$$-Beziehungen "
+                                        "nicht als eigene Relation bestehen bleiben müssen.\n"
+                                        "Integriere diese stattdessen, wo möglich, über geeignete **Fremdschlüssel** in die passenden Entitätsrelationen.\n\n"
+                                        "Achte darauf:\n"
+                                        "- $$M..N$$-Beziehungen bleiben in der Regel als eigene Relation bestehen\n"
+                                        "- $$1..1$$- und $$1..*$$-Beziehungen können oft in Entitätsrelationen integriert werden\n"
+                                        "- Trage pro Entitätsrelation nur die **neu hinzukommenden Fremdschlüssel** ein\n"
+                                        "- Entferne in Gedanken die entsprechenden Beziehungsrelationen, wenn sie vollständig ersetzt wurden\n"
+                                    ),
+                                },
+                            ]
+                        }
         ]
 
         opt_cells = [[
@@ -210,19 +242,26 @@ class ERSchema:
 
 
         view4 = [
-            {
-                "type": "Text",
-                "content": (
-                    "#### Teil 4: Vollständiges relationales Schema\n\n"
-                    "Führe nun alle bisherigen Zwischenschritte zu einem vollständigen relationalen Schema zusammen.\n\n"
-                    "Achte darauf:\n"
-                    "- Alle Entitäten wurden in Relationen überführt\n"
-                    "- Alle Primärschlüssel sind korrekt gesetzt\n"
-                    "- Alle nötigen Fremdschlüssel sind enthalten\n"
-                    "- Beziehungen aus $$M..N$$ bleiben als eigene Relationen bestehen\n"
-                    "- Beziehungen aus $$1..1$$ und $$1..*$$ wurden, falls möglich, sinnvoll integriert\n"
-                ),
-            },
+                        {
+                "type": "Dropdown",
+                "title": "Hinweise zur Aufgabe",
+                "defaultOpen": False,
+                "children": [
+                                {
+                                    "type": "Text",
+                                    "content": (
+                                        "#### Teil 4: Vollständiges relationales Schema\n\n"
+                                        "Führe nun alle bisherigen Zwischenschritte zu einem vollständigen relationalen Schema zusammen.\n\n"
+                                        "Achte darauf:\n"
+                                        "- Alle Entitäten wurden in Relationen überführt\n"
+                                        "- Alle Primärschlüssel sind korrekt gesetzt\n"
+                                        "- Alle nötigen Fremdschlüssel sind enthalten\n"
+                                        "- Beziehungen aus $$M..N$$ bleiben als eigene Relationen bestehen\n"
+                                        "- Beziehungen aus $$1..1$$ und $$1..*$$ wurden, falls möglich, sinnvoll integriert\n"
+                                    ),
+                                },
+                            ]
+                        }
         ]
 
         final_cells = [[
@@ -284,12 +323,6 @@ class ERSchema:
                 "content": (
                     "### Prüfungsaufgabe: ER-Diagramm → Relationales Schema\n\n"
                     "Gegeben ist ein **ER-Diagramm**. Leite daraus ein **relational optimiertes Schema** ab.\n\n"
-                    "Achte dabei insbesondere auf:\n"
-                    "- **Primärschlüssel (PK)** korrekt bestimmen\n"
-                    "- **Fremdschlüssel (FK)** aus Beziehungen ableiten\n"
-                    "- **n:m-Beziehungen** in eigene Relationen überführen\n"
-                    "- **1:n-Beziehungen** durch Fremdschlüssel modellieren\n"
-                    "- Nur **optimierte Relationen** angeben (keine redundanten Zwischentabellen)\n\n"
                     "#### Abgabeformat\n"
                     "Gib dein Ergebnis **als Text** im folgenden Format an:\n\n"
                     "- **Eine Relation pro Zeile**\n"

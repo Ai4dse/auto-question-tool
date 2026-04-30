@@ -515,7 +515,7 @@ QUESTION_CONFIG = {
         "metadata": {
             "title": "ER-Modellierung",
             "week": 3,
-            "desc": "Erstelle ein ER-Diagramm aus einem Text.",
+            "desc": "Vervollständige ein ER-Diagramm mithilfe eines Textes. Der Schwierigkeitsgrad gibt an wie viel des ER-Diagramms vorgegeben ist.",
             "tags": ["matching", "algorithms"],
             "settings": {
                 "difficulty": {
@@ -547,7 +547,7 @@ QUESTION_CONFIG = {
         "metadata": {
             "title": "Relationales Schema",
             "week": 3,
-            "desc": "Leite Tabellen aus einem ER-Diagramm ab.",
+            "desc": "Leite ein Relationales Schema aus einem ER-Diagramm ab.",
             "tags": ["matching", "algorithms"],
             "settings": {
                 "mode": {
@@ -572,9 +572,9 @@ QUESTION_CONFIG = {
     "er_cardinality": {
         "class_path": "app.question_types.er_cardinality.ERCardinality",
         "metadata": {
-            "title": "Cardinalitäten im Relationalen Schema",
+            "title": "Kardinalitäten im Relationalen Schema",
             "week": 3,
-            "desc": "Ergänze ein ER Diagramm mit den richtigen Cardinalitäten.",
+            "desc": "Ergänze die ER Diagramme aus der ER-Modellierungs Aufgabe mit den richtigen Kardinalitäten.",
             "tags": ["matching", "algorithms"],
             "settings": {
                 "card_type": {
