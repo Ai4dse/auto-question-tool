@@ -194,31 +194,94 @@ class ERModelling:
                     "type": "Text",
                     "content": (
                         "### Aufgabe: ER-Diagramm erstellen\n"
-                        "Erstelle ein Entity-Relationship-Diagramm aus dem gegebenen Text.\n\n"
-                        "### Schritt 1: Entitäten\n"
-                        "Definiere sinnvolle Entitäten (z. B. Student, Kurs, Dozent).\n"
-                        "Bennene Entitäten wie im gegebenen Text.\n"
-                        "Jede Entität sollte Attribute besitzen.\n\n"
-                        "Achte darauf:\n"
-                        "- Jede Entität benötigt einen **Primärschlüssel** $$PK$$\n"
-                        "- Attribute sollen **atomar** und eindeutig sein\n\n"
-                        "### Schritt 2: Attribute und Schlüssel\n"
-                        "Ergänze alle Attribute für die Entitäten.\n"
-                        "Markiere den jeweiligen Primärschlüssel $$PK$$ klar durch einen Doppelclick auf das jeweilige Attribut.\n\n"
-                        "### Schritt 3: Beziehungen\n"
-                        "Erstelle Beziehungen zwischen den Entitäten.\n\n"
-                        "Achte darauf:\n"
-                        "- Jede Beziehung verbindet minimal **zwei** und maximal **drei** Entitäten\n"
-                        "- Jede Entität kann an beliebig vielen unterschiedlichen Relationen Teilnehmen\n"
-                        "- Eine Relation kann bis zu **zweimal** mit der selben entität verbunden werden\n"
-                        "- Verwende sinnvolle **Beziehungsnamen (Verben)**\n\n"
-                        f"{text}"
-                        "### Schritt 5: Beziehungsattribute\n"
-                        "Beziehungen können ebenfalls eigene Attribute besitzen (z. B. Datum, Rolle).\n\n"
-                        "### Hinweise\n"
-                        "- Vermeide doppelte oder unnötige Attribute oder Entitäten\n"
-                        "- Achte auf eine klare und übersichtliche Struktur im Diagramm\n"
+                        f"Erstelle ein Entity-Relationship-Diagramm aus dem gegebenen Text. Verwende die {self.card_type} Notation\n\n"
                     )
+                },
+                {
+                "type": "Dropdown",
+                "title": "Hinweise zur Aufgabe",
+                "defaultOpen": False,
+                "children": [
+                    {
+                        "type": "Text",
+                        "content": (
+                            "### Schritt 1: Entitäten\n"
+                            "Definiere sinnvolle Entitäten (z. B. Student, Kurs, Dozent).\n"
+                            "Bennene Entitäten wie im gegebenen Text.\n"
+                            "Jede Entität sollte Attribute besitzen.\n\n"
+                            "Achte darauf:\n"
+                            "- Jede Entität benötigt einen **Primärschlüssel** $$PK$$\n"
+                            "- Attribute sollen **atomar** und eindeutig sein\n\n"
+                            "### Schritt 2: Attribute und Schlüssel\n"
+                            "Ergänze alle Attribute für die Entitäten.\n"
+                            "Markiere den jeweiligen Primärschlüssel $$PK$$ klar durch einen Doppelclick auf das jeweilige Attribut.\n\n"
+                            "### Schritt 3: Beziehungen\n"
+                            "Erstelle Beziehungen zwischen den Entitäten.\n\n"
+                            "Achte darauf:\n"
+                            "- Jede Beziehung verbindet minimal **zwei** und maximal **drei** Entitäten\n"
+                            "- Jede Entität kann an beliebig vielen unterschiedlichen Relationen Teilnehmen\n"
+                            "- Eine Relation kann bis zu **zweimal** mit der selben entität verbunden werden\n"
+                            "- Verwende sinnvolle **Beziehungsnamen (Verben)**\n\n"
+                            f"{text}"
+                            "### Schritt 5: Beziehungsattribute\n"
+                            "Beziehungen können ebenfalls eigene Attribute besitzen (z. B. Datum, Rolle).\n\n"
+                        )
+                    },
+                ]
+                },
+                {
+                "type": "Dropdown",
+                "title": "Hinweise zur Bedienung",
+                "defaultOpen": False,
+                "children": [
+                    {
+                        "type": "Text",
+                        "content": (
+                            "### Erstellung von Komponenten\n"
+                            "- **Add Entity klicken** → erstellt eine neue Entität\n"
+                            "- **Add Relation klicken** → erstellt eine neue Relation\n"
+                            "- **Add Attribute klicken** → erstellt ein neues Attribut\n\n"
+
+                            "### Entität\n"
+                            "- **Klick auf Text → DEL / Entfernen → Tastatureingabe** → ändert den Namen\n"
+                            "- **Maus an Rand + Linksklick halten + ziehen** → verschiebt die Entität\n"
+                            "- **Doppelklick auf Text** → markiert die Entität als *schwach*\n"
+                            "- **Klick auf Rand → Objekt ausgewählt → DEL / Entfernen oder \"Delete Selected\"** → löscht die Entität\n\n"
+                            "Eigenschaften:\n"
+                            "- Kann **beliebig viele Verbindungen** aufnehmen\n"
+                            "- Unterstützt **blaue und orange Verbindungspunkte**\n\n"
+
+                            "### Relation\n"
+                            "- **Klick auf Text → DEL / Entfernen → Tastatureingabe** → ändert den Namen\n"
+                            "- **Maus an Rand + Linksklick halten + ziehen** → verschiebt die Relation\n"
+                            "- **Doppelklick auf Text** → markiert die Relation als *schwach*\n"
+                            "- **Klick auf Rand → Objekt ausgewählt → DEL / Entfernen oder \"Delete Selected\"** → löscht die Relation\n\n"
+                            "Verbindungen:\n"
+                            "- **Ziehen von orangem Verbindungspunkt → zu Entität** → erstellt Verbindung\n"
+                            "- Maximal **3 Entitäten** verbindbar\n"
+                            "- Eine Entität darf **maximal 2×** mit derselben Relation verbunden werden\n\n"
+
+                            "### Attribut\n"
+                            "- **Klick auf Text → DEL / Entfernen → Tastatureingabe** → ändert den Namen\n"
+                            "- **Maus an Rand + Linksklick halten + ziehen** → verschiebt das Attribut\n"
+                            "- **Doppelklick auf Text** → markiert das Attribut als *Primärschlüssel*\n"
+                            "- **Klick auf Rand → Objekt ausgewählt → DEL / Entfernen oder \"Delete Selected\"** → löscht das Attribut\n\n"
+                            "Verbindungen:\n"
+                            "- **Blauen Punkt ziehen → auf blauen Punkt von Entität/Relation** → erstellt Verbindung\n"
+                            "- Verbindung ist **nur vom Attribut aus möglich**\n"
+                            "- **\"+\" erscheint** bei gültigem Verbindungspunkt\n"
+                            "- Ein Attribut kann **genau eine Verbindung** besitzen\n\n"
+
+                            "### Allgemeine Interaktionen\n"
+                            "- **Klick auf Rand eines Objekts** → wählt das Objekt aus\n"
+                            "- **STRG + Klick** → erweitert die Auswahl um weitere Objekte\n"
+                            "- **Maus an Rand + Linksklick halten + ziehen** → verschiebt alle ausgewählten Objekte\n"
+                            "- **DEL / Entfernen oder \"Delete Selected\"** → löscht alle ausgewählten Objekte\n"
+                            "- **Mausrad drehen** → zoomt in die Arbeitsfläche hinein bzw. heraus\n"
+                            "- **Linksklick auf Hintergrund halten + ziehen** → verschiebt die gesamte Arbeitsfläche\n"
+                            )
+                    },
+                ]
                 },
                 {
                     "type": "Text",
