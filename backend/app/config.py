@@ -9,7 +9,7 @@ WEEK_CONFIG = {
     },
     3: {
         "title": "Woche 3: ER-Diagramm",
-        "start_date": "2026-05-05",
+        "start_date": "2026-05-12",
     },
     4: {
         "title": "Woche 4: Relationales Schema",

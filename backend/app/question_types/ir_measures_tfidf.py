@@ -68,7 +68,7 @@ class IRMeasuresTFIDF:
             df.update(set(d["tokens"]))
 
         N = len(self.selected_docs)
-        idf = {t: math.log((N + 1) / (c + 1)) + 1.0 for t, c in df.items()}
+        idf = {t: math.log10((N + 1) / (c + 1)) + 1.0 for t, c in df.items()}
 
         self.vocab = sorted(set(self.query) | {t for d in self.selected_docs for t in d["tokens"]})
         self.expected_df = {t: int(df.get(t, 0)) for t in self.vocab}
@@ -79,14 +79,14 @@ class IRMeasuresTFIDF:
             self.expected_tf[d["nr"]] = {t: int(counts.get(t, 0)) for t in self.vocab}
 
         self.expected_tfidf["Q"] = {
-            t: round(self.expected_tf_q[t] * idf.get(t, math.log(N + 1) + 1.0), self.rounding)
+            t: round(self.expected_tf_q[t] * idf.get(t, math.log10(N + 1) + 1.0), self.rounding)
             for t in self.vocab
         }
 
         for d in self.selected_docs:
             nr = d["nr"]
             self.expected_tfidf[nr] = {
-                t: round(self.expected_tf[nr][t] * idf.get(t, math.log(N + 1) + 1.0), self.rounding)
+                t: round(self.expected_tf[nr][t] * idf.get(t, math.log10(N + 1) + 1.0), self.rounding)
                 for t in self.vocab
             }
 
