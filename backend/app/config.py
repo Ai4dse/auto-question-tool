@@ -21,7 +21,7 @@ WEEK_CONFIG = {
     },
     6: {
         "title": "Woche 6: Funktionale Abhängigkeiten und Normalformen",
-        "start_date": "2025-05-26",
+        "start_date": "2026-05-26",
     },
     7: {
         "title": "Woche 7: Synthesealgorithmus und Star-/Snowflake-Schema",
