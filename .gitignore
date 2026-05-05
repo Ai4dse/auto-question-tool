@@ -12,3 +12,4 @@ backend/app/test.ipynb
 
 # Load test artifacts
 loadtest/results/
+log_analysis_output/

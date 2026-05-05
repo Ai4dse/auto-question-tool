@@ -10,35 +10,45 @@ WEEK_CONFIG = {
     3: {
         "title": "Woche 3: ER-Diagramm",
         "start_date": "2026-05-12",
-    },
     4: {
         "title": "Woche 4: Relationales Schema",
-        "start_date": "2026-05-12",
+        "start_date": "2025-05-12",
     },
     5: {
         "title": "Woche 5: Relationale Algebra, SQL und XPath/XQuery",
-        "start_date": "2026-05-19",
+        "start_date": "2025-05-19",
     },
     6: {
         "title": "Woche 6: Funktionale Abhängigkeiten und Normalformen",
-        "start_date": "2026-05-26",
+        "start_date": "2025-05-26",
     },
     7: {
         "title": "Woche 7: Synthesealgorithmus und Star-/Snowflake-Schema",
-        "start_date": "2026-06-02",
+        "start_date": "2025-06-02",
     },
     8: {
         "title": "Woche 8: Assoziationsregel-Extraktion",
-        "start_date": "2026-06-09",
+        "start_date": "2025-06-09",
     },
     9: {
         "title": "Woche 9: Distanzmaße und Clustering",
-        "start_date": "2026-06-16",
+        "start_date": "2025-06-16",
     },
     10: {
         "title": "Woche 10: Schema-Matching und Data Cleaning",
-        "start_date": "2026-06-23",
+        "start_date": "2025-06-23",
     },
+}
+
+MISSING_TASKS = {
+    'E 6/7. Schlüsselsuche': 'gegeben R und F',
+    'E 6. Verlustfreiheit und Abhängigkeitsbewahrung': 'gegeben R und R1/R2; ist die Zerlegung verlustfrei/abh.?',
+    'E 6. Normalformen': 'gegeben Relation + FD; welche Normalform liegt vor? --> vielleicht Überführung in nächst höhere? + Anomalien; kann Tuple eingefügt werden?',
+    'E 7. Synthesealgorithmus': 'gegeben R und F; vielleicht kanonische Überdeckung auskoppeln?',
+    'R 7. Star/Snowflakeschema': 'gegeben R + Datentypen --> transformieren Sie Relation in Schema',
+    'R 8. Assoziationsregeln': 'gegeben häufige Itemsets',
+    'R 8. FP-Growth:': 'gegeben Transaktionen (wie bei Apriori)',
+    'R 9. Distanzen': 'Bigramm/Trigramm und vielleicht noch andere'
 }
 
 QUESTION_CONFIG = {
