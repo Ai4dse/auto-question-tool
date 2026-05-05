@@ -72,6 +72,7 @@ class SqlQueryQuestion:
                 {
                     "type": "Text",
                     "content": (
+                        "### SQL Query\n\n"
                         "Verwenden Sie die bereitgestellte SQL-Datenbank und formulieren Sie eine passende Abfrage. In [ ] ist die Anzahl der Lösungstupel angegeben.\n"
                     ),
                 },

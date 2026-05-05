@@ -302,7 +302,7 @@ class HungarianMethodQuestion:
         base["view1"] = [
             {
                 "type": "Text",
-                "content": "",
+                "content": "### Ungarische Methode",
             },
             self._matrix_input(
                 "hm_step1",
@@ -429,6 +429,7 @@ class HungarianMethodQuestion:
                 {
                     "type": "Text",
                     "content": (
+                        "### Ungarische Methode\n\n"
                         "Exam-Modus: Geben Sie nur die finale optimale Zuordnung an. "
                         "Zwischenschritte werden nicht bewertet."
                     ),

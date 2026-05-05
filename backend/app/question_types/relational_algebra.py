@@ -90,7 +90,7 @@ class RelationalAlgebra:
         base["view1"] = view0 + [
             {
                 "type": "Text",
-                "content": 'Aufgabe: ' + self.exercise['text'],
+                "content": '### Relationale Algebra\n\nAufgabe: ' + self.exercise['text'],
             },
             {
             "type": "ExpressionInput",

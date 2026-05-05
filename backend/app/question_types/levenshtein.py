@@ -107,6 +107,7 @@ class LevenshteinQuestion:
                 {
                     "type": "Text",
                     "content": (
+                        "### Levenshtein\n\n"
                         "Berechne die Levenshtein-Distanz schrittweise. "
                         "Die Randwerte sind vorgegeben. "
                         "Pro Vergleichsfeld sind Hilfsfelder für die Lösch-, Einfüge und Kopier-/Ersetzoperation gegeben. Das rot hinterlegte Feld soll die Kosten für die günstigste Operation kennzeichnen."

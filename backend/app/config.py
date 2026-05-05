@@ -21,7 +21,7 @@ WEEK_CONFIG = {
     },
     6: {
         "title": "Woche 6: Funktionale Abhängigkeiten und Normalformen",
-        "start_date": "2026-05-26",
+        "start_date": "2025-05-26",
     },
     7: {
         "title": "Woche 7: Synthesealgorithmus und Star-/Snowflake-Schema",
@@ -42,7 +42,6 @@ WEEK_CONFIG = {
 }
 
 MISSING_TASKS = {
-    'E 6/7. Schlüsselsuche': 'gegeben R und F',
     'E 6. Verlustfreiheit und Abhängigkeitsbewahrung': 'gegeben R und R1/R2; ist die Zerlegung verlustfrei/abh.?',
     'E 6. Normalformen': 'gegeben Relation + FD; welche Normalform liegt vor? --> vielleicht Überführung in nächst höhere? + Anomalien; kann Tuple eingefügt werden?',
     'E 7. Synthesealgorithmus': 'gegeben R und F; vielleicht kanonische Überdeckung auskoppeln?',
@@ -606,6 +605,28 @@ QUESTION_CONFIG = {
             },
         },
     },
+    "candidate_keys_fd": {
+        "class_path": "app.question_types.candidate_keys_fd.CandidateKeysFDQuestion",
+        "metadata": {
+            "title": "Schlüsselsuche",
+            "week": 6,
+            "desc": "Bestimme Kandidatenschlüssel aus einer Relation und funktionalen Abhängigkeiten.",
+            "tags": ["databases", "functional dependencies"],
+            "suppress_final_view": True,
+            "settings": {
+                "difficulty": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["easy", "medium", "hard"],
+                    "default": "easy",
+                },
+                "seed": {
+                    "kind": "number",
+                    "visibility": "hidden",
+                },
+            },
+        },
+    },
     "ir_measures_jaccard": {
         "class_path": "app.question_types.ir_measures_jaccard.IRMeasuresJaccard",
         "metadata": {
@@ -634,4 +655,3 @@ QUESTION_CONFIG = {
         },
     }
 }
-

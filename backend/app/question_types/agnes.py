@@ -124,7 +124,7 @@ class AGNESQuestion:
         view0 = [
             {
                 "type": "Text",
-                "content": f"In this exercise you need to solf the clustering task using AGNES. Use the {self.linkage} linkage method and {self.dist} distance as distance measure. In the following {self.num_points} Points are given and ploted.",
+                "content": f"### AGNES\n\nIn this exercise you need to solf the clustering task using AGNES. Use the {self.linkage} linkage method and {self.dist} distance as distance measure. In the following {self.num_points} Points are given and ploted.",
             },
             {
                 "type": "Table",

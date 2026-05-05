@@ -135,7 +135,7 @@ class DBSCANQuestion:
         view0 = [
             {
                 "type": "Text",
-                "content": f"In the following {self.num_points} are given and ploted. Use the DBSCAN algorithm do find cluster and Noise Points. To execute the DBSCAN algorithm use {self.dist}distance as distance measure. Furthermore the parameters min_pts = {self.min_pts}\n and e = {self.cluster_range} are given",
+                "content": f"### DBSCAN\n\nIn the following {self.num_points} are given and ploted. Use the DBSCAN algorithm do find cluster and Noise Points. To execute the DBSCAN algorithm use {self.dist}distance as distance measure. Furthermore the parameters min_pts = {self.min_pts}\n and e = {self.cluster_range} are given",
             },
             {
                 "type": "Table",

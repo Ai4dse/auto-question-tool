@@ -273,14 +273,10 @@ export default function QuestionPage({ onSessionExpired }) {
   if (loadError) return <div className="alert alert-danger">{loadError}</div>;
   if (!question) return <div>Lade...</div>;
 
-  const sp = new URLSearchParams(search);
-  const difficultyLabel = sp.get("difficulty") || question.difficulty;
-  const displayType = type === "sql_query" ? "SQL-Abfrage" : type?.replace(/_/g, " ");
-  const displayHeader = `${displayType}${difficultyLabel ? ` (${difficultyLabel})` : ""}`;
+  const suppressFinalView = question?.metadata?.suppress_final_view === true;
 
   return (
     <div className="container py-4">
-      <h2 className="mb-4 text-capitalize">{displayHeader}</h2>
       {requestError && <div className="alert alert-warning">{requestError}</div>}
 
       {visibleViews.map((viewName, index) => {
@@ -321,12 +317,12 @@ export default function QuestionPage({ onSessionExpired }) {
                 </button>
               )}
 
-              {status === "showingResults" && isLastVisible && (
-                <button
-                  type="button"
-                  onClick={() => handleNextStep(viewName)}
-                  className="btn btn-success mt-3"
-                >
+               {status === "showingResults" && isLastVisible && (!suppressFinalView || nextExists) && (
+                 <button
+                   type="button"
+                   onClick={() => handleNextStep(viewName)}
+                   className="btn btn-success mt-3"
+                 >
                   {nextExists ? "Naechster Schritt ->" : "Endergebnisse anzeigen"}
                 </button>
               )}
@@ -335,7 +331,7 @@ export default function QuestionPage({ onSessionExpired }) {
         );
       })}
 
-      {finished && (
+      {finished && !suppressFinalView && (
         <div className="mt-4">
           {question.layout.lastView ? (
             <div className="card shadow-sm">

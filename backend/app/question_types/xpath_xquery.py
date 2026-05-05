@@ -58,6 +58,7 @@ class XPathXQueryQuestion:
             {
                 "type": "Text",
                 "content": (
+                    "### XPath/XQuery\n\n"
                     "Diese Aufgabe wird hier erklärt, aber auf einer externen Seite gelöst. "
                     "Falls es beim Lösen Probleme gibt, können Sie auf diese Seite zurückkommen "
                     "und mit `Abgeben` die Musterlösung ansehen.\n"

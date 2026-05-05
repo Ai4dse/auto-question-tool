@@ -145,7 +145,7 @@ class KMeansQuestion:
         view0 = [
             {
                 "type": "Text",
-                "content": f"In this task you have to solve {self.iterations} Kmeans iterations.\n Use euclidean Distance for Point Distances. \n If a Point has the same Distance to 2 centroids choose the first (choose C0 over C1 if they have equal distance to a point). \n If a Centroid isnt the closest centroid to any point it stays in its position",    
+                "content": f"### K-Means Clustering\n\nIn this task you have to solve {self.iterations} Kmeans iterations.\n Use euclidean Distance for Point Distances. \n If a Point has the same Distance to 2 centroids choose the first (choose C0 over C1 if they have equal distance to a point). \n If a Centroid isnt the closest centroid to any point it stays in its position",    
             },
             {
                 "type": "Table",
