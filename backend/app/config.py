@@ -4,7 +4,7 @@ WEEK_CONFIG = {
         "start_date": "2026-04-21",
     },
     2: {
-        "title": "Woche 2: Vektorraummodell",
+        "title": "Vektorraummodell",
         "start_date": "2026-04-28",
     },
     3: {
