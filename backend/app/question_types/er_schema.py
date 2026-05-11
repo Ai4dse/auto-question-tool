@@ -668,6 +668,7 @@ class ERSchema:
         }
 
     def evaluate(self, user_input):
+        print("###############################\n"+ str(user_input))
         if self.mode == "exam":
             return self._evaluate_exam(user_input)
         return self._evaluate_steps(user_input)

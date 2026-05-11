@@ -330,4 +330,5 @@ class ERModelling:
         return results
 
     def evaluate(self, user_input):
+        print("###############################\n"+ str(user_input))
         return self._evaluate_steps(user_input)

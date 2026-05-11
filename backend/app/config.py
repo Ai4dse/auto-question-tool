@@ -532,12 +532,12 @@ QUESTION_CONFIG = {
                     "kind": "select",
                     "visibility": "open",
                     "options": ["easy", "medium", "hard"],
-                    "default": "easy",
+                    "default": "hard",
                 },
                 "question": {
                     "kind": "select",
                     "visibility": "hidden",
-                    "options": ["random", "universitäts_schema","firmen_schema(weak_entity)"],
+                    "options": ["random","universitäts_schema","firmen_schema(weak_entity)","supermarkt_schema"],
                     "default": "random",
                 },
                 "seed": {
@@ -569,7 +569,7 @@ QUESTION_CONFIG = {
                 "question": {
                     "kind": "select",
                     "visibility": "hidden",
-                    "options": ["random", "universitäts_schema","firmen_schema(weak_entity)"],
+                    "options": ["random", "universitäts_schema","firmen_schema(weak_entity)","supermarkt_schema"],
                     "default": "random",
                 },
                 "seed": {
@@ -595,7 +595,7 @@ QUESTION_CONFIG = {
                 "question": {
                     "kind": "select",
                     "visibility": "hidden",
-                    "options": ["random", "universitäts_schema","firmen_schema(weak_entity)"],
+                    "options": ["random", "universitäts_schema","firmen_schema(weak_entity)","supermarkt_schema"],
                     "default": "random",
                 },
                 "seed": {
