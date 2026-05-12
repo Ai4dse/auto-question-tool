@@ -300,6 +300,10 @@ class ERModelling:
         ]
         base["lastView"] = [
                 {
+                    "type": "Text",
+                    "content": self.task["explanatory_text"],
+                },
+                {
                     "type": "ER_Diagram_Builder",
                     "id": "free_er_builder",
                     "title": "Musterlösung:",
