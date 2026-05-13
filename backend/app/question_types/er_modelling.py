@@ -305,7 +305,7 @@ class ERModelling:
                 },
                 {
                     "type": "ER_Diagram_Builder",
-                    "id": "free_er_builder",
+                    "id": "free_er_builder_solution",
                     "title": "Musterlösung:",
                     "initial_diagram": {
                         "nodes": self.nodes,
