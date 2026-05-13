@@ -16,6 +16,7 @@ import {
   useEdgesState,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
+import { v4 as uuidv4 } from "uuid";
 
 /* ---------------- SHARED STYLES ---------------- */
 
@@ -571,7 +572,7 @@ export default function ERDiagramBuilder({ el, idx, onChange }) {
         return [
         ...nds,
         {
-            id: `entity_${crypto.randomUUID()}`,
+            id: `entity_${uuidv4()}`,
             type: "entity",
             position: { x: 100 + count * 40, y: 80 + count * 30 },
             data: {
@@ -592,7 +593,7 @@ export default function ERDiagramBuilder({ el, idx, onChange }) {
         return [
         ...nds,
         {
-            id: `relation_${crypto.randomUUID()}`,
+            id: `relation_${uuidv4()}`,
             type: "relation",
             position: { x: 350 + count * 40, y: 220 + count * 30 },
             data: {
@@ -613,7 +614,7 @@ export default function ERDiagramBuilder({ el, idx, onChange }) {
       return [
         ...nds,
         {
-          id: `attribute_${crypto.randomUUID()}`,
+          id: `attribute_${uuidv4()}`,
           type: "attribute",
           position: { x: 180 + count * 35, y: 420 + count * 25 },
           data: {
