@@ -12,12 +12,12 @@ WEEK_CONFIG = {
         "start_date": "2026-05-12",
     },
     4: {
-        "title": "Woche 4: Relationales Schema",
-        "start_date": "2026-05-12",
+        "title": "Relationale Algebra",
+        "start_date": "2026-05-19",
     },
     5: {
         "title": "Woche 5: Relationale Algebra, SQL und XPath/XQuery",
-        "start_date": "2026-05-19",
+        "start_date": "2026-05-26",
     },
     6: {
         "title": "Woche 6: Funktionale Abhängigkeiten und Normalformen",
@@ -156,7 +156,7 @@ QUESTION_CONFIG = {
         "class_path": "app.question_types.relational_algebra.RelationalAlgebra",
         "metadata": {
             "title": "Relationale Algebra",
-            "week": 5,
+            "week": 4,
             "mode": ["steps", "exam"],
             "desc": "Übe relationale Algebra mit Tabellenoperationen.",
             "tags": ["arithmetic"],
