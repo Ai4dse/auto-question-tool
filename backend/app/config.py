@@ -17,11 +17,11 @@ WEEK_CONFIG = {
     },
     5: {
         "title": "Woche 5: Relationale Algebra, SQL und XPath/XQuery",
-        "start_date": "2026-05-26",
+        "start_date": "2026-06-26",
     },
     6: {
         "title": "Woche 6: Funktionale Abhängigkeiten und Normalformen",
-        "start_date": "2026-05-26",
+        "start_date": "2026-06-26",
     },
     7: {
         "title": "Woche 7: Synthesealgorithmus und Star-/Snowflake-Schema",
