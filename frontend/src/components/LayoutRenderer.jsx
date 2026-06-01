@@ -1606,6 +1606,29 @@ export default function LayoutRenderer({
           </div>
         );
       }
+      case "SolutionBox":
+      case "solution_box": {
+        // Register the id up front (before any early return) so the matching
+        // evaluation result survives QuestionPage's field-id result filter.
+        if (typeof registerFieldId === "function") registerFieldId(String(el.id));
+        // Instance-specific worked solution. The body is delivered via the
+        // evaluation result (expected), so it only appears once results are shown.
+        if (!showExpected) return null;
+        const body = evaluationResults?.[el.id]?.expected;
+        if (body === undefined || body === null || body === "") return null;
+        const bodyText = typeof body === "string" ? body : String(body);
+
+        return (
+          <div key={el.id ?? idx} className="card mb-4 border-info shadow-sm">
+            <div className="card-body" style={{ whiteSpace: "pre-line" }}>
+              <h5 className="card-title mb-3">{el.title || "Musterlösung"}</h5>
+              <ReactMarkdown remarkPlugins={[remarkMath]} rehypePlugins={[rehypeKatex]}>
+                {bodyText}
+              </ReactMarkdown>
+            </div>
+          </div>
+        );
+      }
       case "Table":
       case "table":
         return (
@@ -2090,27 +2113,43 @@ export default function LayoutRenderer({
         );
       }
       case "MultipleChoice":
-      case "multiple_choice":
+      case "multiple_choice": {
+        const fieldId = el.id;
+        if (typeof registerFieldId === "function") registerFieldId(String(fieldId));
+        const evalResult = evaluationResults?.[fieldId];
+        const isCorrect = evalResult?.correct;
+        const expected = evalResult?.expected;
         return (
-          <div key={idx} className="mb-4">
-            <h5>{el.label}</h5>
+          <div key={idx} className="mb-2">
+            {el.label && <h5>{el.label}</h5>}
             <div>
-              {el.options.map((opt, i) => (
-                <div className="form-check form-check-inline" key={i}>
-                  <input
-                    className="form-check-input"
-                    type="radio"
-                    name={el.id}
-                    value={opt}
-                    checked={userInput?.[el.id] === opt}
-                    onChange={(e) => onChange(el.id, e.target.value)}
-                  />
-                  <label className="form-check-label">{opt}</label>
-                </div>
-              ))}
+              {el.options.map((opt, i) => {
+                const checked = userInput?.[fieldId] === opt;
+                let inputClass = "form-check-input";
+                if (evalResult !== undefined && checked) {
+                  inputClass += isCorrect ? " is-valid" : " is-invalid";
+                }
+                return (
+                  <div className="form-check form-check-inline" key={i}>
+                    <input
+                      className={inputClass}
+                      type="radio"
+                      name={fieldId}
+                      value={opt}
+                      checked={checked}
+                      onChange={(e) => onChange(fieldId, e.target.value)}
+                    />
+                    <label className="form-check-label">{opt}</label>
+                  </div>
+                );
+              })}
             </div>
+            {showExpected && evalResult !== undefined && !isCorrect && expected !== undefined && (
+              <small className="text-muted fst-italic d-block">Correct: {String(expected)}</small>
+            )}
           </div>
         );
+      }
 
       case "TextInput":
       case "text_input":

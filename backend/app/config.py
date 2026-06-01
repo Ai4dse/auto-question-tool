@@ -16,20 +16,20 @@ WEEK_CONFIG = {
         "start_date": "2026-05-19",
     },
     5: {
-        "title": "Woche 5: Relationale Algebra, SQL und XPath/XQuery",
-        "start_date": "2026-06-26",
+        "title": "SQL und XPath/XQuery",
+        "start_date": "2026-06-02",
     },
     6: {
-        "title": "Woche 6: Funktionale Abhängigkeiten und Normalformen",
+        "title": "Funktionale Abhängigkeiten und Normalformen",
         "start_date": "2026-06-26",
     },
     7: {
         "title": "Woche 7: Synthesealgorithmus und Star-/Snowflake-Schema",
-        "start_date": "2026-06-02",
+        "start_date": "2026-06-26",
     },
     8: {
         "title": "Woche 8: Assoziationsregel-Extraktion",
-        "start_date": "2026-06-09",
+        "start_date": "2026-06-26",
     },
     9: {
         "title": "Woche 9: Distanzmaße und Clustering",
@@ -611,6 +611,50 @@ QUESTION_CONFIG = {
             "title": "Schlüsselsuche",
             "week": 6,
             "desc": "Bestimme Kandidatenschlüssel aus einer Relation und funktionalen Abhängigkeiten.",
+            "tags": ["databases", "functional dependencies"],
+            "suppress_final_view": True,
+            "settings": {
+                "difficulty": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["easy", "medium", "hard"],
+                    "default": "easy",
+                },
+                "seed": {
+                    "kind": "number",
+                    "visibility": "hidden",
+                },
+            },
+        },
+    },
+    "tuple_insertion_fd": {
+        "class_path": "app.question_types.tuple_insertion_fd.TupleInsertionFDQuestion",
+        "metadata": {
+            "title": "Tupel einfügen (FD-Verletzung)",
+            "week": 6,
+            "desc": "Entscheide, ob Tupel in eine Relation eingefügt werden können, ohne funktionale Abhängigkeiten zu verletzen.",
+            "tags": ["databases", "functional dependencies"],
+            "suppress_final_view": True,
+            "settings": {
+                "difficulty": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["easy", "medium", "hard"],
+                    "default": "easy",
+                },
+                "seed": {
+                    "kind": "number",
+                    "visibility": "hidden",
+                },
+            },
+        },
+    },
+    "decomposition_fd": {
+        "class_path": "app.question_types.decomposition_fd.DecompositionFDQuestion",
+        "metadata": {
+            "title": "Verlustfreiheit & Abhängigkeitsbewahrung",
+            "week": 6,
+            "desc": "Entscheide, ob eine Zerlegung einer Relation verlustfrei und abhängigkeitsbewahrend ist.",
             "tags": ["databases", "functional dependencies"],
             "suppress_final_view": True,
             "settings": {
