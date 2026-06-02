@@ -21,7 +21,7 @@ WEEK_CONFIG = {
     },
     6: {
         "title": "Funktionale Abhängigkeiten und Normalformen",
-        "start_date": "2026-06-26",
+        "start_date": "2026-06-09",
     },
     7: {
         "title": "Woche 7: Synthesealgorithmus und Star-/Snowflake-Schema",
@@ -42,8 +42,6 @@ WEEK_CONFIG = {
 }
 
 MISSING_TASKS = {
-    'E 6. Verlustfreiheit und Abhängigkeitsbewahrung': 'gegeben R und R1/R2; ist die Zerlegung verlustfrei/abh.?',
-    'E 6. Normalformen': 'gegeben Relation + FD; welche Normalform liegt vor? --> vielleicht Überführung in nächst höhere? + Anomalien; kann Tuple eingefügt werden?',
     'E 7. Synthesealgorithmus': 'gegeben R und F; vielleicht kanonische Überdeckung auskoppeln?',
     'R 7. Star/Snowflakeschema': 'gegeben R + Datentypen --> transformieren Sie Relation in Schema',
     'R 8. Assoziationsregeln': 'gegeben häufige Itemsets',
@@ -229,7 +227,7 @@ QUESTION_CONFIG = {
         "class_path": "app.question_types.xpath_xquery.XPathXQueryQuestion",
         "metadata": {
             "title": "XPath/XQuery",
-            "week": 5,
+            "week": 6,
             "desc": "Löse XPath- und XQuery-Aufgaben über externe Tools.",
             "tags": ["xml", "xpath", "xquery"],
             "settings": {
@@ -655,6 +653,28 @@ QUESTION_CONFIG = {
             "title": "Verlustfreiheit & Abhängigkeitsbewahrung",
             "week": 6,
             "desc": "Entscheide, ob eine Zerlegung einer Relation verlustfrei und abhängigkeitsbewahrend ist.",
+            "tags": ["databases", "functional dependencies"],
+            "suppress_final_view": True,
+            "settings": {
+                "difficulty": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["easy", "medium", "hard"],
+                    "default": "easy",
+                },
+                "seed": {
+                    "kind": "number",
+                    "visibility": "hidden",
+                },
+            },
+        },
+    },
+    "normal_forms_fd": {
+        "class_path": "app.question_types.normal_forms_fd.NormalFormsFDQuestion",
+        "metadata": {
+            "title": "Normalform bestimmen",
+            "week": 6,
+            "desc": "Bestimme die höchste Normalform (1NF/2NF/3NF) einer Relation bezüglich funktionaler Abhängigkeiten.",
             "tags": ["databases", "functional dependencies"],
             "suppress_final_view": True,
             "settings": {
