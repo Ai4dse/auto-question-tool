@@ -21,11 +21,11 @@ WEEK_CONFIG = {
     },
     6: {
         "title": "Funktionale Abhängigkeiten und Normalformen",
-        "start_date": "2026-06-09",
+        "start_date": "2026-06-20",
     },
     7: {
         "title": "Woche 7: Synthesealgorithmus und Star-/Snowflake-Schema",
-        "start_date": "2026-06-26",
+        "start_date": "2026-06-20",
     },
     8: {
         "title": "Woche 8: Assoziationsregel-Extraktion",
@@ -227,7 +227,7 @@ QUESTION_CONFIG = {
         "class_path": "app.question_types.xpath_xquery.XPathXQueryQuestion",
         "metadata": {
             "title": "XPath/XQuery",
-            "week": 6,
+            "week": 5,
             "desc": "Löse XPath- und XQuery-Aufgaben über externe Tools.",
             "tags": ["xml", "xpath", "xquery"],
             "settings": {
@@ -678,6 +678,34 @@ QUESTION_CONFIG = {
             "tags": ["databases", "functional dependencies"],
             "suppress_final_view": True,
             "settings": {
+                "difficulty": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["easy", "medium", "hard"],
+                    "default": "easy",
+                },
+                "seed": {
+                    "kind": "number",
+                    "visibility": "hidden",
+                },
+            },
+        },
+    },
+    "synthesis_algorithm": {
+        "class_path": "app.question_types.synthesis_algorithm.SynthesisAlgorithmQuestion",
+        "metadata": {
+            "title": "Synthesealgorithmus",
+            "week": 7,
+            "desc": "Führe den 3NF-Synthesealgorithmus schrittweise durch: kanonische Überdeckung (Links-/Rechtsreduktion, Vereinigung) und Bildung der Relationenschemata.",
+            "tags": ["databases", "functional dependencies", "normalization"],
+            "suppress_final_view": True,
+            "settings": {
+                "mode": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["steps", "exam"],
+                    "default": "steps",
+                },
                 "difficulty": {
                     "kind": "select",
                     "visibility": "open",
