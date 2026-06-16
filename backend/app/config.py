@@ -21,23 +21,23 @@ WEEK_CONFIG = {
     },
     6: {
         "title": "Funktionale Abhängigkeiten und Normalformen",
-        "start_date": "2026-06-20",
+        "start_date": "2026-06-16",
     },
     7: {
         "title": "Woche 7: Synthesealgorithmus und Star-/Snowflake-Schema",
-        "start_date": "2026-06-20",
+        "start_date": "2026-07-20",
     },
     8: {
         "title": "Woche 8: Assoziationsregel-Extraktion",
-        "start_date": "2026-06-26",
+        "start_date": "2026-07-26",
     },
     9: {
         "title": "Woche 9: Distanzmaße und Clustering",
-        "start_date": "2026-06-16",
+        "start_date": "2026-07-16",
     },
     10: {
         "title": "Woche 10: Schema-Matching und Data Cleaning",
-        "start_date": "2026-06-23",
+        "start_date": "2026-07-23",
     }
 }
 
@@ -695,8 +695,8 @@ QUESTION_CONFIG = {
         "class_path": "app.question_types.synthesis_algorithm.SynthesisAlgorithmQuestion",
         "metadata": {
             "title": "Synthesealgorithmus",
-            "week": 7,
-            "desc": "Führe den 3NF-Synthesealgorithmus schrittweise durch: kanonische Überdeckung (Links-/Rechtsreduktion, Vereinigung) und Bildung der Relationenschemata.",
+            "week": 6,
+            "desc": "Führe den 3NF-Synthesealgorithmus schrittweise durch.",
             "tags": ["databases", "functional dependencies", "normalization"],
             "suppress_final_view": True,
             "settings": {

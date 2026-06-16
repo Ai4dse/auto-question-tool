@@ -15,10 +15,12 @@ import { API_URL } from "../api";
 const replaceOps = (value) => {
   return value
     .replace(/\\join/g, "⋈{}")
-    .replace(/\\proj/g, "π{}")     
+    .replace(/\\proj/g, "π{}")
     .replace(/\\sel/g, "σ{}")
-    .replace(/\\diff/g, "−{}")           
-    .replace(/\\rename/g, "ρ{}")   
+    .replace(/\\diff/g, "−{}")
+    .replace(/\\rename/g, "ρ{}")
+    .replace(/\\empty/g, "∅")
+    .replace(/\\leer/g, "∅")
 };
 
 const NODE_OP_META = {

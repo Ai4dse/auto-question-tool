@@ -294,6 +294,8 @@ def test_fd_parser_variants():
     # empty right-hand side variants
     assert q._parse_fds("AB->") == fdset(("AB", ""))
     assert q._parse_fds("AB->∅") == fdset(("AB", ""))
+    assert q._parse_fds("AB->\\empty") == fdset(("AB", ""))
+    assert q._parse_fds("AB->\\leer") == fdset(("AB", ""))
 
     assert q._parse_fds("") == set()
     assert q._parse_fds("garbage") is None  # no arrow
@@ -317,3 +319,92 @@ def test_invalid_difficulty_and_mode_fall_back():
     q = SynthesisAlgorithmQuestion(seed=1, difficulty="impossible", mode="weird")
     assert q.difficulty == "easy"
     assert q.mode == "steps"
+
+
+# --------------------------------------------------------------------------- #
+# Multiple valid solution paths (non-unique canonical cover)
+#
+# F = AC->BD; AD->B; B->D  has two valid right reductions of AC->BD:
+#   AC->D (sorted default)  and  AC->B.
+# The left reduction here is unique (nothing is reducible).
+# --------------------------------------------------------------------------- #
+NONUNIQUE_ATTRS = ["A", "B", "C", "D"]
+NONUNIQUE_FDS = fdset(("AC", "BD"), ("AD", "B"), ("B", "D"))
+
+
+def _nonunique_q():
+    return _with_fds(NONUNIQUE_ATTRS, NONUNIQUE_FDS)
+
+
+def test_all_right_reductions_enumerated():
+    q = _nonunique_q()
+    rights = q._all_right_reductions(q._norm_fds(q.f1))
+    assert q._norm_fds(fdset(("AC", "D"), ("AD", "B"), ("B", "D"))) in rights
+    assert q._norm_fds(fdset(("AC", "B"), ("AD", "B"), ("B", "D"))) in rights
+    assert len(rights) == 2
+
+
+def test_left_reduction_here_is_unique():
+    q = _nonunique_q()
+    assert len(q._all_left_reductions(q._norm_fds(q.f0))) == 1
+
+
+def test_both_right_reduction_branches_accepted():
+    q = _nonunique_q()
+    assert q.evaluate({"step_right": "AC->D; AD->B; B->D"})["step_right"]["correct"] is True
+    assert q.evaluate({"step_right": "AC->B; AD->B; B->D"})["step_right"]["correct"] is True
+
+
+def test_full_alternative_path_all_correct():
+    # A complete valid solution through the (non-default) AC->B branch.
+    q = _nonunique_q()
+    payload = {
+        "step_left": "AC->BD; AD->B; B->D",     # unique: nothing reducible
+        "step_right": "AC->B; AD->B; B->D",      # alternative branch
+        "step_empty": "AC->B; AD->B; B->D",
+        "step_union": "AC->B; AD->B; B->D",
+        "step_schemas": "{A,B,C}; {A,B,D}; {B,D}",
+        "step_key": "{A,B,C}; {A,B,D}; {B,D}",   # key {A,C} already in {A,B,C}
+        "step_final": "{A,B,C}; {A,B,D}",
+    }
+    res = q.evaluate(payload)
+    for field_id, _s, _t in q.STEP_IDS:
+        assert res[field_id]["correct"] is True, field_id
+
+
+def test_downstream_must_follow_the_selected_branch():
+    # Choose the AC->B branch at step_right, then submit the OTHER branch's
+    # schemas (those of AC->D): the chosen branch fixes the continuation, so the
+    # inconsistent schemas must be rejected.
+    q = _nonunique_q()
+    res = q.evaluate({
+        "step_right": "AC->B; AD->B; B->D",
+        "step_schemas": "{A,C,D}; {A,B,D}; {B,D}",
+    })
+    assert res["step_right"]["correct"] is True
+    assert res["step_schemas"]["correct"] is False
+
+
+def test_solution_lists_all_options_and_highlights_submitted():
+    q = _nonunique_q()
+    sol = q.evaluate({"step_right": "AC->B; AD->B; B->D"})["sol_right"]["expected"]
+    assert "AC → B" in sol and "AC → D" in sol      # both valid results listed
+    assert "Mehrere Ergebnisse" in sol              # explanation is present
+    highlighted = [ln for ln in sol.splitlines() if "✅" in ln]
+    assert len(highlighted) == 1 and "AC → B" in highlighted[0]
+
+
+def test_default_branch_highlighted_when_answer_missing_or_wrong():
+    q = _nonunique_q()
+    sol = q.evaluate({"step_right": "garbage"})["sol_right"]["expected"]
+    highlighted = [ln for ln in sol.splitlines() if "✅" in ln]
+    assert len(highlighted) == 1 and "AC → D" in highlighted[0]  # sorted-order default
+
+
+def test_unique_step_has_no_multiple_solutions_note():
+    q = _nonunique_q()
+    sol_left = q.evaluate({})["sol_left"]["expected"]
+    # unique step -> just the bold result, no list and no multi-solutions note
+    assert "Mehrere Ergebnisse" not in sol_left
+    assert "Gültige Ergebnisse" not in sol_left
+    assert "AC → BD" in sol_left

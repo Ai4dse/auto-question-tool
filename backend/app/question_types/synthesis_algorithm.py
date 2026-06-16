@@ -28,16 +28,21 @@ class SynthesisAlgorithmQuestion:
     (build schemas, add a key relation if needed, drop contained schemas).
 
     Everything is computed deterministically from ``seed`` strictly following the
-    lecture definitions (Folie 47 + 62). Each step is graded against the
-    *canonical* chain, so the verified intermediate result of one step is always
-    the starting point for the next — independent of what the student entered
-    before. ``mode`` only changes the layout:
+    lecture definitions (Folie 47 + 62). The left and right reductions are
+    order-dependent, so a step can have **several** equally valid results. Grading
+    follows the branch the student selected: every valid result of a step is
+    accepted, and the submitted one becomes the basis for the following steps. If
+    a step's answer is invalid, the deterministic sorted-order result is used as
+    the basis so later steps can still be graded independently. ``mode`` only
+    changes the layout:
 
-    - ``steps`` : one view per step; the verified result of each step is shown
-                  (via a ``solution_box`` delivered only through ``evaluate``) and
-                  serves as the visible starting point for the next step.
-    - ``exam``  : a single view with every step at once, one submission, every
-                  step graded, but no intermediate results revealed in between.
+    - ``steps`` : one view per step; all valid results of each step are shown
+                  (via a ``solution_box`` delivered only through ``evaluate``),
+                  the submitted one highlighted, serving as the starting point for
+                  the next step.
+    - ``exam``  : a single view with every step at once, one submission; every
+                  step is graded along the path the student typed in, but no
+                  results are revealed in between.
     """
 
     # Ordered (field_id, solution_box_id, short title) of the seven steps.
@@ -169,6 +174,74 @@ class SynthesisAlgorithmQuestion:
         """Step 7: drop any schema that is a (proper) subset of another."""
         schemas = set(schemas)
         return {s for s in schemas if not any(s < t for t in schemas)}
+
+    # ------------------------------------------------------------------ #
+    # Normalisation + enumeration of ALL valid reduction results
+    # ------------------------------------------------------------------ #
+    def _norm_fds(self, fds):
+        """Canonical hashable form of an FD set."""
+        return frozenset((frozenset(lhs), frozenset(rhs)) for lhs, rhs in fds)
+
+    def _norm_schemas(self, schemas):
+        """Canonical hashable form of a set of relation schemas."""
+        return frozenset(frozenset(s) for s in schemas)
+
+    def _all_left_reductions(self, fds):
+        """Every left-reduced FD set reachable by removing extraneous left
+        attributes one at a time (Folie 47/48). The result is order-dependent, so
+        in general there is more than one valid outcome; this returns all of them.
+        The sorted-order result of ``_left_reduce`` is always among them."""
+        seen, terminals, stack = set(), set(), [self._norm_fds(fds)]
+        while stack:
+            state = stack.pop()
+            if state in seen:
+                continue
+            seen.add(state)
+            work = [(set(lhs), set(rhs)) for lhs, rhs in state]
+            moves = []
+            for i, (lhs, rhs) in enumerate(work):
+                if len(lhs) <= 1:
+                    continue
+                for x in sorted(lhs):
+                    if rhs <= self._closure(lhs - {x}, work):
+                        moves.append((i, x))
+            if not moves:
+                terminals.add(state)
+                continue
+            for i, x in moves:
+                nxt = [(set(lhs), set(rhs)) for lhs, rhs in work]
+                nxt[i] = (nxt[i][0] - {x}, nxt[i][1])
+                stack.append(self._norm_fds(nxt))
+        return terminals
+
+    def _all_right_reductions(self, fds):
+        """Every right-reduced FD set reachable by removing extraneous right
+        attributes one at a time (Folie 47/53). As with the left reduction the
+        outcome is order-dependent; this returns all valid results (FDs that
+        become α→∅ are kept — they are only dropped in step 3). The sorted-order
+        result of ``_right_reduce`` is always among them."""
+        seen, terminals, stack = set(), set(), [self._norm_fds(fds)]
+        while stack:
+            state = stack.pop()
+            if state in seen:
+                continue
+            seen.add(state)
+            work = [(set(lhs), set(rhs)) for lhs, rhs in state]
+            moves = []
+            for i, (lhs, rhs) in enumerate(work):
+                for y in sorted(rhs):
+                    trial = list(work)
+                    trial[i] = (lhs, rhs - {y})
+                    if y in self._closure(lhs, trial):
+                        moves.append((i, y))
+            if not moves:
+                terminals.add(state)
+                continue
+            for i, y in moves:
+                nxt = [(set(lhs), set(rhs)) for lhs, rhs in work]
+                nxt[i] = (nxt[i][0], nxt[i][1] - {y})
+                stack.append(self._norm_fds(nxt))
+        return terminals
 
     # ------------------------------------------------------------------ #
     # Deterministic computation of the whole chain
@@ -368,7 +441,7 @@ class SynthesisAlgorithmQuestion:
             # An empty right-hand side (α→∅) is a valid intermediate FD: it can
             # arise from the right reduction and is only dropped in step 3.
             rhs_stripped = rhs_raw.strip()
-            if rhs_stripped in ("", "∅", "{}", "{ }"):
+            if rhs_stripped.lower() in ("", "∅", "{}", "{ }", "\\empty", "\\emptyset", "\\leer"):
                 rhs = set()
             else:
                 rhs = self._letters_to_attrs(rhs_stripped)
@@ -424,102 +497,54 @@ class SynthesisAlgorithmQuestion:
 
     # ------------------------------------------------------------------ #
     # Per-step worked solutions (delivered only via evaluate())
+    #
+    # A step can have more than one valid result (the left/right reduction are
+    # order-dependent). The solution lists every valid result for the step *given
+    # the branch the student selected in the previous steps* and highlights the
+    # selected one; from there only that branch is followed.
     # ------------------------------------------------------------------ #
-    def _sol_left(self):
-        return (
-            "**Linksreduktion.** Prüfe für jede FD α→β mit |α|>1 und jedes X∈α, ob "
-            "β ⊆ (α∖{X})⁺ bzgl. F. Falls ja, ist X überflüssig.\n\n"
-            f"Ergebnis: **{self._fmt_fds(self.f1)}**"
-        )
+    def _fmt_value(self, field_id, value):
+        if field_id in self.FD_STEPS:
+            return self._fmt_fds(value)
+        return self._fmt_schemas(value)
 
-    def _sol_right(self):
-        return (
-            "**Rechtsreduktion.** Prüfe für jede FD α→β und jedes Y∈β, ob "
-            "Y ∈ α⁺ bzgl. (F∖{α→β}) ∪ {α→(β∖{Y})}. Falls ja, ist Y überflüssig.\n\n"
-            f"Ergebnis: **{self._fmt_fds(self.f2)}**"
-        )
+    def _format_options_block(self, field_id, info):
+        options = info["options"]
+        selected = info["selected"]
+        ordered = sorted(options, key=lambda o: self._fmt_value(field_id, o))
+        if len(ordered) <= 1:
+            return f"**{self._fmt_value(field_id, selected)}**"
 
-    def _sol_empty(self):
-        if len(self.f2) == len(self.f3):
-            return (
-                "**Entferne α→∅.** Es gibt keine FD mit leerer rechter Seite – keine "
-                f"Änderung.\n\nErgebnis: **{self._fmt_fds(self.f3)}**"
-            )
-        return (
-            "**Entferne α→∅.** FDs mit leerer rechter Seite (durch die Rechtsreduktion "
-            "entstanden) werden gestrichen.\n\n"
-            f"Ergebnis: **{self._fmt_fds(self.f3)}**"
-        )
-
-    def _sol_union(self):
+        lines = []
+        for opt in ordered:
+            text = self._fmt_value(field_id, opt)
+            if opt == selected:
+                lines.append(f"- ✅ **{text}**  ← deine Auswahl (wird weiter berücksichtigt)")
+            else:
+                lines.append(f"- {text}")
         note = (
-            "FDs mit gleicher linker Seite werden zusammengefasst."
-            if len(self.cover) < len(self.f3)
-            else "Keine zwei FDs teilen sich eine linke Seite – keine Zusammenfassung nötig."
+            "\n\n*Mehrere Ergebnisse sind gültig – **alle** oben gelisteten sind korrekt. "
+            "Für die folgenden Schritte wird deine abgegebene (hervorgehobene) Lösung "
+            "weiter berücksichtigt.*"
         )
-        return (
-            f"**Vereinigung.** {note}\n\n"
-            f"Kanonische Überdeckung **Fc = {self._fmt_fds(self.cover)}**"
-        )
+        return "Gültige Ergebnisse:\n" + "\n".join(lines) + note
 
-    def _sol_schemas(self):
-        return (
-            "**Schemata bilden.** Für jede FD α→β ∈ Fc entsteht ein Relationenschema "
-            "R_i = α ∪ β.\n\n"
-            f"Schemata: **{self._fmt_schemas(self.schemas)}**"
-        )
+    def _solution_builder(self, sol_id, path):
+        field_id = next(f for f, s, _t in self.STEP_IDS if s == sol_id)
+        return self._format_options_block(field_id, path[field_id])
 
-    def _sol_key(self):
-        if self.key_contained:
-            return (
-                f"**Schlüsselrelation.** Ein Kandidatenschlüssel (Kandidatenschlüssel: "
-                f"{self._keys_text()}) ist bereits in einem Schema enthalten – keine "
-                "zusätzliche Relation nötig.\n\n"
-                f"Schemata: **{self._fmt_schemas(self.schemas_with_key)}**"
+    def _full_solution(self, path):
+        parts = [
+            "### Synthesealgorithmus – Musterlösung",
+            f"R({', '.join(self.attributes)}), F = **{self._fmt_fds(self.f0)}**, "
+            f"Kandidatenschlüssel: **{self._keys_text()}**.",
+        ]
+        for index, (field_id, _sol_id, title) in enumerate(self.STEP_IDS, start=1):
+            parts.append(
+                f"#### {index}. Schritt – {title}\n\n"
+                + self._format_options_block(field_id, path[field_id])
             )
-        return (
-            "**Schlüsselrelation.** Kein Schema enthält einen Kandidatenschlüssel von R "
-            f"(Kandidatenschlüssel: {self._keys_text()}). Ergänze eine Relation mit dem "
-            f"Schlüssel K = {self._fmt_set(self.chosen_key)}.\n\n"
-            f"Schemata: **{self._fmt_schemas(self.schemas_with_key)}**"
-        )
-
-    def _sol_final(self):
-        if self.removed_schemas:
-            removed = self._fmt_schemas(self.removed_schemas)
-            note = f"Entferne in anderen Schemata enthaltene Schemata ({removed})."
-        else:
-            note = "Kein Schema ist in einem anderen enthalten – keine Entfernung nötig."
-        return (
-            f"**Teilmengen entfernen.** {note}\n\n"
-            f"Endschema: **{self._fmt_schemas(self.final_schemas)}**"
-        )
-
-    def _solution_builder(self, sol_id):
-        return {
-            "sol_left": self._sol_left,
-            "sol_right": self._sol_right,
-            "sol_empty": self._sol_empty,
-            "sol_union": self._sol_union,
-            "sol_schemas": self._sol_schemas,
-            "sol_key": self._sol_key,
-            "sol_final": self._sol_final,
-        }[sol_id]()
-
-    def _full_solution(self):
-        return (
-            "### Synthesealgorithmus – Musterlösung\n\n"
-            f"Gegeben: **R({', '.join(self.attributes)})**, "
-            f"F = **{self._fmt_fds(self.f0)}**.\n\n"
-            f"Kandidatenschlüssel von R: **{self._keys_text()}**.\n\n"
-            "#### Schritt 1 — " + self._sol_left() + "\n\n"
-            "#### Schritt 2 — " + self._sol_right() + "\n\n"
-            "#### Schritt 3 — " + self._sol_empty() + "\n\n"
-            "#### Schritt 4 — " + self._sol_union() + "\n\n"
-            "#### Schritt 5 — " + self._sol_schemas() + "\n\n"
-            "#### Schritt 6 — " + self._sol_key() + "\n\n"
-            "#### Schritt 7 — " + self._sol_final()
-        )
+        return "\n\n".join(parts)
 
     # ------------------------------------------------------------------ #
     # Expected answers + grading per step
@@ -540,22 +565,83 @@ class SynthesisAlgorithmQuestion:
             return self._fmt_fds(self._expected_value(field_id))
         return self._fmt_schemas(self._expected_value(field_id))
 
-    def _grade_step(self, field_id, raw):
-        expected = self._expected_value(field_id)
-        if field_id in self.FD_STEPS:
-            parsed = self._parse_fds(raw)
-        else:
-            parsed = self._parse_relation_set(raw)
+    def _resolve_path(self, user_input):
+        """Walk the solution tree following the student's submitted answers.
 
-        if field_id == "step_key" and not self.key_contained and self.keys:
-            # Any candidate key is an acceptable addition, not only the chosen one.
-            correct = parsed is not None and any(
-                parsed == (set(self.schemas) | {frozenset(k)}) for k in self.keys
-            )
-        else:
-            correct = parsed is not None and parsed == expected
+        At each branching step the student's answer becomes the basis for the
+        following steps *iff* it is one of the valid results for that step;
+        otherwise the deterministic sorted-order result is used as the basis so
+        later steps can still be graded (independent carry-forward). Returns, per
+        step field, the set of all valid results (``options``) and the selected
+        basis (``selected``)."""
+        ui = user_input or {}
 
-        return {"correct": bool(correct), "expected": self._expected_text(field_id)}
+        def choose(field_id, options, default):
+            parser = self._parse_fds if field_id in self.FD_STEPS else self._parse_relation_set
+            raw = ui.get(field_id)
+            parsed = parser(raw) if raw is not None else None
+            selected = default
+            if parsed is not None:
+                norm = (self._norm_fds(parsed) if field_id in self.FD_STEPS
+                        else self._norm_schemas(parsed))
+                if norm in options:
+                    selected = norm
+            return {"options": set(options), "selected": selected}
+
+        path = {}
+
+        # Step 1 — left reduction (branching)
+        left_opts = self._all_left_reductions(self.f0)
+        path["step_left"] = choose("step_left", left_opts, self._norm_fds(self.f1))
+        sel_left = path["step_left"]["selected"]
+
+        # Step 2 — right reduction from the selected left result (branching)
+        right_opts = self._all_right_reductions(sel_left)
+        path["step_right"] = choose(
+            "step_right", right_opts, self._norm_fds(self._right_reduce(sel_left))
+        )
+        sel_right = path["step_right"]["selected"]
+
+        # Step 3 — remove α→∅ (deterministic given the branch)
+        sel_f3 = self._norm_fds(self._remove_empty(sel_right))
+        path["step_empty"] = choose("step_empty", {sel_f3}, sel_f3)
+
+        # Step 4 — union (deterministic)
+        sel_cover = self._norm_fds(self._union_same_lhs(sel_f3))
+        path["step_union"] = choose("step_union", {sel_cover}, sel_cover)
+
+        # Step 5 — build schemas (deterministic)
+        sel_schemas = self._norm_schemas(self._schemas_from_cover(sel_cover))
+        path["step_schemas"] = choose("step_schemas", {sel_schemas}, sel_schemas)
+
+        # Step 6 — key relation (branches over candidate keys when none is contained)
+        schemas_set = set(sel_schemas)
+        key_contained = any(set(k) <= s for s in schemas_set for k in self.keys)
+        if key_contained or not self.keys:
+            key_opts = {sel_schemas}
+            default_key = sel_schemas
+        else:
+            key_opts = {self._norm_schemas(schemas_set | {frozenset(k)}) for k in self.keys}
+            default_key = self._norm_schemas(schemas_set | {frozenset(self.chosen_key)})
+        path["step_key"] = choose("step_key", key_opts, default_key)
+        sel_s6 = path["step_key"]["selected"]
+
+        # Step 7 — drop contained schemas (deterministic given the branch)
+        sel_final = self._norm_schemas(self._drop_contained(set(sel_s6)))
+        path["step_final"] = choose("step_final", {sel_final}, sel_final)
+
+        return path
+
+    def _grade_step(self, field_id, raw, path):
+        info = path[field_id]
+        parser = self._parse_fds if field_id in self.FD_STEPS else self._parse_relation_set
+        parsed = parser(raw) if raw is not None else None
+        correct = False
+        if parsed is not None:
+            norm = (self._norm_fds(parsed) if field_id in self.FD_STEPS
+                    else self._norm_schemas(parsed))
+            correct = norm in info["options"]
+        return {"correct": bool(correct), "expected": self._fmt_value(field_id, info["selected"])}
 
     # ------------------------------------------------------------------ #
     # Layout
@@ -565,45 +651,20 @@ class SynthesisAlgorithmQuestion:
             "### Synthesealgorithmus (3NF)\n\n"
             f"Gegeben sei die Relation **R({', '.join(self.attributes)})** mit den "
             f"funktionalen Abhängigkeiten\n\n**F = {self._fmt_fds(self.f0)}**.\n\n"
-            "Führen Sie den 3NF-Synthesealgorithmus schrittweise durch. FD-Mengen im "
-            "Format `AB->C; D->E`, Schemamengen im Format `{A,B}; {C,D}`."
+            "Führe den 3NF-Synthesealgorithmus schrittweise durch. FD-Mengen im "
+            "Format `AB->C; D->E`, Schemamengen im Format `{A,B}; {C,D}`.\n\n"
+            "*Tipp: Für die leere Menge ∅ kannst du `\\empty` eingeben.*"
         )
 
     def _step_prompt(self, field_id):
         return {
-            "step_left": (
-                "**Schritt 1 – Linksreduktion.** Entfernen Sie überflüssige Attribute "
-                "auf den linken Seiten (nur bei FDs mit mehr als einem Attribut links). "
-                "Geben Sie die FD-Menge **nach** der Linksreduktion an."
-            ),
-            "step_right": (
-                "**Schritt 2 – Rechtsreduktion.** Ausgangspunkt ist die linksreduzierte "
-                "FD-Menge aus Schritt 1 (siehe Musterlösung oben). Entfernen Sie "
-                "überflüssige Attribute auf den rechten Seiten."
-            ),
-            "step_empty": (
-                "**Schritt 3 – Entferne α→∅.** Streichen Sie aus dem Ergebnis von "
-                "Schritt 2 (siehe oben) alle FDs mit leerer rechter Seite."
-            ),
-            "step_union": (
-                "**Schritt 4 – Vereinigung.** Fassen Sie FDs mit gleicher linker Seite "
-                "zusammen. Das Ergebnis ist die **kanonische Überdeckung Fc**."
-            ),
-            "step_schemas": (
-                "**Schritt 5 – Schemata bilden.** Bilden Sie für jede FD α→β aus Fc "
-                "(Schritt 4, siehe oben) ein Relationenschema R_i = α ∪ β. Geben Sie die "
-                "Schemata als Mengen an, z.B. `{A,B}; {C,D}`."
-            ),
-            "step_key": (
-                "**Schritt 6 – Schlüsselrelation.** Falls **kein** Schema aus Schritt 5 "
-                "einen Kandidatenschlüssel von R enthält, ergänzen Sie eine Relation mit "
-                "einem Kandidatenschlüssel. Geben Sie die (ggf. ergänzte) Schemamenge an."
-            ),
-            "step_final": (
-                "**Schritt 7 – Teilmengen entfernen.** Entfernen Sie Schemata, die "
-                "vollständig in einem anderen Schema enthalten sind. Geben Sie das "
-                "**Endschema** an."
-            ),
+            "step_left": "**1. Schritt – Linksreduktion.** Gib die FD-Menge nach der Linksreduktion an.",
+            "step_right": "**2. Schritt – Rechtsreduktion.** Gib die FD-Menge nach der Rechtsreduktion an.",
+            "step_empty": "**3. Schritt – Entferne α→∅.** Streiche FDs mit leerer rechter Seite.",
+            "step_union": "**4. Schritt – Vereinigung.** Fasse FDs mit gleicher linker Seite zur kanonischen Überdeckung Fc zusammen.",
+            "step_schemas": "**5. Schritt – Relationenschemata.** Bilde für jede FD aus Fc ein Relationenschema.",
+            "step_key": "**6. Schritt – Schlüsselrelation.** Ergänze eine Relation mit einem Kandidatenschlüssel, falls kein Schema einen enthält.",
+            "step_final": "**7. Schritt – Teilmengen entfernen.** Gib das Endschema an (entferne enthaltene Schemata).",
         }[field_id]
 
     def _input_label(self, field_id):
@@ -663,14 +724,15 @@ class SynthesisAlgorithmQuestion:
     # ------------------------------------------------------------------ #
     def evaluate(self, user_input):
         user_input = user_input or {}
+        path = self._resolve_path(user_input)
         results = {}
 
         for field_id, sol_id, _title in self.STEP_IDS:
-            results[field_id] = self._grade_step(field_id, user_input.get(field_id))
-            # Verified intermediate result (steps mode) — delivered only here, so
-            # it never leaks through the question payload.
-            results[sol_id] = {"correct": True, "expected": self._solution_builder(sol_id)}
+            results[field_id] = self._grade_step(field_id, user_input.get(field_id), path)
+            # All valid results for the selected branch (submitted one highlighted)
+            # — delivered only here, so it never leaks through the question payload.
+            results[sol_id] = {"correct": True, "expected": self._solution_builder(sol_id, path)}
 
-        # Full worked solution (exam mode).
-        results["solution"] = {"correct": True, "expected": self._full_solution()}
+        # Full worked solution along the selected path (exam mode).
+        results["solution"] = {"correct": True, "expected": self._full_solution(path)}
         return results
