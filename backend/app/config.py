@@ -25,7 +25,7 @@ WEEK_CONFIG = {
     },
     7: {
         "title": "Woche 7: Synthesealgorithmus und Star-/Snowflake-Schema",
-        "start_date": "2026-07-20",
+        "start_date": "2026-06-30",
     },
     8: {
         "title": "Woche 8: Assoziationsregel-Extraktion",
@@ -42,7 +42,6 @@ WEEK_CONFIG = {
 }
 
 MISSING_TASKS = {
-    'E 7. Synthesealgorithmus': 'gegeben R und F; vielleicht kanonische Überdeckung auskoppeln?',
     'R 7. Star/Snowflakeschema': 'gegeben R + Datentypen --> transformieren Sie Relation in Schema',
     'R 8. Assoziationsregeln': 'gegeben häufige Itemsets',
     'R 8. FP-Growth:': 'gegeben Transaktionen (wie bei Apriori)',
@@ -706,6 +705,28 @@ QUESTION_CONFIG = {
                     "options": ["steps", "exam"],
                     "default": "steps",
                 },
+                "difficulty": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["easy", "medium", "hard"],
+                    "default": "easy",
+                },
+                "seed": {
+                    "kind": "number",
+                    "visibility": "hidden",
+                },
+            },
+        },
+    },
+    "wait_for_graph": {
+        "class_path": "app.question_types.wait_for_graph.WaitForGraphQuestion",
+        "metadata": {
+            "title": "Wartegraph & Verklemmung",
+            "week": 7,
+            "desc": "Leite den Wartegraphen unter striktem 2PL ab, erkenne eine Verklemmung (Deadlock) und wähle die zurückzusetzende Transaktion.",
+            "tags": ["databases", "transactions", "deadlock", "2PL"],
+            "suppress_final_view": True,
+            "settings": {
                 "difficulty": {
                     "kind": "select",
                     "visibility": "open",

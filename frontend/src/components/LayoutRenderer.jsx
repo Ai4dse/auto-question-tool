@@ -1384,6 +1384,350 @@ function AprioriLevelBuilder(props) {
   );
 }
 
+function WaitForGraphBuilder({
+  el,
+  idx,
+  userInput,
+  onChange,
+  evaluationResults,
+  showExpected,
+  registerFieldId,
+}) {
+  const id = el.id || `wait_for_${idx}`;
+  // Register the field id up front (before any early return) so the matching
+  // evaluation result survives QuestionPage's per-view field-id filter.
+  if (typeof registerFieldId === "function") registerFieldId(String(id));
+
+  const transactions = (Array.isArray(el.transactions) ? el.transactions : []).map((t) => String(t));
+  const txSet = new Set(transactions);
+
+  const edgeKey = (from, to) => `${from}->${to}`;
+
+  // Edges are derived from userInput[id] (a JSON string of [from,to] pairs).
+  const parseEdges = (raw) => {
+    let parsed;
+    try {
+      parsed = raw ? (typeof raw === "string" ? JSON.parse(raw) : raw) : null;
+    } catch {
+      return [];
+    }
+    if (!Array.isArray(parsed)) return [];
+    const out = [];
+    const seen = new Set();
+    for (const pair of parsed) {
+      if (!Array.isArray(pair) || pair.length < 2) continue;
+      const from = String(pair[0]);
+      const to = String(pair[1]);
+      if (from === to) continue;
+      if (!txSet.has(from) || !txSet.has(to)) continue;
+      const k = edgeKey(from, to);
+      if (seen.has(k)) continue;
+      seen.add(k);
+      out.push([from, to]);
+    }
+    return out;
+  };
+
+  const edges = parseEdges(userInput?.[id]);
+  const edgeSet = new Set(edges.map(([f, t]) => edgeKey(f, t)));
+
+  const [selected, setSelected] = useState(null);
+  const [msg, setMsg] = useState("");
+
+  const editable = !showExpected;
+  const commit = (next) => onChange(id, JSON.stringify(next));
+
+  const toggleEdge = (from, to) => {
+    const k = edgeKey(from, to);
+    const next = edgeSet.has(k)
+      ? edges.filter(([f, t]) => edgeKey(f, t) !== k)
+      : [...edges, [from, to]];
+    commit(next);
+  };
+
+  const onNodeClick = (label) => {
+    if (!editable) return;
+    setMsg("");
+    if (selected === null) {
+      setSelected(label);
+      return;
+    }
+    if (selected === label) {
+      setSelected(null);
+      return;
+    }
+    toggleEdge(selected, label);
+    setSelected(null);
+  };
+
+  const removeEdge = (from, to) => {
+    if (!editable) return;
+    const k = edgeKey(from, to);
+    commit(edges.filter(([f, t]) => edgeKey(f, t) !== k));
+  };
+
+  const clearAll = () => {
+    if (!editable) return;
+    commit([]);
+    setSelected(null);
+    setMsg("");
+  };
+
+  // ----- Layout (nodes evenly on a circle) -----
+  const W = Number(el.width ?? 460);
+  const H = Number(el.height ?? 460);
+  const nodeR = Number(el.nodeR ?? 26);
+  const cx = W / 2;
+  const cy = H / 2;
+  const ringR = Math.min(W, H) / 2 - nodeR - 30;
+
+  const pos = new Map();
+  const n = transactions.length;
+  transactions.forEach((t, i) => {
+    const angle = -Math.PI / 2 + (2 * Math.PI * i) / Math.max(1, n);
+    pos.set(t, { x: cx + ringR * Math.cos(angle), y: cy + ringR * Math.sin(angle) });
+  });
+
+  const markerId = (suffix) => `${id}-arrow-${suffix}`;
+  const MARKER_COLORS = {
+    default: "#0d6efd",
+    green: "#198754",
+    red: "#dc3545",
+    grey: "#adb5bd",
+  };
+
+  const edgePath = (from, to) => {
+    const a = pos.get(from);
+    const b = pos.get(to);
+    if (!a || !b) return null;
+
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const ux = dx / len;
+    const uy = dy / len;
+
+    const sx = a.x + ux * (nodeR + 2);
+    const sy = a.y + uy * (nodeR + 2);
+    const ex = b.x - ux * (nodeR + 8);
+    const ey = b.y - uy * (nodeR + 8);
+
+    // Perpendicular (direction-stable) so A->B and B->A bow to opposite sides.
+    const nx = -uy;
+    const ny = ux;
+    const bow = Math.max(20, 0.18 * len);
+    const mx = (sx + ex) / 2 + nx * bow;
+    const my = (sy + ey) / 2 + ny * bow;
+
+    return `M ${sx} ${sy} Q ${mx} ${my} ${ex} ${ey}`;
+  };
+
+  // ----- Reveal-mode (solution) data -----
+  const evalResult = evaluationResults?.[id];
+  const expected = evalResult?.expected;
+  const hasStructured = expected && typeof expected === "object" && !Array.isArray(expected);
+  const expectedEdges = hasStructured && Array.isArray(expected.edges) ? expected.edges : [];
+  const cycles = hasStructured && Array.isArray(expected.cycles) ? expected.cycles : [];
+  const rollback = hasStructured && Array.isArray(expected.rollback) ? expected.rollback : [];
+  const deadlock = hasStructured ? !!expected.deadlock : false;
+  const isCorrect = evalResult?.correct;
+
+  const expectedSet = new Set(expectedEdges.map(([f, t]) => edgeKey(String(f), String(t))));
+  const cycleSet = new Set();
+  for (const cyc of cycles) {
+    if (!Array.isArray(cyc) || cyc.length < 2) continue;
+    const ring = [...cyc, cyc[0]];
+    for (let i = 0; i + 1 < ring.length; i++) {
+      cycleSet.add(edgeKey(String(ring[i]), String(ring[i + 1])));
+    }
+  }
+
+  // In reveal mode draw the union of expected + student edges.
+  const revealEdges = showExpected
+    ? [...new Set([...expectedSet, ...edges.map(([f, t]) => edgeKey(f, t))])].map((k) => {
+        const sep = k.indexOf("->");
+        return [k.slice(0, sep), k.slice(sep + 2)];
+      })
+    : edges;
+
+  const styleFor = (from, to) => {
+    if (!showExpected) {
+      return { stroke: MARKER_COLORS.default, width: 2.5, dash: undefined, mk: "default" };
+    }
+    const k = edgeKey(from, to);
+    const inExpected = expectedSet.has(k);
+    const inStudent = edgeSet.has(k);
+    const onCycle = cycleSet.has(k);
+    let role;
+    if (inExpected && inStudent) role = "correct";
+    else if (inExpected && !inStudent) role = "missed";
+    else role = "wrong"; // student-drawn, not in expected
+
+    const stroke = onCycle
+      ? MARKER_COLORS.red
+      : role === "correct"
+      ? MARKER_COLORS.green
+      : role === "wrong"
+      ? MARKER_COLORS.red
+      : MARKER_COLORS.grey;
+    const mk = onCycle || role === "wrong" ? "red" : role === "correct" ? "green" : "grey";
+    return {
+      stroke,
+      width: onCycle ? 4 : role === "missed" ? 2.5 : 3,
+      dash: role === "missed" ? "6 5" : undefined,
+      mk,
+    };
+  };
+
+  return (
+    <div className="card mb-4 shadow-sm">
+      <div className="card-body">
+        <div className="d-flex justify-content-between align-items-center mb-2">
+          <h5 className="card-title mb-0">{el.title || "Wartegraph zeichnen"}</h5>
+          {!showExpected && (
+            <button
+              type="button"
+              className="btn btn-sm btn-outline-danger"
+              onClick={clearAll}
+              disabled={edges.length === 0}
+            >
+              Clear all
+            </button>
+          )}
+        </div>
+
+        <div className="text-muted small mb-2">
+          Klicke zwei Transaktionen an, um eine Kante zu ziehen. Ti → Tj bedeutet: Ti wartet auf Tj.
+        </div>
+
+        {!showExpected && msg && <div className="alert alert-warning py-2">{msg}</div>}
+
+        {showExpected && evalResult !== undefined && (
+          <div className={`alert py-2 ${isCorrect ? "alert-success" : "alert-danger"}`}>
+            {isCorrect ? "Korrekt" : "Nicht korrekt"}
+            {hasStructured && (
+              <span className="ms-2">
+                — {deadlock ? "Verklemmung liegt vor" : "keine Verklemmung"}
+                {rollback.length > 0 && `; Rücksetzen: ${rollback.join(", ")}`}
+              </span>
+            )}
+          </div>
+        )}
+
+        {showExpected && (
+          <div className="d-flex flex-wrap gap-3 small mb-2">
+            <span style={{ color: MARKER_COLORS.green }}>━▶ richtig gezeichnet</span>
+            <span style={{ color: MARKER_COLORS.red }}>━▶ falsch / Teil eines Zyklus</span>
+            <span style={{ color: MARKER_COLORS.grey }}>┄▶ fehlende Kante</span>
+          </div>
+        )}
+
+        <div className="border rounded p-2 bg-light" style={{ overflow: "auto" }}>
+          <svg width={W} height={H} style={{ display: "block", margin: "0 auto" }}>
+            <defs>
+              {Object.entries(MARKER_COLORS).map(([key, color]) => (
+                <marker
+                  key={key}
+                  id={markerId(key)}
+                  viewBox="0 0 10 10"
+                  refX="9"
+                  refY="5"
+                  markerWidth="7"
+                  markerHeight="7"
+                  orient="auto"
+                >
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill={color} />
+                </marker>
+              ))}
+            </defs>
+
+            {revealEdges.map(([from, to]) => {
+              const d = edgePath(from, to);
+              if (!d) return null;
+              const s = styleFor(from, to);
+              return (
+                <path
+                  key={edgeKey(from, to)}
+                  d={d}
+                  fill="none"
+                  stroke={s.stroke}
+                  strokeWidth={s.width}
+                  strokeDasharray={s.dash}
+                  markerEnd={`url(#${markerId(s.mk)})`}
+                />
+              );
+            })}
+
+            {transactions.map((t) => {
+              const pt = pos.get(t);
+              if (!pt) return null;
+              const isSel = selected === t && !showExpected;
+              const isRollbackNode = showExpected && rollback.includes(t);
+              return (
+                <g
+                  key={`${id}-node-${t}`}
+                  style={{ cursor: showExpected ? "default" : "pointer" }}
+                  onClick={() => onNodeClick(t)}
+                >
+                  <circle
+                    cx={pt.x}
+                    cy={pt.y}
+                    r={nodeR}
+                    fill={isSel ? "#0d6efd" : "#fff"}
+                    stroke={isRollbackNode ? "#dc3545" : "#0d6efd"}
+                    strokeWidth={isRollbackNode ? 4 : 3}
+                  />
+                  <text
+                    x={pt.x}
+                    y={pt.y + 5}
+                    textAnchor="middle"
+                    style={{
+                      fontFamily: "monospace",
+                      fontSize: 14,
+                      fill: isSel ? "#fff" : "#111",
+                      userSelect: "none",
+                      pointerEvents: "none",
+                    }}
+                  >
+                    {t}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+
+        <div className="mt-3">
+          <div className="fw-semibold mb-2">Kanten</div>
+          {edges.length === 0 ? (
+            <div className="text-muted small">Noch keine Kanten gezeichnet.</div>
+          ) : (
+            <div className="d-flex flex-wrap gap-2">
+              {edges.map(([from, to]) => (
+                <div key={edgeKey(from, to)} className="d-flex align-items-center gap-1">
+                  <span className="badge bg-light text-dark border">
+                    {from} → {to}
+                  </span>
+                  {!showExpected && (
+                    <button
+                      type="button"
+                      className="btn btn-sm btn-outline-danger py-0 px-2"
+                      onClick={() => removeEdge(from, to)}
+                      aria-label={`Kante ${from} nach ${to} entfernen`}
+                    >
+                      ×
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function LayoutRenderer({
   layout,
   activeView = "view1",
@@ -1529,6 +1873,20 @@ export default function LayoutRenderer({
             userInput={userInput}
             onChange={onChange}
             renderEvaluatedInput={renderEvaluatedInput}
+          />
+        );
+      case "WaitForGraphBuilder":
+      case "wait_for_graph_builder":
+        return (
+          <WaitForGraphBuilder
+            key={el.id ?? idx}
+            el={el}
+            idx={idx}
+            userInput={userInput}
+            onChange={onChange}
+            evaluationResults={evaluationResults}
+            showExpected={showExpected}
+            registerFieldId={registerFieldId}
           />
         );
       case "AprioriExamBuilder":
