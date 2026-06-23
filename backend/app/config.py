@@ -24,8 +24,8 @@ WEEK_CONFIG = {
         "start_date": "2026-06-16",
     },
     7: {
-        "title": "Woche 7: Synthesealgorithmus und Star-/Snowflake-Schema",
-        "start_date": "2026-06-30",
+        "title": "Transaktionen und Synchronisation",
+        "start_date": "2026-06-23",
     },
     8: {
         "title": "Woche 8: Assoziationsregel-Extraktion",
@@ -723,8 +723,30 @@ QUESTION_CONFIG = {
         "metadata": {
             "title": "Wartegraph & Verklemmung",
             "week": 7,
-            "desc": "Leite den Wartegraphen unter striktem 2PL ab, erkenne eine Verklemmung (Deadlock) und wähle die zurückzusetzende Transaktion.",
+            "desc": "Erkenne Verklemmungen mit dem Wartegraphen.",
             "tags": ["databases", "transactions", "deadlock", "2PL"],
+            "suppress_final_view": True,
+            "settings": {
+                "difficulty": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["easy", "medium", "hard"],
+                    "default": "easy",
+                },
+                "seed": {
+                    "kind": "number",
+                    "visibility": "hidden",
+                },
+            },
+        },
+    },
+    "schedule_properties": {
+        "class_path": "app.question_types.schedule_properties.SchedulePropertiesQuestion",
+        "metadata": {
+            "title": "Eigenschaften von Historien",
+            "week": 7,
+            "desc": "Bestimme die Eigenschaften einer Historie.",
+            "tags": ["databases", "transactions", "serializability", "recoverability"],
             "suppress_final_view": True,
             "settings": {
                 "difficulty": {

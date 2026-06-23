@@ -1728,6 +1728,149 @@ function WaitForGraphBuilder({
   );
 }
 
+// Read-only serializability (precedence) graph, shown only in the solution.
+// Reads its data from evaluationResults[id].expected =
+//   { nodes: ["T1",...], edges: [["T1","T2"],...], cycles: [["T1","T2"],...],
+//     serializable: bool, aborted: ["T3",...] }.
+function SerializabilityGraph({ el, idx, evaluationResults, showExpected, registerFieldId }) {
+  const id = el.id || `graph_${idx}`;
+  // Register up front so the matching evaluation result survives the per-view
+  // field-id filter, even though nothing renders before submission.
+  if (typeof registerFieldId === "function") registerFieldId(String(id));
+
+  const expected = evaluationResults?.[id]?.expected;
+  const hasData = expected && typeof expected === "object" && !Array.isArray(expected);
+  if (!showExpected || !hasData) return null;
+
+  const nodes = (Array.isArray(expected.nodes) ? expected.nodes : []).map((n) => String(n));
+  const edges = (Array.isArray(expected.edges) ? expected.edges : [])
+    .filter((e) => Array.isArray(e) && e.length >= 2)
+    .map((e) => [String(e[0]), String(e[1])]);
+  const cycles = Array.isArray(expected.cycles) ? expected.cycles : [];
+  const serializable = !!expected.serializable;
+  const aborted = (Array.isArray(expected.aborted) ? expected.aborted : []).map((n) => String(n));
+
+  const edgeKey = (from, to) => `${from}->${to}`;
+  const cycleSet = new Set();
+  for (const cyc of cycles) {
+    if (!Array.isArray(cyc) || cyc.length < 2) continue;
+    const ring = [...cyc, cyc[0]].map((n) => String(n));
+    for (let i = 0; i + 1 < ring.length; i++) cycleSet.add(edgeKey(ring[i], ring[i + 1]));
+  }
+
+  // ----- Layout (nodes evenly on a circle) -----
+  const W = Number(el.width ?? 420);
+  const H = Number(el.height ?? 420);
+  const nodeR = Number(el.nodeR ?? 26);
+  const cx = W / 2;
+  const cy = H / 2;
+  const ringR = Math.min(W, H) / 2 - nodeR - 30;
+  const pos = new Map();
+  const n = nodes.length;
+  nodes.forEach((t, i) => {
+    const angle = -Math.PI / 2 + (2 * Math.PI * i) / Math.max(1, n);
+    pos.set(t, { x: cx + ringR * Math.cos(angle), y: cy + ringR * Math.sin(angle) });
+  });
+
+  const markerId = (suffix) => `${id}-arrow-${suffix}`;
+  const MARKER_COLORS = { blue: "#0d6efd", red: "#dc3545" };
+
+  const edgePath = (from, to) => {
+    const a = pos.get(from);
+    const b = pos.get(to);
+    if (!a || !b) return null;
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const ux = dx / len;
+    const uy = dy / len;
+    const sx = a.x + ux * (nodeR + 2);
+    const sy = a.y + uy * (nodeR + 2);
+    const ex = b.x - ux * (nodeR + 8);
+    const ey = b.y - uy * (nodeR + 8);
+    // Perpendicular bow so A->B and B->A separate.
+    const nx = -uy;
+    const ny = ux;
+    const bow = Math.max(20, 0.18 * len);
+    const mx = (sx + ex) / 2 + nx * bow;
+    const my = (sy + ey) / 2 + ny * bow;
+    return `M ${sx} ${sy} Q ${mx} ${my} ${ex} ${ey}`;
+  };
+
+  return (
+    <div className="card mb-4 shadow-sm">
+      <div className="card-body">
+        <h5 className="card-title mb-2">{el.title || "Serialisierbarkeitsgraph"}</h5>
+        <div className={`alert py-2 ${serializable ? "alert-success" : "alert-danger"}`}>
+          {serializable
+            ? "Der Graph ist azyklisch → die Historie ist serialisierbar."
+            : "Der Graph enthält einen Zyklus → die Historie ist nicht serialisierbar."}
+        </div>
+        {aborted.length > 0 && (
+          <div className="text-muted small mb-2">
+            Nur über die festgeschriebenen Transaktionen gebildet; abgebrochen (ausgeschlossen):{" "}
+            {aborted.join(", ")}.
+          </div>
+        )}
+        <div className="border rounded p-2 bg-light" style={{ overflow: "auto" }}>
+          <svg width={W} height={H} style={{ display: "block", margin: "0 auto" }}>
+            <defs>
+              {Object.entries(MARKER_COLORS).map(([key, color]) => (
+                <marker
+                  key={key}
+                  id={markerId(key)}
+                  viewBox="0 0 10 10"
+                  refX="9"
+                  refY="5"
+                  markerWidth="7"
+                  markerHeight="7"
+                  orient="auto"
+                >
+                  <path d="M 0 0 L 10 5 L 0 10 z" fill={color} />
+                </marker>
+              ))}
+            </defs>
+
+            {edges.map(([from, to]) => {
+              const d = edgePath(from, to);
+              if (!d) return null;
+              const onCycle = cycleSet.has(edgeKey(from, to));
+              return (
+                <path
+                  key={edgeKey(from, to)}
+                  d={d}
+                  fill="none"
+                  stroke={onCycle ? MARKER_COLORS.red : MARKER_COLORS.blue}
+                  strokeWidth={onCycle ? 4 : 2.5}
+                  markerEnd={`url(#${markerId(onCycle ? "red" : "blue")})`}
+                />
+              );
+            })}
+
+            {nodes.map((t) => {
+              const pt = pos.get(t);
+              if (!pt) return null;
+              return (
+                <g key={`${id}-node-${t}`}>
+                  <circle cx={pt.x} cy={pt.y} r={nodeR} fill="#fff" stroke="#0d6efd" strokeWidth={3} />
+                  <text
+                    x={pt.x}
+                    y={pt.y + 5}
+                    textAnchor="middle"
+                    style={{ fontFamily: "monospace", fontSize: 14, fill: "#111", userSelect: "none" }}
+                  >
+                    {t}
+                  </text>
+                </g>
+              );
+            })}
+          </svg>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function LayoutRenderer({
   layout,
   activeView = "view1",
@@ -1884,6 +2027,18 @@ export default function LayoutRenderer({
             idx={idx}
             userInput={userInput}
             onChange={onChange}
+            evaluationResults={evaluationResults}
+            showExpected={showExpected}
+            registerFieldId={registerFieldId}
+          />
+        );
+      case "SerializabilityGraph":
+      case "serializability_graph":
+        return (
+          <SerializabilityGraph
+            key={el.id ?? idx}
+            el={el}
+            idx={idx}
             evaluationResults={evaluationResults}
             showExpected={showExpected}
             registerFieldId={registerFieldId}
