@@ -28,15 +28,15 @@ WEEK_CONFIG = {
         "start_date": "2026-06-23",
     },
     8: {
-        "title": "Woche 8: Assoziationsregel-Extraktion",
+        "title": "Assoziationsregel-Extraktion",
         "start_date": "2026-07-01",
     },
     9: {
-        "title": "Woche 9: Distanzmaße und Clustering",
+        "title": "Distanzmaße und Clustering",
         "start_date": "2026-07-07",
     },
     10: {
-        "title": "Woche 10: Schema-Matching und Data Cleaning",
+        "title": "Schema-Matching",
         "start_date": "2026-07-14",
     }
 }
@@ -387,9 +387,9 @@ QUESTION_CONFIG = {
     "fp_grow": {
         "class_path": "app.question_types.fp_grow.FPGrowthAlgorithmQuestion",
         "metadata": {
-            "title": "FP-Grow",
+            "title": "FP-Growth",
             "week": 8,
-            "desc": "Bestimme frequent itemsets mit dem FP-Grow-Algorithmus.",
+            "desc": "Bestimme frequent itemsets mit dem FP-Growth-Algorithmus.",
             "tags": ["data mining", "association rules"],
             "settings": {
                 "mode": {
@@ -415,7 +415,7 @@ QUESTION_CONFIG = {
         "class_path": "app.question_types.ass_rule_mining.AssociationRuleMiningQuestion",
         "metadata": {
             "title": "Association Rule Mining",
-            "week": 8,
+            "week": 10,
             "desc": "Bestimme association rules für ein Set häufiger Itemsets.",
             "tags": ["data mining", "association rules"],
             "settings": {
