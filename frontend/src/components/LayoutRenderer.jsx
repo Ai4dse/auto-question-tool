@@ -1,5 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import ERDiagramBuilder from "./ERDiagramBuilder.jsx";
+import FPTreeBuilder from "./FPTreeBuilder.jsx";
+import AssociationRuleFormulaBuilder from "./AssociationRuleFormulaBuilder.jsx";
 
 import Plot from "react-plotly.js";
 import Tree from "react-d3-tree";
@@ -2091,6 +2093,31 @@ export default function LayoutRenderer({
       case "ER_Diagram_Builder":
       case "er_diagram_builder":
         return <ERDiagramBuilder key={el.id} el={el} idx={idx} onChange={onChange} />;
+      case "fp_tree_builder":
+      case "FPTreeBuilder":
+        return (
+          <FPTreeBuilder
+            key={idx}
+            el={el}
+            idx={idx}
+            onChange={onChange}
+            evaluationResults={evaluationResults}
+            showExpected={showExpected}
+            registerFieldId={registerFieldId}
+          />
+        );
+      case "AssociationRuleFormulaBuilder":
+        return (
+          <AssociationRuleFormulaBuilder
+            key={idx}
+            el={el}
+            idx={idx}
+            onChange={onChange}
+            evaluationResults={evaluationResults}
+            showExpected={showExpected}
+            registerFieldId={registerFieldId}
+          />
+        );
       case "Text":
       case "text": {
         const rawMarkdown = el.value ?? el.content ?? "";

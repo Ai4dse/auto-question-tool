@@ -29,15 +29,15 @@ WEEK_CONFIG = {
     },
     8: {
         "title": "Woche 8: Assoziationsregel-Extraktion",
-        "start_date": "2026-07-26",
+        "start_date": "2026-07-01",
     },
     9: {
         "title": "Woche 9: Distanzmaße und Clustering",
-        "start_date": "2026-07-16",
+        "start_date": "2026-07-07",
     },
     10: {
         "title": "Woche 10: Schema-Matching und Data Cleaning",
-        "start_date": "2026-07-23",
+        "start_date": "2026-07-14",
     }
 }
 
@@ -281,7 +281,7 @@ QUESTION_CONFIG = {
     "sigma_rule": {
         "class_path": "app.question_types.sigma_rule.SigmaRule",
         "metadata": {
-            "title": "Outlier Detection",
+            "title": "Sigma-Regel",
             "week": 9,
             "desc": "Identifiziere Ausreißer mit der Sigma-Regel.",
             "tags": ["matching", "algorithms"],
@@ -321,8 +321,8 @@ QUESTION_CONFIG = {
     "tukey_fences": {
         "class_path": "app.question_types.tukey_fences.TukeyFences",
         "metadata": {
-            "title": "Outlier Detection2",
-            "week": 10,
+            "title": "Tukey-Fences",
+            "week": 9,
             "desc": "Identifiziere Ausreißer mit Tukey-Fences.",
             "tags": ["matching", "algorithms"],
             "settings": {
@@ -357,7 +357,6 @@ QUESTION_CONFIG = {
             },
         },
     },
-
     "apriori_algorithm": {
         "class_path": "app.question_types.apriori_algorithm.AprioriAlgorithmQuestion",
         "metadata": {
@@ -372,6 +371,54 @@ QUESTION_CONFIG = {
                     "options": ["steps", "exam"],
                     "default": "steps",
                 },
+                "difficulty": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["easy", "medium", "hard"],
+                    "default": "easy",
+                },
+                "seed": {
+                    "kind": "number",
+                    "visibility": "hidden",
+                },
+            },
+        },
+    },
+    "fp_grow": {
+        "class_path": "app.question_types.fp_grow.FPGrowthAlgorithmQuestion",
+        "metadata": {
+            "title": "FP-Grow",
+            "week": 8,
+            "desc": "Bestimme frequent itemsets mit dem FP-Grow-Algorithmus.",
+            "tags": ["data mining", "association rules"],
+            "settings": {
+                "mode": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["steps", "exam"],
+                    "default": "steps",
+                },
+                "difficulty": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["easy", "medium", "hard"],
+                    "default": "easy",
+                },
+                "seed": {
+                    "kind": "number",
+                    "visibility": "hidden",
+                },
+            },
+        },
+    },
+    "ass_rule_mining": {
+        "class_path": "app.question_types.ass_rule_mining.AssociationRuleMiningQuestion",
+        "metadata": {
+            "title": "Association Rule Mining",
+            "week": 8,
+            "desc": "Bestimme association rules für ein Set häufiger Itemsets.",
+            "tags": ["data mining", "association rules"],
+            "settings": {
                 "difficulty": {
                     "kind": "select",
                     "visibility": "open",
