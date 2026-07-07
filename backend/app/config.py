@@ -282,7 +282,7 @@ QUESTION_CONFIG = {
         "class_path": "app.question_types.sigma_rule.SigmaRule",
         "metadata": {
             "title": "Sigma-Regel",
-            "week": 9,
+            "week": 10,
             "desc": "Identifiziere Ausreißer mit der Sigma-Regel.",
             "tags": ["matching", "algorithms"],
             "settings": {
@@ -322,7 +322,7 @@ QUESTION_CONFIG = {
         "class_path": "app.question_types.tukey_fences.TukeyFences",
         "metadata": {
             "title": "Tukey-Fences",
-            "week": 9,
+            "week": 10,
             "desc": "Identifiziere Ausreißer mit Tukey-Fences.",
             "tags": ["matching", "algorithms"],
             "settings": {
@@ -415,7 +415,7 @@ QUESTION_CONFIG = {
         "class_path": "app.question_types.ass_rule_mining.AssociationRuleMiningQuestion",
         "metadata": {
             "title": "Association Rule Mining",
-            "week": 10,
+            "week": 8,
             "desc": "Bestimme association rules für ein Set häufiger Itemsets.",
             "tags": ["data mining", "association rules"],
             "settings": {

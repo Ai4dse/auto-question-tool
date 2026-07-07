@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 
 const STYLE_ID = "association-rule-formula-builder-styles";
 
@@ -14,111 +14,12 @@ function ensureStyles() {
       gap: 1rem;
     }
 
-    .arfb-header,
-    .arfb-support-panel,
     .arfb-target-card {
+      padding: 1rem;
       border: 1px solid #e5e7eb;
       border-radius: 16px;
       background: #ffffff;
       box-shadow: 0 1px 2px rgba(15, 23, 42, 0.04);
-    }
-
-    .arfb-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: flex-start;
-      gap: 1rem;
-      padding: 1rem;
-    }
-
-    .arfb-title {
-      margin: 0;
-      font-size: 1.05rem;
-      font-weight: 750;
-      color: #111827;
-    }
-
-    .arfb-subtitle {
-      margin: 0.25rem 0 0;
-      color: #6b7280;
-      line-height: 1.35;
-    }
-
-    .arfb-formula-badge {
-      flex: 0 0 auto;
-      padding: 0.65rem 0.9rem;
-      border-radius: 14px;
-      background: #f3f4f6;
-      color: #111827;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", monospace;
-      font-size: 0.9rem;
-      white-space: nowrap;
-      line-height: 1.45;
-    }
-
-    .arfb-formula-note {
-      display: block;
-      margin-top: 0.15rem;
-      color: #6b7280;
-      font-size: 0.78rem;
-    }
-
-    .arfb-support-panel {
-      padding: 1rem;
-    }
-
-    .arfb-panel-title {
-      margin: 0 0 0.75rem;
-      font-size: 0.95rem;
-      font-weight: 750;
-      color: #111827;
-    }
-
-    .arfb-support-levels {
-      display: grid;
-      grid-template-columns: repeat(3, minmax(0, 1fr));
-      gap: 0.75rem;
-    }
-
-    .arfb-support-level {
-      padding: 0.75rem;
-      border-radius: 14px;
-      background: #f9fafb;
-      min-height: 4rem;
-    }
-
-    .arfb-level-title {
-      margin-bottom: 0.45rem;
-      font-weight: 750;
-      color: #374151;
-      font-size: 0.9rem;
-    }
-
-    .arfb-chip-list {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 0.4rem;
-    }
-
-    .arfb-chip {
-      display: inline-flex;
-      align-items: center;
-      gap: 0.3rem;
-      padding: 0.32rem 0.55rem;
-      border-radius: 999px;
-      background: #eef2ff;
-      color: #1f2937;
-      font-size: 0.88rem;
-      font-weight: 650;
-    }
-
-    .arfb-chip-support {
-      color: #6b7280;
-      font-weight: 600;
-    }
-
-    .arfb-target-card {
-      padding: 1rem;
     }
 
     .arfb-target-header {
@@ -283,43 +184,6 @@ function ensureStyles() {
       font-weight: 700;
     }
 
-    .arfb-decision-row {
-      display: flex;
-      align-items: center;
-      gap: 0.55rem;
-      margin-top: 0.7rem;
-      color: #374151;
-      font-weight: 600;
-      border: 1px solid transparent;
-      border-radius: 10px;
-      padding: 0.35rem 0.45rem;
-      width: fit-content;
-    }
-
-    .arfb-checkbox-wrap {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 1.15rem;
-      height: 1.15rem;
-      border-radius: 0.35rem;
-      border: 1px solid transparent;
-    }
-
-    .arfb-checkbox-wrap.arfb-correct,
-    .arfb-decision-row.arfb-correct {
-      border-color: #86efac;
-      background: #dcfce7;
-      color: #166534;
-    }
-
-    .arfb-checkbox-wrap.arfb-wrong,
-    .arfb-decision-row.arfb-wrong {
-      border-color: #fca5a5;
-      background: #fee2e2;
-      color: #991b1b;
-    }
-
     .arfb-field-block {
       display: inline-flex;
       flex-direction: column;
@@ -343,24 +207,9 @@ function ensureStyles() {
       font-weight: 650;
     }
 
-    .arfb-empty {
-      color: #9ca3af;
-      font-style: italic;
-      font-size: 0.9rem;
-    }
-
     @media (max-width: 900px) {
-      .arfb-header,
       .arfb-target-header {
         flex-direction: column;
-      }
-
-      .arfb-formula-badge {
-        white-space: normal;
-      }
-
-      .arfb-support-levels {
-        grid-template-columns: 1fr;
       }
     }
 
@@ -430,30 +279,40 @@ function difference(items, removeItems) {
   return uniqueSorted(items).filter((item) => !remove.has(item));
 }
 
+function emptyRow(target = "") {
+  return {
+    target,
+    lhs: "",
+    rhs: "",
+    numerator: "",
+    denominator: "",
+    rhsProbability: "",
+    addedValue: "",
+  };
+}
+
 function buildRowsForTarget(targetItems, prefillRuleSides, initialRowsPerTarget) {
   const target = itemsetKey(targetItems);
 
   if (prefillRuleSides) {
     return nonEmptyProperSubsets(targetItems).map((lhs) => ({
+      ...emptyRow(target),
       lhs: itemsetKey(lhs),
       rhs: itemsetKey(difference(targetItems, lhs)),
-      numerator: "",
-      denominator: "",
-      confidence: "",
-      accepted: false,
     }));
   }
 
   const count = Math.max(1, Number(initialRowsPerTarget || 2));
-  return Array.from({ length: count }, () => ({
-    lhs: "",
-    rhs: "",
-    numerator: "",
-    denominator: "",
-    confidence: "",
-    accepted: false,
-    target,
-  }));
+  return Array.from({ length: count }, () => emptyRow(target));
+}
+
+function normalizeSavedRow(row, target) {
+  return {
+    ...emptyRow(target),
+    ...(row || {}),
+    rhsProbability: row?.rhsProbability ?? row?.rhs_probability ?? row?.pB ?? row?.supportY ?? "",
+    addedValue: row?.addedValue ?? row?.added_value ?? row?.value ?? row?.confidence ?? "",
+  };
 }
 
 function parseInitialGroups(el) {
@@ -461,7 +320,18 @@ function parseInitialGroups(el) {
   if (raw) {
     try {
       const parsed = typeof raw === "string" ? JSON.parse(raw) : raw;
-      if (Array.isArray(parsed?.groups)) return parsed.groups;
+      if (Array.isArray(parsed?.groups)) {
+        return parsed.groups.map((group, groupIndex) => {
+          const targetFromLayout = el?.targetItemsets?.[groupIndex]?.items;
+          const target = group?.target || itemsetKey(targetFromLayout);
+          return {
+            target,
+            rows: Array.isArray(group?.rows)
+              ? group.rows.map((row) => normalizeSavedRow(row, target))
+              : buildRowsForTarget(targetFromLayout, el?.prefillRuleSides !== false, el?.initialRowsPerTarget),
+          };
+        });
+      }
     } catch {
       // Ignore invalid saved state and rebuild from layout data.
     }
@@ -474,22 +344,6 @@ function parseInitialGroups(el) {
     target: itemsetKey(target.items),
     rows: buildRowsForTarget(target.items, prefillRuleSides, el?.initialRowsPerTarget),
   }));
-}
-
-function groupedSupportItemsets(supportItemsets) {
-  const groups = { 1: [], 2: [], 3: [] };
-
-  for (const entry of supportItemsets || []) {
-    const level = Number(entry.level || entry.items?.length || 0);
-    if (!groups[level]) groups[level] = [];
-    groups[level].push(entry);
-  }
-
-  for (const level of Object.keys(groups)) {
-    groups[level].sort((a, b) => itemsetKey(a.items).localeCompare(itemsetKey(b.items)));
-  }
-
-  return groups;
 }
 
 function formatExpected(expected) {
@@ -521,16 +375,9 @@ export default function AssociationRuleFormulaBuilder({
   }, []);
 
   const id = el?.id || `association_rule_formula_${idx ?? 0}`;
-  const label = el?.label || "Assoziationsregeln mit Konfidenz";
-  const minConfidence = Number(el?.minConfidence ?? 0);
-  const supportItemsets = Array.isArray(el?.supportItemsets) ? el.supportItemsets : [];
   const targetItemsets = Array.isArray(el?.targetItemsets) ? el.targetItemsets : [];
-  const showFormula = el?.showFormula !== false;
-  const showDecisionInput = el?.showDecisionInput !== false;
   const allowRuleEditing = el?.allowRuleEditing !== false;
   const allowAddRows = el?.allowAddRows !== false;
-  const formulaText = el?.formulaText || "conf(A ⇒ B) = P(A∩B) / P(A)";
-  const probabilityDefinition = el?.probabilityDefinition || "P(A) = σ(A) / |Transactions|";
 
   const [groups, setGroups] = useState(() => parseInitialGroups(el));
   const onChangeRef = useRef(onChange);
@@ -544,8 +391,6 @@ export default function AssociationRuleFormulaBuilder({
   useEffect(() => {
     registerFieldIdRef.current = registerFieldId;
   }, [registerFieldId]);
-
-  const supportGroups = useMemo(() => groupedSupportItemsets(supportItemsets), [supportItemsets]);
 
   useEffect(() => {
     const serialized = JSON.stringify({ groups });
@@ -565,8 +410,8 @@ export default function AssociationRuleFormulaBuilder({
         ids.push(`${base}_rhs`);
         ids.push(`${base}_numerator`);
         ids.push(`${base}_denominator`);
-        ids.push(`${base}_confidence`);
-        ids.push(`${base}_accepted`);
+        ids.push(`${base}_rhsProbability`);
+        ids.push(`${base}_addedValue`);
       });
     });
 
@@ -620,18 +465,7 @@ export default function AssociationRuleFormulaBuilder({
         if (gi !== groupIndex) return group;
         return {
           ...group,
-          rows: [
-            ...(Array.isArray(group.rows) ? group.rows : []),
-            {
-              lhs: "",
-              rhs: "",
-              numerator: "",
-              denominator: "",
-              confidence: "",
-              accepted: false,
-              target: group.target,
-            },
-          ],
+          rows: [...(Array.isArray(group.rows) ? group.rows : []), emptyRow(group.target)],
         };
       })
     );
@@ -658,46 +492,6 @@ export default function AssociationRuleFormulaBuilder({
         <div className="arfb-summary">{mainMessage}</div>
       )}
 
-      <div className="arfb-header">
-        <div>
-          <h3 className="arfb-title">{label}</h3>
-          <p className="arfb-subtitle">
-            Erzeuge Regel-Blöcke, trage die Itemsets links/rechts des Pfeils ein und fülle die Formelwerte aus.
-          </p>
-        </div>
-        {showFormula && (
-          <div className="arfb-formula-badge">
-            {formulaText}
-            <span className="arfb-formula-note">{probabilityDefinition}</span>
-          </div>
-        )}
-      </div>
-
-      <div className="arfb-support-panel">
-        <h4 className="arfb-panel-title">Gegebene frequent itemsets (FIS)</h4>
-        <div className="arfb-support-levels">
-          {[1, 2, 3].map((level) => (
-            <div key={level} className="arfb-support-level">
-              <div className="arfb-level-title">L{level}</div>
-              <div className="arfb-chip-list">
-                {(supportGroups[level] || []).length ? (
-                  (supportGroups[level] || []).map((entry) => (
-                    <span key={`${level}_${itemsetKey(entry.items)}`} className="arfb-chip">
-                      {itemsetDisplay(entry.items)}
-                      <span className="arfb-chip-support">
-                        σ={entry.support}{entry.probability != null ? `, P=${Number(entry.probability).toFixed(3)}` : ""}
-                      </span>
-                    </span>
-                  ))
-                ) : (
-                  <span className="arfb-empty">keine</span>
-                )}
-              </div>
-            </div>
-          ))}
-        </div>
-      </div>
-
       {groups.map((group, groupIndex) => {
         const targetFromLayout = targetItemsets[groupIndex]?.items;
         const targetLabel = group.target || itemsetDisplay(targetFromLayout);
@@ -707,14 +501,14 @@ export default function AssociationRuleFormulaBuilder({
           <div key={`${targetLabel}_${groupIndex}`} className="arfb-target-card">
             <div className="arfb-target-header">
               <div>
-                <h4 className="arfb-target-title">Regeln aus FIS {targetLabel}</h4>
+                <h4 className="arfb-target-title">Regel-Block {targetLabel ? `für ${targetLabel}` : ""}</h4>
                 <p className="arfb-target-subtitle">
-                  Für jede Regel muss A ∪ B = {targetLabel} gelten. Die Richtung A ⇒ B ist relevant.
+                  Trage A, B, P(A∩B), P(A), P(B) und den Added Value ein.
                 </p>
               </div>
               {allowAddRows && (
                 <button type="button" className="arfb-add-btn" onClick={() => addRow(groupIndex)}>
-                  + Regel-Block
+                  + Regel
                 </button>
               )}
             </div>
@@ -726,13 +520,13 @@ export default function AssociationRuleFormulaBuilder({
                 const rhsField = `${base}_rhs`;
                 const numeratorField = `${base}_numerator`;
                 const denominatorField = `${base}_denominator`;
-                const confidenceField = `${base}_confidence`;
-                const acceptedField = `${base}_accepted`;
+                const rhsProbabilityField = `${base}_rhsProbability`;
+                const addedValueField = `${base}_addedValue`;
                 const lhsLabel = itemsetDisplay(row.lhs);
                 const rhsLabel = itemsetDisplay(row.rhs);
-                const xLabel = itemsetKey(row.lhs) || "?";
                 const probabilityBothLabel = lhsLabel !== "?" && rhsLabel !== "?" ? `${lhsLabel}∩${rhsLabel}` : "A∩B";
-                const probabilityLeftLabel = xLabel !== "?" ? xLabel : "A";
+                const probabilityLeftLabel = lhsLabel !== "?" ? lhsLabel : "A";
+                const probabilityRightLabel = rhsLabel !== "?" ? rhsLabel : "B";
 
                 return (
                   <div key={rowIndex} className={classFor(base, "arfb-rule-card")}>
@@ -788,9 +582,9 @@ export default function AssociationRuleFormulaBuilder({
                     </div>
 
                     <div className="arfb-rendered-formula">
-                      <span className="arfb-formula-label">conf({lhsLabel} ⇒ {rhsLabel})</span>
+                      <span className="arfb-formula-label">AV({lhsLabel} ⇒ {rhsLabel})</span>
                       <span>=</span>
-                      <span>P({probabilityBothLabel}) / P({probabilityLeftLabel})</span>
+                      <span>P({probabilityBothLabel}) / P({probabilityLeftLabel}) − P({probabilityRightLabel})</span>
                       <span>=</span>
 
                       <span className="arfb-field-block">
@@ -817,33 +611,32 @@ export default function AssociationRuleFormulaBuilder({
                         {expectedHint(denominatorField)}
                       </span>
 
+                      <span>−</span>
+
+                      <span className="arfb-field-block">
+                        <input
+                          className={classFor(rhsProbabilityField, "arfb-input arfb-number-input")}
+                          value={row.rhsProbability || ""}
+                          placeholder="P(B)"
+                          inputMode="decimal"
+                          onChange={(event) => updateRow(groupIndex, rowIndex, { rhsProbability: event.target.value })}
+                        />
+                        {expectedHint(rhsProbabilityField)}
+                      </span>
+
                       <span>=</span>
 
                       <span className="arfb-field-block">
                         <input
-                          className={classFor(confidenceField, "arfb-input arfb-number-input")}
-                          value={row.confidence || ""}
-                          placeholder="conf"
+                          className={classFor(addedValueField, "arfb-input arfb-number-input")}
+                          value={row.addedValue || ""}
+                          placeholder="AV"
                           inputMode="decimal"
-                          onChange={(event) => updateRow(groupIndex, rowIndex, { confidence: event.target.value })}
+                          onChange={(event) => updateRow(groupIndex, rowIndex, { addedValue: event.target.value })}
                         />
-                        {expectedHint(confidenceField)}
+                        {expectedHint(addedValueField)}
                       </span>
                     </div>
-
-                    {showDecisionInput && (
-                      <label className={classFor(acceptedField, "arfb-decision-row")}>
-                        <span className={classFor(acceptedField, "arfb-checkbox-wrap")}>
-                          <input
-                            type="checkbox"
-                            checked={Boolean(row.accepted)}
-                            onChange={(event) => updateRow(groupIndex, rowIndex, { accepted: event.target.checked })}
-                          />
-                        </span>
-                        <span>conf ≥ d = {minConfidence.toFixed(2)}</span>
-                        {expectedHint(acceptedField)}
-                      </label>
-                    )}
                   </div>
                 );
               })}

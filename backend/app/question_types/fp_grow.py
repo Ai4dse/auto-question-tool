@@ -644,8 +644,7 @@ class FPGrowthAlgorithmQuestion:
                         f"- Grundmenge: {', '.join(self.base_items)}\n"
                         f"- minsup = {self.minsup} ({self.minsup_count} von {len(self.transactions)} Transaktionen)\n"
                         "- Sortiere Items pro Transaktion zuerst nach globaler Häufigkeit absteigend und bei Gleichstand alphabetisch.\n"
-                        "- Entferne Items, die nicht frequent sind, bevor der FP-tree aufgebaut wird.\n"
-                        "- Für Bäume genügt die Pfad-Darstellung: ein Knoten wird als Pfad vom Root bis zum Knoten mit Count eingetragen."
+                        "- Entferne Items, die nicht frequent sind, bevor der FP-tree aufgebaut wird."
                     ),
                 },
                 {
@@ -706,7 +705,8 @@ class FPGrowthAlgorithmQuestion:
             "view3": [
                 {
                     "type": "Text",
-                    "content": "### Schritt 3\nBilde für jedes Item die relationalen Pfade, also die Prefix-Pfade im FP-tree mit dem Count des jeweiligen Item-Knotens.",
+                    "content": "### Schritt 3\nBilde für jedes Item die relationalen Pfade, also die Prefix-Pfade im FP-tree mit dem Count des jeweiligen Item-Knotens.\n"
+                                "**Format:** `D:5, DC:5, DB:3, DCB:3`"
                 },
                 {
                     "type": "TableInput",

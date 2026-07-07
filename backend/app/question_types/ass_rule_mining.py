@@ -19,11 +19,9 @@ DIFFICULTY_SETTINGS = {
         "min_items": 1,
         "max_items": 3,
         "minsup_range": (0.40, 0.60),
-        "min_conf_range": (0.60, 0.75),
         "target_itemset_count": 1,
         "prefer_target_sizes": (2, 3),
         "min_target_rule_count": 2,
-        "min_accepted_rule_count": 1,
     },
     "medium": {
         "num_items": 5,
@@ -31,11 +29,9 @@ DIFFICULTY_SETTINGS = {
         "min_items": 1,
         "max_items": 4,
         "minsup_range": (0.30, 0.50),
-        "min_conf_range": (0.65, 0.80),
         "target_itemset_count": 2,
         "prefer_target_sizes": (3, 2),
         "min_target_rule_count": 4,
-        "min_accepted_rule_count": 1,
     },
     "hard": {
         "num_items": 6,
@@ -43,32 +39,24 @@ DIFFICULTY_SETTINGS = {
         "min_items": 2,
         "max_items": 5,
         "minsup_range": (0.25, 0.40),
-        "min_conf_range": (0.70, 0.85),
         "target_itemset_count": 2,
         "prefer_target_sizes": (3, 2),
         "min_target_rule_count": 6,
-        "min_accepted_rule_count": 1,
     },
 }
 
 
 class AssociationRuleMiningQuestion:
     """
-    Association-rule question based on already frequent itemsets.
+    Association-rule question for editable rule rows.
 
-    The generated instance gives L1, L2 and L3 frequent itemsets, but only selects
-    one or two frequent 2-/3-itemsets as target itemsets. Students build the
-    possible rules for those targets and calculate the confidence formula in the
-    probability notation used in the exercise sheet:
+    Students build rules A => B from one or two target frequent itemsets and
+    calculate the added value in probability notation:
 
-        conf(A => B) = P(A intersection B) / P(A)
-        P(A) = sigma(A) / |Transactions|
+        AV(A => B) = P(A intersection B) / P(A) - P(B)
+        P(X) = sigma(X) / |Transactions|
 
-    The dynamic UI lets students add/remove rule blocks and edit both sides of
-    the arrow. Numeric formula fields use probabilities, while the evaluator also
-    accepts the corresponding support counts for compatibility.
-
-    Expected frontend payload for the dynamic UI component:
+    Expected frontend payload:
         {
             "groups": [
                 {
@@ -77,10 +65,10 @@ class AssociationRuleMiningQuestion:
                         {
                             "lhs": "A",
                             "rhs": "BD",
-                            "numerator": "3",
-                            "denominator": "5",
-                            "confidence": "0.60",
-                            "accepted": false
+                            "numerator": "0.333",
+                            "denominator": "0.500",
+                            "rhsProbability": "0.667",
+                            "addedValue": "0.000"
                         }
                     ]
                 }
@@ -100,9 +88,7 @@ class AssociationRuleMiningQuestion:
 
         self.seed = int(seed) if seed is not None else random.randint(1, 999999)
         self.rng = random.Random(self.seed)
-
         self.minsup = round(self.rng.uniform(*self.config["minsup_range"]), 2)
-        self.min_confidence = round(self.rng.uniform(*self.config["min_conf_range"]), 2)
 
         self.base_items = []
         self.transactions = []
@@ -112,7 +98,6 @@ class AssociationRuleMiningQuestion:
         self.target_itemsets = []
         self.support_map = {}
         self.target_rules = []
-        self.accepted_target_rules = []
 
         self._initialize_instance()
 
@@ -138,16 +123,9 @@ class AssociationRuleMiningQuestion:
         if any(sep in raw for sep in [",", ";", " ", "/", "|"]):
             parts = [part for part in re.split(r"[,;\s/|]+", raw) if part]
         else:
-            # Compact notation: AB means A,B. This assumes single-letter item names.
             parts = list(raw)
 
         return cls._normalize_itemset(parts)
-
-    @staticmethod
-    def _bool_value(value):
-        if isinstance(value, bool):
-            return value
-        return str(value or "").strip().lower() in {"1", "true", "yes", "ja", "on"}
 
     @staticmethod
     def _int_value(value):
@@ -160,8 +138,35 @@ class AssociationRuleMiningQuestion:
             return None
 
     @staticmethod
-    def _confidence_matches(actual, expected):
-        return actual is not None and abs(float(actual) - float(expected)) <= 0.005
+    def _parse_decimal(value):
+        if value is None:
+            return None
+        raw = str(value).strip().replace(",", ".")
+        if not raw:
+            return None
+        try:
+            if raw.endswith("%"):
+                return float(raw[:-1].strip()) / 100.0
+            if "/" in raw:
+                left, right = raw.split("/", 1)
+                denominator = float(right.strip())
+                if abs(denominator) < 1e-12:
+                    return None
+                return float(left.strip()) / denominator
+            return float(raw)
+        except (TypeError, ValueError, ZeroDivisionError):
+            return None
+
+    @staticmethod
+    def _number_matches(actual, expected, tolerance=0.005):
+        return actual is not None and abs(float(actual) - float(expected)) <= tolerance
+
+    @staticmethod
+    def _format_decimal(value):
+        value = float(value)
+        if abs(value) < 0.0005:
+            value = 0.0
+        return f"{value:.3f}"
 
     def _initialize_instance(self):
         chosen = None
@@ -176,12 +181,14 @@ class AssociationRuleMiningQuestion:
                 self.config["max_items"],
             )
 
+            # _rules_for_itemset needs the transaction count while candidates are built.
+            self.transactions = transactions
+
             levels, minsup_count = run_apriori_levels(transactions, base_items, self.minsup)
             frequent_itemsets = self._collect_frequent_itemsets(levels)
             support_map = self._build_support_map(frequent_itemsets)
             target_itemsets = self._choose_target_itemsets(frequent_itemsets, support_map, local_rng)
             target_rules = self._generate_rules_for_targets(target_itemsets, support_map)
-            accepted_rules = [rule for rule in target_rules if rule["accepted"]]
 
             chosen = (
                 base_items,
@@ -192,14 +199,9 @@ class AssociationRuleMiningQuestion:
                 target_itemsets,
                 support_map,
                 target_rules,
-                accepted_rules,
             )
 
-            if (
-                target_itemsets
-                and len(target_rules) >= self.config["min_target_rule_count"]
-                and len(accepted_rules) >= self.config["min_accepted_rule_count"]
-            ):
+            if target_itemsets and len(target_rules) >= self.config["min_target_rule_count"]:
                 break
 
         if not chosen:
@@ -214,7 +216,6 @@ class AssociationRuleMiningQuestion:
             self.target_itemsets,
             self.support_map,
             self.target_rules,
-            self.accepted_target_rules,
         ) = chosen
 
     def _collect_frequent_itemsets(self, levels):
@@ -238,6 +239,12 @@ class AssociationRuleMiningQuestion:
     def _build_support_map(self, frequent_itemsets):
         return {self._itemset_key(entry["itemset"]): int(entry["count"]) for entry in frequent_itemsets}
 
+    def _support_count(self, itemset):
+        return int(self.support_map.get(self._itemset_key(itemset), 0))
+
+    def _probability(self, itemset):
+        return float(self._support_count(itemset)) / float(max(1, len(self.transactions)))
+
     def _non_empty_proper_subsets(self, itemset):
         items = list(self._normalize_itemset(itemset))
         result = []
@@ -253,23 +260,35 @@ class AssociationRuleMiningQuestion:
             return []
 
         rules = []
+        transaction_count = max(1, len(self.transactions))
+
         for lhs in self._non_empty_proper_subsets(full_itemset):
             lhs = self._normalize_itemset(lhs)
             rhs = tuple(item for item in full_itemset if item not in set(lhs))
             rhs = self._normalize_itemset(rhs)
             lhs_support = support_map.get(self._itemset_key(lhs))
-            if not lhs_support:
+            rhs_support = support_map.get(self._itemset_key(rhs))
+            if not lhs_support or rhs_support is None:
                 continue
 
-            confidence = float(full_support) / float(lhs_support)
+            p_xy = float(full_support) / float(transaction_count)
+            p_x = float(lhs_support) / float(transaction_count)
+            p_y = float(rhs_support) / float(transaction_count)
+            ratio = p_xy / p_x if p_x else 0.0
+            added_value = ratio - p_y
+
             rule = {
                 "target": full_itemset,
                 "lhs": lhs,
                 "rhs": rhs,
                 "support_xy": int(full_support),
                 "support_x": int(lhs_support),
-                "confidence": confidence,
-                "accepted": confidence + 1e-12 >= self.min_confidence,
+                "support_y": int(rhs_support),
+                "p_xy": p_xy,
+                "p_x": p_x,
+                "p_y": p_y,
+                "confidence": ratio,
+                "added_value": added_value,
             }
             rule["key"] = self._rule_key(rule["lhs"], rule["rhs"])
             rules.append(rule)
@@ -342,11 +361,10 @@ class AssociationRuleMiningQuestion:
         return {
             "type": "AssociationRuleFormulaBuilder",
             "id": self.FIELD_ID,
-            "label": "Assoziationsregeln: Konfidenz",
-            "minConfidence": float(self.min_confidence),
+            "label": "Added Value von Regeln",
             "transactionCount": transaction_count,
-            "formulaText": "conf(A ⇒ B) = P(A∩B) / P(A)",
-            "probabilityDefinition": "P(A) = σ(A) / |Transactions|",
+            "formulaText": "AV(A ⇒ B) = P(A∩B) / P(A) − P(B)",
+            "probabilityDefinition": "P(X) = σ(X) / |Transactions|",
             "supportItemsets": [
                 {
                     "items": list(entry["itemset"]),
@@ -364,10 +382,9 @@ class AssociationRuleMiningQuestion:
                 }
                 for entry in self.target_itemsets
             ],
-            "showFormula": True,
-            "showDecisionInput": True,
-            # Students should build the rules themselves: they can add/remove
-            # blocks and edit both sides of A ⇒ B in steps and exam mode.
+            # The JSX component intentionally renders only the editable rule rows.
+            "showFormula": False,
+            "showDecisionInput": False,
             "prefillRuleSides": False,
             "allowRuleEditing": True,
             "allowAddRows": True,
@@ -376,16 +393,15 @@ class AssociationRuleMiningQuestion:
 
     def _rule_solution_rows(self, rules=None):
         source_rules = self.target_rules if rules is None else rules
-        transaction_count = max(1, len(self.transactions))
         return [
             [
                 format_itemset(rule["target"]),
                 format_itemset(rule["lhs"]),
                 format_itemset(rule["rhs"]),
-                format_probability(float(rule["support_xy"]) / float(transaction_count)),
-                format_probability(float(rule["support_x"]) / float(transaction_count)),
-                format_probability(rule["confidence"]),
-                str(bool(rule["accepted"])),
+                format_probability(rule["p_xy"]),
+                format_probability(rule["p_x"]),
+                format_probability(rule["p_y"]),
+                self._format_decimal(rule["added_value"]),
             ]
             for rule in source_rules
         ]
@@ -402,19 +418,20 @@ class AssociationRuleMiningQuestion:
                     {
                         "lhs": format_itemset(rule["lhs"]),
                         "rhs": format_itemset(rule["rhs"]),
-                        "numerator": format_probability(float(rule["support_xy"]) / float(max(1, len(self.transactions)))),
-                        "denominator": format_probability(float(rule["support_x"]) / float(max(1, len(self.transactions)))),
+                        "numerator": format_probability(rule["p_xy"]),
+                        "denominator": format_probability(rule["p_x"]),
+                        "rhsProbability": format_probability(rule["p_y"]),
                         "supportXY": str(rule["support_xy"]),
                         "supportX": str(rule["support_x"]),
-                        "confidence": format_probability(rule["confidence"]),
-                        "accepted": str(bool(rule["accepted"])),
+                        "supportY": str(rule["support_y"]),
+                        "addedValue": self._format_decimal(rule["added_value"]),
                     }
                 )
             groups.append({"target": target_key, "rows": rows})
 
         return {
             "message": message,
-            "minConfidence": format_probability(self.min_confidence),
+            "formula": "AV(A⇒B)=P(A∩B)/P(A)-P(B)",
             "groups": groups,
         }
 
@@ -424,25 +441,23 @@ class AssociationRuleMiningQuestion:
                 {
                     "type": "Text",
                     "content": (
-                        "Erzeuge die Assoziationsregeln für die angegebenen frequent itemsets (FIS) "
-                        "und berechne die Konfidenz mit der Notation aus der Übung.\n"
-                        f"- Mindestkonfidenz $$d = {format_probability(self.min_confidence)}$$.\n"
+                        "Erzeuge die Regeln für die angegebenen Ziel-Itemsets und berechne den Added Value.\n"
                         "- Lege für jede Regel einen Block an und trage die Itemsets links und rechts des Pfeils ein.\n"
-                        "- Trage dann die Wahrscheinlichkeiten $$P(A\\cap B)$$ und $$P(A)$$ sowie die Konfidenz ein.\n"
-                        "- Für die Wahrscheinlichkeiten gilt: $$P(A)=\\frac{\\sigma(A)}{|Transactions|}$$.\n\n"
-                        "$$conf(A \\Rightarrow B)=\\frac{P(A\\cap B)}{P(A)}$$"
+                        "- Trage dann die Wahrscheinlichkeiten $$P(A\\cap B)$$, $$P(A)$$ und $$P(B)$$ ein.\n"
+                        "- Berechne anschließend den Added Value.\n\n"
+                        "$$AV(A \\Rightarrow B)=\\frac{P(A\\cap B)}{P(A)}-P(B)$$"
                     ),
                 },
                 {
                     "type": "Table",
                     "title": "Gegebene frequent itemsets",
-                    "columns": ["Level", "FIS", "σ", "P"],
+                    "columns": ["Level", "Itemset", "σ", "P"],
                     "rows": self._frequent_itemset_rows(),
                 },
                 {
                     "type": "Table",
                     "title": "Ziel-Itemsets für die Regelerzeugung",
-                    "columns": ["FIS", "σ", "P", "Anzahl möglicher Regeln"],
+                    "columns": ["Itemset", "σ", "P", "Anzahl möglicher Regeln"],
                     "rows": self._target_itemset_rows(),
                 },
                 self._component_payload(steps=True),
@@ -450,12 +465,12 @@ class AssociationRuleMiningQuestion:
             "lastView": [
                 {
                     "type": "Text",
-                    "content": "Referenzlösung: Alle Regeln der Ziel-FIS mit Wahrscheinlichkeiten, Konfidenz und Entscheidung.",
+                    "content": "Referenzlösung: Alle Regeln der Ziel-Itemsets mit Wahrscheinlichkeiten und Added Value.",
                 },
                 {
                     "type": "Table",
-                    "title": "Regeln aus den Ziel-FIS",
-                    "columns": ["FIS", "A", "B", "P(A∩B)", "P(A)", "conf", "conf ≥ d?"],
+                    "title": "Added Value der Regeln",
+                    "columns": ["Itemset", "A", "B", "P(A∩B)", "P(A)", "P(B)", "AV"],
                     "rows": self._rule_solution_rows() or [["-", "-", "-", "-", "-", "-", "-"]],
                 },
             ],
@@ -467,22 +482,20 @@ class AssociationRuleMiningQuestion:
                 {
                     "type": "Text",
                     "content": (
-                        "Exam-Modus: Erzeuge die Assoziationsregeln für die angegebenen Ziel-FIS und berechne die Konfidenz.\n"
-                        f"Mindestkonfidenz: $$d = {format_probability(self.min_confidence)}$$. "
-                        "Verwende $$conf(A \\Rightarrow B)=\\frac{P(A\\cap B)}{P(A)}$$ und "
-                        "$$P(A)=\\frac{\\sigma(A)}{|Transactions|}$$."
+                        "Exam-Modus: Erzeuge die Regeln für die angegebenen Ziel-Itemsets und berechne den Added Value. "
+                        "Verwende $$AV(A \\Rightarrow B)=\\frac{P(A\\cap B)}{P(A)}-P(B)$$."
                     ),
                 },
                 {
                     "type": "Table",
                     "title": "Gegebene frequent itemsets",
-                    "columns": ["Level", "FIS", "σ", "P"],
+                    "columns": ["Level", "Itemset", "σ", "P"],
                     "rows": self._frequent_itemset_rows(),
                 },
                 {
                     "type": "Table",
                     "title": "Ziel-Itemsets für die Regelerzeugung",
-                    "columns": ["FIS", "σ", "P", "Anzahl möglicher Regeln"],
+                    "columns": ["Itemset", "σ", "P", "Anzahl möglicher Regeln"],
                     "rows": self._target_itemset_rows(),
                 },
                 self._component_payload(steps=False),
@@ -490,12 +503,12 @@ class AssociationRuleMiningQuestion:
             "lastView": [
                 {
                     "type": "Text",
-                    "content": "Referenzlösung: Alle Regeln der Ziel-FIS mit Wahrscheinlichkeiten, Konfidenz und Entscheidung.",
+                    "content": "Referenzlösung: Alle Regeln der Ziel-Itemsets mit Wahrscheinlichkeiten und Added Value.",
                 },
                 {
                     "type": "Table",
-                    "title": "Regeln aus den Ziel-FIS",
-                    "columns": ["FIS", "A", "B", "P(A∩B)", "P(A)", "conf", "conf ≥ d?"],
+                    "title": "Added Value der Regeln",
+                    "columns": ["Itemset", "A", "B", "P(A∩B)", "P(A)", "P(B)", "AV"],
                     "rows": self._rule_solution_rows() or [["-", "-", "-", "-", "-", "-", "-"]],
                 },
             ],
@@ -532,14 +545,6 @@ class AssociationRuleMiningQuestion:
         return by_target
 
     def _grade_rows(self, groups):
-        """Grade the dynamic rule-builder payload.
-
-        The returned shape mirrors FPTreeBuilder/evaluate_fp_tree: the main
-        component key contains the global result plus nested detailed results.
-        The flat field ids are still returned for backwards compatibility, but
-        the React component can now read everything through
-        evaluationResults[FIELD_ID].field_results and .rule_results.
-        """
         results = {}
         field_results = {}
         rule_results = {}
@@ -552,7 +557,6 @@ class AssociationRuleMiningQuestion:
         seen_rule_keys = set()
         messages = []
         overall_correct = True
-        transaction_count = max(1, len(self.transactions))
 
         def add_message(message):
             if message and message not in messages:
@@ -565,19 +569,18 @@ class AssociationRuleMiningQuestion:
             return f"{format_probability(probability)} oder σ={int(support_count)}"
 
         def rule_payload(rule):
-            numerator_probability = float(rule["support_xy"]) / float(transaction_count)
-            denominator_probability = float(rule["support_x"]) / float(transaction_count)
             return {
                 "target": format_itemset(rule["target"]),
                 "lhs": format_itemset(rule["lhs"]),
                 "rhs": format_itemset(rule["rhs"]),
                 "label": format_rule_label(rule),
-                "numerator": format_probability(numerator_probability),
-                "denominator": format_probability(denominator_probability),
+                "numerator": format_probability(rule["p_xy"]),
+                "denominator": format_probability(rule["p_x"]),
+                "rhsProbability": format_probability(rule["p_y"]),
                 "supportXY": str(rule["support_xy"]),
                 "supportX": str(rule["support_x"]),
-                "confidence": format_probability(rule["confidence"]),
-                "accepted": str(bool(rule["accepted"])),
+                "supportY": str(rule["support_y"]),
+                "addedValue": self._format_decimal(rule["added_value"]),
             }
 
         def set_field(field_id, correct, expected, **extra_payload):
@@ -587,7 +590,6 @@ class AssociationRuleMiningQuestion:
             }
             payload.update(extra_payload)
             field_results[field_id] = payload
-            # Keep the old flat structure as a compatibility fallback.
             results[field_id] = payload
             return payload
 
@@ -622,11 +624,29 @@ class AssociationRuleMiningQuestion:
                 rhs_raw = str(row.get("rhs") or row.get("consequent") or "").strip()
                 numerator_raw = str(row.get("numerator") or row.get("supportXY") or "").strip()
                 denominator_raw = str(row.get("denominator") or row.get("supportX") or "").strip()
-                conf_raw = str(row.get("confidence") or "").strip()
-                accepted_value = row.get("accepted")
-                accepted_raw = self._bool_value(accepted_value)
+                rhs_probability_raw = str(
+                    row.get("rhsProbability")
+                    or row.get("rhs_probability")
+                    or row.get("pB")
+                    or row.get("supportY")
+                    or ""
+                ).strip()
+                added_value_raw = str(
+                    row.get("addedValue")
+                    or row.get("added_value")
+                    or row.get("value")
+                    or row.get("confidence")
+                    or ""
+                ).strip()
 
-                row_has_content = bool(lhs_raw or rhs_raw or numerator_raw or denominator_raw or conf_raw or accepted_raw)
+                row_has_content = bool(
+                    lhs_raw
+                    or rhs_raw
+                    or numerator_raw
+                    or denominator_raw
+                    or rhs_probability_raw
+                    or added_value_raw
+                )
                 if not row_has_content:
                     continue
 
@@ -635,15 +655,15 @@ class AssociationRuleMiningQuestion:
                 rhs_key = f"{base_key}_rhs"
                 numerator_key = f"{base_key}_numerator"
                 denominator_key = f"{base_key}_denominator"
-                confidence_key = f"{base_key}_confidence"
-                accepted_key = f"{base_key}_accepted"
+                rhs_probability_key = f"{base_key}_rhsProbability"
+                added_value_key = f"{base_key}_addedValue"
                 field_ids = {
                     "lhs": lhs_key,
                     "rhs": rhs_key,
                     "numerator": numerator_key,
                     "denominator": denominator_key,
-                    "confidence": confidence_key,
-                    "accepted": accepted_key,
+                    "rhsProbability": rhs_probability_key,
+                    "addedValue": added_value_key,
                 }
 
                 lhs = self.parse_itemset_text(lhs_raw)
@@ -675,8 +695,8 @@ class AssociationRuleMiningQuestion:
                     set_field(rhs_key, False, "Konsequenz erforderlich")
                     set_field(numerator_key, False, "P(A∩B) erforderlich")
                     set_field(denominator_key, False, "P(A) erforderlich")
-                    set_field(confidence_key, False, "Konfidenz erforderlich")
-                    set_field(accepted_key, False, "Entscheidung erforderlich")
+                    set_field(rhs_probability_key, False, "P(B) erforderlich")
+                    set_field(added_value_key, False, "Added Value erforderlich")
                     set_rule(
                         base_key,
                         correct=False,
@@ -687,18 +707,20 @@ class AssociationRuleMiningQuestion:
                         rhs_correct=False,
                         numerator_correct=False,
                         denominator_correct=False,
-                        confidence_correct=False,
-                        accepted_correct=False,
+                        rhs_probability_correct=False,
+                        added_value_correct=False,
                     )
                     add_message("Mindestens eine Regel hat kein vollständiges Antezedens/Konsequenz.")
-                    extra.append({
-                        "group": group_idx,
-                        "row": row_idx,
-                        "lhs": actual_payload["lhs"],
-                        "rhs": actual_payload["rhs"],
-                        "label": actual_payload["label"],
-                        "message": "incomplete rule",
-                    })
+                    extra.append(
+                        {
+                            "group": group_idx,
+                            "row": row_idx,
+                            "lhs": actual_payload["lhs"],
+                            "rhs": actual_payload["rhs"],
+                            "label": actual_payload["label"],
+                            "message": "incomplete rule",
+                        }
+                    )
                     continue
 
                 rule_ok = expected_rule is not None and not is_duplicate
@@ -707,14 +729,14 @@ class AssociationRuleMiningQuestion:
                     expected_text = (
                         "Duplikat: Regel bereits eingetragen"
                         if is_duplicate
-                        else f"Erlaubte Regeln für dieses FIS: {allowed_rules_for_group}"
+                        else f"Erlaubte Regeln für dieses Itemset: {allowed_rules_for_group}"
                     )
                     set_field(lhs_key, False, expected_text)
                     set_field(rhs_key, False, expected_text)
                     set_field(numerator_key, False, "P(A∩B) zu einer erlaubten Regel")
                     set_field(denominator_key, False, "P(A) zu einer erlaubten Regel")
-                    set_field(confidence_key, False, "Konfidenz zu einer erlaubten Regel")
-                    set_field(accepted_key, False, "Entscheidung zu einer erlaubten Regel")
+                    set_field(rhs_probability_key, False, "P(B) zu einer erlaubten Regel")
+                    set_field(added_value_key, False, "Added Value zu einer erlaubten Regel")
                     set_rule(
                         base_key,
                         correct=False,
@@ -725,61 +747,86 @@ class AssociationRuleMiningQuestion:
                         rhs_correct=False,
                         numerator_correct=False,
                         denominator_correct=False,
-                        confidence_correct=False,
-                        accepted_correct=False,
+                        rhs_probability_correct=False,
+                        added_value_correct=False,
                     )
                     add_message("Es wurden doppelte oder nicht erlaubte Regeln eingetragen.")
-                    extra.append({
-                        "group": group_idx,
-                        "row": row_idx,
-                        "lhs": actual_payload["lhs"],
-                        "rhs": actual_payload["rhs"],
-                        "label": actual_payload["label"],
-                        "message": "duplicate rule" if is_duplicate else "not an allowed rule for this target itemset",
-                    })
+                    extra.append(
+                        {
+                            "group": group_idx,
+                            "row": row_idx,
+                            "lhs": actual_payload["lhs"],
+                            "rhs": actual_payload["rhs"],
+                            "label": actual_payload["label"],
+                            "message": "duplicate rule" if is_duplicate else "not an allowed rule for this target itemset",
+                        }
+                    )
                     continue
 
                 matched_rule_keys.add(rule_key)
+
                 numerator_raw_value = row.get("numerator") or row.get("supportXY")
                 denominator_raw_value = row.get("denominator") or row.get("supportX")
+                rhs_probability_raw_value = (
+                    row.get("rhsProbability")
+                    or row.get("rhs_probability")
+                    or row.get("pB")
+                    or row.get("supportY")
+                )
+                added_value_raw_value = (
+                    row.get("addedValue")
+                    or row.get("added_value")
+                    or row.get("value")
+                    or row.get("confidence")
+                )
+
                 numerator_probability = parse_probability(numerator_raw_value)
                 denominator_probability = parse_probability(denominator_raw_value)
+                rhs_probability = parse_probability(rhs_probability_raw_value)
+                added_value = self._parse_decimal(added_value_raw_value)
                 numerator_count = self._int_value(numerator_raw_value)
                 denominator_count = self._int_value(denominator_raw_value)
-                confidence = parse_probability(row.get("confidence"))
+                rhs_count = self._int_value(rhs_probability_raw_value)
 
-                expected_numerator_probability = float(expected_rule["support_xy"]) / float(transaction_count)
-                expected_denominator_probability = float(expected_rule["support_x"]) / float(transaction_count)
                 numerator_ok = (
-                    self._confidence_matches(numerator_probability, expected_numerator_probability)
+                    self._number_matches(numerator_probability, expected_rule["p_xy"])
                     or numerator_count == int(expected_rule["support_xy"])
                 )
                 denominator_ok = (
-                    self._confidence_matches(denominator_probability, expected_denominator_probability)
+                    self._number_matches(denominator_probability, expected_rule["p_x"])
                     or denominator_count == int(expected_rule["support_x"])
                 )
-                confidence_ok = self._confidence_matches(confidence, expected_rule["confidence"])
-                accepted_ok = accepted_raw == bool(expected_rule["accepted"])
-                rule_correct = bool(numerator_ok and denominator_ok and confidence_ok and accepted_ok)
+                rhs_probability_ok = (
+                    self._number_matches(rhs_probability, expected_rule["p_y"])
+                    or rhs_count == int(expected_rule["support_y"])
+                )
+                added_value_ok = self._number_matches(added_value, expected_rule["added_value"])
+                rule_correct = bool(numerator_ok and denominator_ok and rhs_probability_ok and added_value_ok)
 
                 set_field(lhs_key, True, format_itemset(expected_rule["lhs"]))
                 set_field(rhs_key, True, format_itemset(expected_rule["rhs"]))
                 set_field(
                     numerator_key,
                     numerator_ok,
-                    expected_probability_or_count(expected_numerator_probability, expected_rule["support_xy"]),
-                    expected_probability=format_probability(expected_numerator_probability),
+                    expected_probability_or_count(expected_rule["p_xy"], expected_rule["support_xy"]),
+                    expected_probability=format_probability(expected_rule["p_xy"]),
                     expected_support=str(expected_rule["support_xy"]),
                 )
                 set_field(
                     denominator_key,
                     denominator_ok,
-                    expected_probability_or_count(expected_denominator_probability, expected_rule["support_x"]),
-                    expected_probability=format_probability(expected_denominator_probability),
+                    expected_probability_or_count(expected_rule["p_x"], expected_rule["support_x"]),
+                    expected_probability=format_probability(expected_rule["p_x"]),
                     expected_support=str(expected_rule["support_x"]),
                 )
-                set_field(confidence_key, confidence_ok, format_probability(expected_rule["confidence"]))
-                set_field(accepted_key, accepted_ok, str(bool(expected_rule["accepted"])))
+                set_field(
+                    rhs_probability_key,
+                    rhs_probability_ok,
+                    expected_probability_or_count(expected_rule["p_y"], expected_rule["support_y"]),
+                    expected_probability=format_probability(expected_rule["p_y"]),
+                    expected_support=str(expected_rule["support_y"]),
+                )
+                set_field(added_value_key, added_value_ok, self._format_decimal(expected_rule["added_value"]))
                 set_rule(
                     base_key,
                     correct=rule_correct,
@@ -790,8 +837,8 @@ class AssociationRuleMiningQuestion:
                     rhs_correct=True,
                     numerator_correct=bool(numerator_ok),
                     denominator_correct=bool(denominator_ok),
-                    confidence_correct=bool(confidence_ok),
-                    accepted_correct=bool(accepted_ok),
+                    rhs_probability_correct=bool(rhs_probability_ok),
+                    added_value_correct=bool(added_value_ok),
                 )
 
                 if not rule_correct:
@@ -800,23 +847,18 @@ class AssociationRuleMiningQuestion:
                     add_message("Mindestens ein Wert P(A∩B) ist falsch.")
                 if not denominator_ok:
                     add_message("Mindestens ein Wert P(A) ist falsch.")
-                if not confidence_ok:
-                    add_message("Mindestens eine Konfidenz ist falsch berechnet.")
-                if not accepted_ok:
-                    add_message("Mindestens eine conf ≥ d Entscheidung ist falsch.")
+                if not rhs_probability_ok:
+                    add_message("Mindestens ein Wert P(B) ist falsch.")
+                if not added_value_ok:
+                    add_message("Mindestens ein Added Value ist falsch berechnet.")
 
         missing_keys = sorted(set(all_expected_rules.keys()) - matched_rule_keys)
         if missing_keys:
             overall_correct = False
             missing_rules = [all_expected_rules[key] for key in missing_keys]
             missing.extend(rule_payload(rule) for rule in missing_rules)
-            add_message(
-                "Fehlende Regeln: "
-                + ", ".join(format_rule_label(rule) for rule in missing_rules)
-            )
+            add_message("Fehlende Regeln: " + ", ".join(format_rule_label(rule) for rule in missing_rules))
 
-            # Synthetic entries are useful if the user adds more rows after
-            # evaluation; the same id pattern will immediately receive feedback.
             group_lengths = {
                 idx: len((groups[idx] if idx < len(groups) and isinstance(groups[idx], dict) else {}).get("rows", []) or [])
                 for idx in range(max(len(groups), len(self.target_itemsets)))
@@ -831,19 +873,17 @@ class AssociationRuleMiningQuestion:
                 rhs_key = f"{base_key}_rhs"
                 numerator_key = f"{base_key}_numerator"
                 denominator_key = f"{base_key}_denominator"
-                confidence_key = f"{base_key}_confidence"
-                accepted_key = f"{base_key}_accepted"
-                expected_numerator_probability = float(rule["support_xy"]) / float(transaction_count)
-                expected_denominator_probability = float(rule["support_x"]) / float(transaction_count)
+                rhs_probability_key = f"{base_key}_rhsProbability"
+                added_value_key = f"{base_key}_addedValue"
                 set_field(lhs_key, False, format_itemset(rule["lhs"]))
                 set_field(rhs_key, False, format_itemset(rule["rhs"]))
-                set_field(numerator_key, False, expected_probability_or_count(expected_numerator_probability, rule["support_xy"]))
-                set_field(denominator_key, False, expected_probability_or_count(expected_denominator_probability, rule["support_x"]))
-                set_field(confidence_key, False, format_probability(rule["confidence"]))
-                set_field(accepted_key, False, str(bool(rule["accepted"])))
+                set_field(numerator_key, False, expected_probability_or_count(rule["p_xy"], rule["support_xy"]))
+                set_field(denominator_key, False, expected_probability_or_count(rule["p_x"], rule["support_x"]))
+                set_field(rhs_probability_key, False, expected_probability_or_count(rule["p_y"], rule["support_y"]))
+                set_field(added_value_key, False, self._format_decimal(rule["added_value"]))
 
         summary = (
-            "Alle Regeln inkl. Formelwerte und Entscheidung korrekt."
+            "Alle Regeln inkl. Added-Value-Formelwerte korrekt."
             if overall_correct
             else " | ".join(messages) or "Nicht korrekt."
         )
