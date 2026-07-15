@@ -37,7 +37,7 @@ WEEK_CONFIG = {
     },
     10: {
         "title": "Schema-Matching",
-        "start_date": "2026-07-14",
+        "start_date": "2026-07-13",
     }
 }
 
@@ -249,9 +249,8 @@ QUESTION_CONFIG = {
             },
         },
     },
-
-    "stable_marriage": {
-        "class_path": "app.question_types.stable_marriage.StableMarriageQuestion",
+    "n_gramm": {
+        "class_path": "app.question_types.ngram_similarity.NGramSimilarityQuestion",
         "metadata": {
             "title": "Stable Marriage",
             "week": 10,
@@ -269,6 +268,30 @@ QUESTION_CONFIG = {
                     "visibility": "open",
                     "options": ["easy", "medium", "hard"],
                     "default": "easy",
+                },
+                "seed": {
+                    "kind": "number",
+                    "visibility": "hidden",
+                },
+            },
+        },
+    },
+
+    "ngram_similarity": {
+        "class_path": "app.question_types.ngram_similarity.NGramSimilarityQuestion",
+        "metadata": {
+            "title": "Bigramm- und Trigramm-Ähnlichkeit",
+            "week": 10,
+            "desc": (
+                "Berechne die Bigramm- oder Trigramm-Ähnlichkeit von drei Wörtern "
+                "und bestimme das ähnlichste Wortpaar."
+            ),
+            "tags": ["similarity", "ngrams", "dice"],
+            "settings": {
+                "Mode": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["bigram", "trigram"],
                 },
                 "seed": {
                     "kind": "number",
