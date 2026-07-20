@@ -3,21 +3,11 @@ import random
 import re
 from itertools import combinations
 
-
-# Difficulty is determined by how clearly the best pair is separated from
-# the second-best pair. Easy questions have a large similarity gap, while
-# hard questions deliberately contain three closely competing words.
 DIFFICULTY_SETTINGS = {
     "easy": {"min_gap": 0.20, "max_gap": 1.01},
     "medium": {"min_gap": 0.09, "max_gap": 0.20},
     "hard": {"min_gap": 0.02, "max_gap": 0.09},
 }
-
-
-# Curated real-word triples. The generator calculates their actual Dice
-# similarities for the selected n and then chooses a triple that matches the
-# requested difficulty. The order is shuffled, so the answer is not always
-# "word 1 and word 2".
 
 WORD_TRIPLES = [
     ("statistics", "statistic", "statistical"),
@@ -185,14 +175,14 @@ class NGramSimilarityQuestion:
 
     @staticmethod
     def _normalize_word(word):
-        # Keep letters and digits only. The curated pool is ASCII, but this
-        # also supports common German characters if the pool is extended.
+
         return re.sub(r"[^0-9a-zäöüß]", "", str(word or "").lower())
 
     def _ngrams_in_order(self, word):
         """Return unique n-grams in first-occurrence order."""
         normalized = self._normalize_word(word)
-        padded = "_" * (self.n - 1) + normalized
+        padding = "_" * (self.n - 1)
+        padded = padding + normalized + padding
 
         grams = []
         seen = set()
@@ -254,8 +244,6 @@ class NGramSimilarityQuestion:
                 reverse=True,
             )
 
-            # The highest result must be unique so the question always has
-            # exactly one correct pair.
             if math.isclose(ranked_scores[0], ranked_scores[1], abs_tol=1e-12):
                 continue
 
@@ -342,8 +330,8 @@ class NGramSimilarityQuestion:
                         f"{self.gram_label} und anschließend für jedes Wortpaar die "
                         "Dice-Ähnlichkeit. Entscheide danach, welches Wortpaar am "
                         "ähnlichsten ist.\n\n"
-                        "Verwende nur führende Leerzeichen als Padding und stelle sie "
-                        f"mit '_' dar. {ngram_examples}\n\n"
+                        "Verwende führende und nachgestellte Leerzeichen als Padding "
+                        f"und stelle sie mit '_' dar. {ngram_examples}\n\n"
                         "Die Reihenfolge der eingegebenen N-Gramme ist egal; doppelte "
                         "N-Gramme werden nur einmal gezählt.\n\n"
                         "Formel: S(A,B) = 2 * |A ∩ B| / (|A| + |B|). "
@@ -423,8 +411,6 @@ class NGramSimilarityQuestion:
             if not text or text == "-":
                 return set()
 
-            # Strip common collection notation, then accept commas,
-            # semicolons, pipes, and whitespace as separators.
             text = re.sub(r"[\[\]{}()]", " ", text)
             raw_parts = re.split(r"[,;|\s]+", text)
 
@@ -467,9 +453,6 @@ class NGramSimilarityQuestion:
         if len(unique_numbers) == 2:
             return tuple(sorted((unique_numbers[0] - 1, unique_numbers[1] - 1)))
 
-        # Match supplied words as complete tokens. Exact matching avoids a
-        # false third match for nested words such as "similar" and
-        # "similarity".
         supplied_tokens = re.findall(r"[0-9a-zäöüß]+", text)
         word_to_index = {
             self._normalize_word(word): index
