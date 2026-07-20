@@ -249,8 +249,8 @@ QUESTION_CONFIG = {
             },
         },
     },
-    "n_gramm": {
-        "class_path": "app.question_types.ngram_similarity.NGramSimilarityQuestion",
+    "stable_marriage": {
+        "class_path": "app.question_types.stable_marriage.StableMarriageQuestion",
         "metadata": {
             "title": "Stable Marriage",
             "week": 10,
