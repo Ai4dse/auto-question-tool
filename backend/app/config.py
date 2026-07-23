@@ -300,6 +300,35 @@ QUESTION_CONFIG = {
             },
         },
     },
+    "ucc_discovery_question": {
+        "class_path": "app.question_types.ucc_discovery_question.UCCDiscoveryQuestion",
+        "metadata": {
+            "title": "UCC Discovery",
+            "week": 10,
+            "desc": (
+                "Berechne die Bigramm- oder Trigramm-Ähnlichkeit von drei Wörtern "
+                "und bestimme das ähnlichste Wortpaar."
+            ),
+            "tags": ["similarity", "ngrams", "dice"],
+            "settings": {
+                "Mode": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["agree_sets", "gordian"],
+                },
+                "difficulty": {
+                    "kind": "select",
+                    "visibility": "open",
+                    "options": ["easy", "medium", "hard"],
+                    "default": "easy",
+                },
+                "seed": {
+                    "kind": "number",
+                    "visibility": "hidden",
+                },
+            },
+        },
+    },
 
     "sigma_rule": {
         "class_path": "app.question_types.sigma_rule.SigmaRule",
