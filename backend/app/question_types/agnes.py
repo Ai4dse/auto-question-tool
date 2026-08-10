@@ -202,18 +202,20 @@ class AGNESQuestion:
         ]
 
         base["view1"] = view0 + base["view1"]
+        print(base)
         return base
 
     # ---------------------------------------------------------------------
     # Evaluation
     # ---------------------------------------------------------------------
     def evaluate(self, user_input):
+        print(user_input)
         results = {}
         #distance matrix eval
         for i in range(self.num_points):
             for j in range(self.num_points):
                 id = f"D1_{i}_{j}"
-                results[id] = { "correct": user_input.get(id) == str(self.D[i][j]),
+                results[id] = { "correct": user_input.get(id) == str(normalize_number(self.D[i][j])),
                                 "expected": f"{self.D[i][j]}"}
                 continue
         #dendogram eval
