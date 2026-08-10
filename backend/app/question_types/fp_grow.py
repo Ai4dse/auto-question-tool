@@ -635,7 +635,7 @@ class FPGrowthAlgorithmQuestion:
         return solution_elements
 
     def _generate_steps_layout(self):
-        return {
+        base = {
             "view1": [
                 {
                     "type": "Text",
@@ -737,6 +737,8 @@ class FPGrowthAlgorithmQuestion:
             ],
             "lastView": self._solution_tables(),
         }
+        print(base)
+        return base
 
     def _conditional_tree_builder_inputs_only(self):
         elements = []
@@ -759,7 +761,7 @@ class FPGrowthAlgorithmQuestion:
         return elements
 
     def _generate_exam_layout(self):
-        return {
+        base = {
             "view1": [
                 {
                     "type": "Text",
@@ -790,6 +792,8 @@ class FPGrowthAlgorithmQuestion:
             ],
             "lastView": self._solution_tables(),
         }
+        print(base)
+        return base
 
     def generate(self):
         return self._generate_exam_layout() if self.mode == "exam" else self._generate_steps_layout()
@@ -1280,6 +1284,7 @@ class FPGrowthAlgorithmQuestion:
         return results
 
     def _evaluate_exam(self, user_input):
+
         user_input = user_input or {}
         results = {}
 
@@ -1304,6 +1309,7 @@ class FPGrowthAlgorithmQuestion:
                 else "Mindestens eine FP-growth Exam-Eingabe ist fehlerhaft."
             ),
         }
+        print(results)
         return results
 
     def evaluate(self, user_input):

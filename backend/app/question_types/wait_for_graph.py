@@ -438,7 +438,7 @@ class WaitForGraphQuestion:
             "rows": [[t, self._fmt_request(t)] for t in self.transactions],
         }
 
-        return {
+        base = {
             "view1": [
                 {
                     "type": "Text",
@@ -481,6 +481,7 @@ class WaitForGraphQuestion:
                 },
             ]
         }
+        return(base)
 
     def evaluate(self, user_input):
         user_input = user_input or {}
@@ -522,5 +523,4 @@ class WaitForGraphQuestion:
 
         # (4) Worked solution — delivered only here (never in the question payload).
         results["solution"] = {"correct": True, "expected": self._build_solution()}
-
         return results

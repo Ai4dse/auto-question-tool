@@ -202,14 +202,12 @@ class AGNESQuestion:
         ]
 
         base["view1"] = view0 + base["view1"]
-        print(base)
         return base
 
     # ---------------------------------------------------------------------
     # Evaluation
     # ---------------------------------------------------------------------
     def evaluate(self, user_input):
-        print(user_input)
         results = {}
         #distance matrix eval
         for i in range(self.num_points):

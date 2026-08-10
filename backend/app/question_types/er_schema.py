@@ -316,7 +316,7 @@ class ERSchema:
                 ),
             }
         ]
-
+        print(base)
         return base
 
     def _generate_exam_layout(self):

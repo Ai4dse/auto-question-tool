@@ -405,6 +405,7 @@ class HungarianMethodQuestion:
                 "content": "Übung abgeschlossen.",
             }
         ]
+        print(base)
         return base
 
     def _generate_exam_layout(self):
@@ -653,6 +654,7 @@ class HungarianMethodQuestion:
     # Evaluation entrypoints
     # ------------------------------------------------------------------
     def _evaluate_steps(self, user_input):
+        print(user_input)
         results = {}
 
         self._evaluate_matrix_stage(results, user_input, "hm_step1", [self.step1_matrix])

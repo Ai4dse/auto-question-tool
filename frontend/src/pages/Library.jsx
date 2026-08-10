@@ -11,7 +11,33 @@ import {
   buildQueryFromSettings,
 } from "../components/settings/settingUtils";
 
-const LIBRARY_SESSION_KEY = "question-library-state-v1";
+const LIBRARY_SESSION_KEY = "question-library-state-v2";
+
+function getPersistableSettings(settingsByQuestion, questions) {
+  const schemas = Object.fromEntries(
+    questions.map((question) => [question.id, question.settings || {}])
+  );
+
+  return Object.fromEntries(
+    Object.entries(settingsByQuestion || {}).flatMap(([questionId, values]) => {
+      const schema = schemas[questionId];
+
+      if (!schema || !values || typeof values !== "object") {
+        return [];
+      }
+
+      const persistable = Object.fromEntries(
+        Object.entries(values).filter(
+          ([name]) => schema[name]?.visibility === "open"
+        )
+      );
+
+      return Object.keys(persistable).length
+        ? [[questionId, persistable]]
+        : [];
+    })
+  );
+}
 
 function readLibrarySessionState() {
   if (typeof window === "undefined") {
@@ -61,12 +87,13 @@ export default function Library({ onSessionExpired }) {
   );
   const hoverTimeout = useRef(null);
 
-  // This also keeps randomly generated defaults such as a seed stable when
-  // the user returns from a question page during the same browser-tab session.
+  // Random defaults remain stable while this Library component is mounted.
+  // Only defaults belonging to open settings are persisted to sessionStorage.
   const randomDefaultsCache = useRef(
     initialSessionStateRef.current.randomDefaults
   );
   const questionSettingsRef = useRef(questionSettings);
+  const questionsRef = useRef([]);
   const restoredScrollRef = useRef(false);
   const [isScrollReady, setIsScrollReady] = useState(
     initialSessionStateRef.current.scrollY <= 0
@@ -89,8 +116,14 @@ export default function Library({ onSessionExpired }) {
       window.sessionStorage.setItem(
         LIBRARY_SESSION_KEY,
         JSON.stringify({
-          questionSettings: questionSettingsRef.current,
-          randomDefaults: randomDefaultsCache.current,
+          questionSettings: getPersistableSettings(
+            questionSettingsRef.current,
+            questionsRef.current
+          ),
+          randomDefaults: getPersistableSettings(
+            randomDefaultsCache.current,
+            questionsRef.current
+          ),
           scrollY: storedScrollY,
         })
       );
@@ -224,6 +257,7 @@ export default function Library({ onSessionExpired }) {
           if (a.week !== b.week) return a.week - b.week;
           return a.title.localeCompare(b.title);
         });
+        questionsRef.current = normalized;
         setQuestions(normalized);
       } catch (e) {
         setError(e?.message || "Failed to load questions");
